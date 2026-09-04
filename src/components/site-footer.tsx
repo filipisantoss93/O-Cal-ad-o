@@ -37,7 +37,7 @@ export function SiteFooter() {
           <p className="text-sm font-black text-ink">Para negócios</p>
           <ul className="mt-3 space-y-2 text-sm text-muted">
             <li>
-              <Link className="hover:text-ink" href="/#para-empresas">
+              <Link className="hover:text-ink" href="/cadastro">
                 Criar minha vitrine
               </Link>
             </li>

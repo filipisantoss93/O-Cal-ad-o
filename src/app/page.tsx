@@ -226,15 +226,13 @@ export default function Home() {
                 conversas no WhatsApp. Sem intermediar pagamentos no lançamento.
               </p>
             </div>
-            <button
-              type="button"
-              disabled
-              className="inline-flex min-h-13 shrink-0 cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-brand/65 px-6 text-base font-black text-white shadow-[0_12px_25px_rgba(187,61,35,0.16)]"
-              title="Cadastro será habilitado após conectar o Supabase"
+            <Link
+              href="/cadastro"
+              className="inline-flex min-h-13 shrink-0 items-center justify-center gap-2 rounded-2xl bg-brand px-6 text-base font-black text-white shadow-[0_12px_25px_rgba(187,61,35,0.2)] transition hover:-translate-y-0.5 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-accent"
             >
-              Cadastro em preparação
+              Criar minha vitrine
               <ArrowRightIcon className="size-5" />
-            </button>
+            </Link>
           </div>
         </section>
       </main>
