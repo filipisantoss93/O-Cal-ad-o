@@ -30,7 +30,11 @@ function authErrorMessage(message: string) {
       ? "Confirme seu e-mail antes de entrar."
       : "E-mail ou senha incorretos.";
   }
-  if (normalized.includes("rate limit")) {
+  if (
+    normalized.includes("rate limit") ||
+    normalized.includes("over_email_send_rate_limit") ||
+    normalized.includes("security purposes")
+  ) {
     return "Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente.";
   }
   if (normalized.includes("password")) {
@@ -120,9 +124,11 @@ export async function requestPasswordResetAction(
   try {
     const email = validateEmail(formString(formData, "email"));
     const supabase = await createClient();
-    await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${appUrl()}/auth/confirm?next=/redefinir-senha`,
     });
+
+    if (error) return actionError(authErrorMessage(error.message));
 
     return {
       status: "success",
