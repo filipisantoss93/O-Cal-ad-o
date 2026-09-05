@@ -20,6 +20,8 @@ A aplicação contém:
 - página inicial com busca, categorias, destaques e ofertas;
 - listagem com busca e filtro por categoria;
 - página pública de cada comércio;
+- seleção manual por estado e município e identificação da cidade pela
+  localização atual do dispositivo;
 - estados de carregamento, erro e página não encontrada;
 - criação de conta, confirmação de e-mail, login, logout e recuperação de senha;
 - painel protegido para o comerciante;
@@ -28,8 +30,10 @@ A aplicação contém:
 - edição do perfil, alteração de e-mail e alteração de senha;
 - exclusão definitiva da conta e dos dados vinculados;
 - clientes Supabase para navegador, servidor e renovação segura de sessão;
-- schema inicial com RLS para perfis, cidades, categorias, comércios, produtos,
-  promoções e imagens;
+- schema com RLS para perfis, 27 estados, 5.571 municípios, categorias,
+  comércios, produtos, promoções e imagens;
+- malhas municipais do IBGE armazenadas no PostGIS para resolver coordenadas
+  sem enviar a localização a serviços externos;
 - Edge Function autenticada para excluir a conta;
 - validação automática no GitHub Actions.
 
@@ -94,6 +98,12 @@ os registros dos próprios negócios.
 A função `supabase/functions/delete-account` deve permanecer com verificação de
 JWT habilitada. A chave `service_role` é fornecida pelo próprio ambiente da Edge
 Function e nunca deve ser exposta ao Next.js ou ao navegador.
+
+Os dados de estados, municípios e malhas são gerados a partir das APIs e dos
+arquivos oficiais do IBGE pelo script `scripts/generate-brazil-locations.mjs`.
+A localização exata recebida pelo endpoint `/api/localizacao` é usada somente
+durante a consulta espacial e não é persistida; o navegador guarda apenas a
+cidade escolhida.
 
 ## Comandos
 

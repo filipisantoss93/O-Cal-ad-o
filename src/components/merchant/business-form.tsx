@@ -3,11 +3,13 @@
 import Image from "next/image";
 import { useActionState, useState } from "react";
 import { saveBusinessAction } from "@/app/painel/loja/actions";
-import { ImageIcon } from "@/components/icons";
+import { ImageIcon, LocateIcon } from "@/components/icons";
 import {
   type ActionState,
   initialActionState,
 } from "@/lib/action-state";
+import type { CityOption, StateOption } from "@/lib/location";
+import { detectCurrentCity } from "@/lib/location-client";
 
 export type BusinessFormValue = {
   id: number;
@@ -31,7 +33,8 @@ export type BusinessFormValue = {
 
 type BusinessFormProps = {
   business: BusinessFormValue;
-  cities: Array<{ id: number; label: string }>;
+  states: StateOption[];
+  initialCity: CityOption | null;
   categories: Array<{ id: number; label: string }>;
 };
 
@@ -58,7 +61,8 @@ function slugify(value: string) {
 
 export function BusinessForm({
   business,
-  cities,
+  states,
+  initialCity,
   categories,
 }: BusinessFormProps) {
   const [state, action, pending] = useActionState(
@@ -68,6 +72,46 @@ export function BusinessForm({
   const [name, setName] = useState(business?.name ?? "");
   const [slug, setSlug] = useState(business?.slug ?? "");
   const [slugWasEdited, setSlugWasEdited] = useState(Boolean(business?.slug));
+  const [stateCode, setStateCode] = useState(initialCity?.stateCode ?? "");
+  const [cityId, setCityId] = useState(initialCity ? String(initialCity.id) : "");
+  const [cities, setCities] = useState<CityOption[]>(initialCity ? [initialCity] : []);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [detectingCity, setDetectingCity] = useState(false);
+  const [cityError, setCityError] = useState("");
+
+  async function loadCities(nextStateCode: string, preservedCityId = "") {
+    if (!nextStateCode) {
+      setCities([]);
+      return;
+    }
+    setLoadingCities(true);
+    setCityError("");
+    try {
+      const response = await fetch(`/api/localidades?uf=${nextStateCode}`);
+      if (!response.ok) throw new Error();
+      const payload = (await response.json()) as { cities: CityOption[] };
+      setCities(payload.cities);
+      setCityId(preservedCityId);
+    } catch {
+      setCityError("Não foi possível carregar as cidades.");
+    } finally {
+      setLoadingCities(false);
+    }
+  }
+
+  async function useCurrentLocation() {
+    setDetectingCity(true);
+    setCityError("");
+    try {
+      const city = await detectCurrentCity();
+      setStateCode(city.stateCode);
+      await loadCities(city.stateCode, String(city.id));
+    } catch (reason) {
+      setCityError(reason instanceof Error ? reason.message : "Não foi possível identificar a cidade.");
+    } finally {
+      setDetectingCity(false);
+    }
+  }
 
   return (
     <form action={action} className="space-y-8">
@@ -145,26 +189,66 @@ export function BusinessForm({
           {fieldError(state, "slug")}
         </div>
 
-        <div>
-          <label className={labelClass} htmlFor="business-city">
-            Cidade
-          </label>
-          <select
-            className={inputClass}
-            id="business-city"
-            name="city_id"
-            defaultValue={business?.cityId ?? ""}
-            required
-          >
-            <option value="" disabled>
-              Selecione
-            </option>
-            {cities.map((city) => (
-              <option key={city.id} value={city.id}>
-                {city.label}
-              </option>
-            ))}
-          </select>
+        <div className="sm:col-span-2">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <p className={labelClass}>Localização da loja</p>
+            <button
+              type="button"
+              onClick={useCurrentLocation}
+              disabled={pending || detectingCity}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-black text-brand-dark transition hover:bg-brand/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
+            >
+              <LocateIcon className="size-4" />
+              {detectingCity ? "Identificando..." : "Usar localização atual"}
+            </button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="text-sm font-extrabold text-ink" htmlFor="business-state">
+              Estado
+              <select
+                className={inputClass}
+                id="business-state"
+                value={stateCode}
+                onChange={(event) => {
+                  const nextStateCode = event.target.value;
+                  setStateCode(nextStateCode);
+                  setCityId("");
+                  void loadCities(nextStateCode);
+                }}
+                required
+              >
+                <option value="" disabled>Selecione</option>
+                {states.map((state) => (
+                  <option key={state.code} value={state.code}>{state.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm font-extrabold text-ink" htmlFor="business-city">
+              Cidade
+              <select
+                className={inputClass}
+                id="business-city"
+                name="city_id"
+                value={cityId}
+                onChange={(event) => setCityId(event.target.value)}
+                onFocus={() => {
+                  if (stateCode && cities.length <= 1) {
+                    void loadCities(stateCode, cityId);
+                  }
+                }}
+                disabled={!stateCode || loadingCities}
+                required
+              >
+                <option value="" disabled>
+                  {loadingCities ? "Carregando..." : "Selecione"}
+                </option>
+                {cities.map((city) => (
+                  <option key={city.id} value={city.id}>{city.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {cityError && <p role="alert" className="mt-2 text-sm font-semibold text-brand-dark">{cityError}</p>}
           {fieldError(state, "city_id")}
         </div>
 

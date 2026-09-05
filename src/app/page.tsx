@@ -3,7 +3,6 @@ import { BusinessCard } from "@/components/business-card";
 import { CategoryGrid } from "@/components/category-grid";
 import {
   ArrowRightIcon,
-  MapPinIcon,
   ShieldCheckIcon,
   SparklesIcon,
   StoreIcon,
@@ -13,6 +12,7 @@ import { PromotionCard } from "@/components/promotion-card";
 import { SearchForm } from "@/components/search-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { CitySelector } from "@/components/city-selector";
 import { businesses, categories, promotions } from "@/data/catalog";
 
 export default function Home() {
@@ -28,14 +28,7 @@ export default function Home() {
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent" />
           <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-16 lg:px-8 lg:py-20">
             <div>
-              <span
-                className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm font-bold text-ink shadow-sm"
-                title="A seleção de cidade será habilitada com os dados reais"
-              >
-                <MapPinIcon className="size-4 text-brand" />
-                Escolha sua cidade
-                <span className="text-brand-dark">Em breve</span>
-              </span>
+              <CitySelector variant="hero" />
 
               <p className="mt-8 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.14em] text-brand-dark">
                 <SparklesIcon className="size-4" />

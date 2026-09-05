@@ -29,10 +29,10 @@ const statusLabels: Record<string, { label: string; className: string }> = {
 
 export default async function BusinessPage() {
   const { supabase, business } = await getMerchantWorkspace("/painel/loja");
-  const [citiesResult, categoriesResult] = await Promise.all([
+  const [statesResult, categoriesResult, cityResult] = await Promise.all([
     supabase
-      .from("cities")
-      .select("id, name, state_code")
+      .from("states")
+      .select("code, name")
       .eq("is_active", true)
       .order("name"),
     supabase
@@ -41,9 +41,16 @@ export default async function BusinessPage() {
       .eq("is_active", true)
       .order("display_order")
       .order("name"),
+    business
+      ? supabase
+          .from("cities")
+          .select("id, name, state_code")
+          .eq("id", business.city_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
-  if (citiesResult.error || categoriesResult.error) {
+  if (statesResult.error || categoriesResult.error || cityResult.error) {
     throw new Error("Não foi possível carregar as opções da loja.");
   }
 
@@ -119,10 +126,15 @@ export default async function BusinessPage() {
       <section className="mt-7 rounded-[2rem] border border-line bg-surface p-5 shadow-sm sm:p-8">
         <BusinessForm
           business={formBusiness}
-          cities={(citiesResult.data ?? []).map((city) => ({
-            id: city.id,
-            label: `${city.name} - ${city.state_code}`,
+          states={(statesResult.data ?? []).map((state) => ({
+            code: state.code,
+            name: state.name,
           }))}
+          initialCity={cityResult.data ? {
+            id: cityResult.data.id,
+            name: cityResult.data.name,
+            stateCode: cityResult.data.state_code,
+          } : null}
           categories={(categoriesResult.data ?? []).map((category) => ({
             id: category.id,
             label: category.name,

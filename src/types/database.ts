@@ -330,7 +330,15 @@ export type Database = {
           timezone?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cities_state_code_fkey"
+            columns: ["state_code"]
+            isOneToOne: false
+            referencedRelation: "states"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -412,12 +420,56 @@ export type Database = {
           },
         ]
       }
+      states: {
+        Row: {
+          code: string
+          created_at: string
+          ibge_code: number
+          is_active: boolean
+          name: string
+          region_code: string
+          region_name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          ibge_code: number
+          is_active?: boolean
+          name: string
+          region_code: string
+          region_name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          ibge_code?: number
+          is_active?: boolean
+          name?: string
+          region_code?: string
+          region_name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      resolve_city_by_coordinates: {
+        Args: { input_latitude: number; input_longitude: number }
+        Returns: {
+          ibge_code: number
+          id: number
+          name: string
+          state_code: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
