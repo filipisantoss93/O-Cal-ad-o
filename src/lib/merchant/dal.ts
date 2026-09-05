@@ -27,7 +27,7 @@ export async function getMerchantWorkspace(returnTo = "/painel") {
     supabase
       .from("businesses")
       .select(
-        "id, owner_id, city_id, category_id, slug, name, description, whatsapp_e164, public_email, website_url, street, address_number, complement, neighborhood, postal_code, logo_path, cover_path, status, moderation_note, plan, is_active, created_at, updated_at",
+        "id, owner_id, city_id, category_id, slug, name, description, whatsapp_e164, public_email, website_url, street, address_number, complement, neighborhood, postal_code, latitude, longitude, logo_path, cover_path, status, moderation_note, plan, is_active, created_at, updated_at",
       )
       .eq("owner_id", user.id)
       .order("created_at", { ascending: true })

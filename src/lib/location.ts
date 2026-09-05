@@ -13,6 +13,15 @@ export type SelectedCity = CityOption & {
   ibgeCode?: number;
 };
 
+export type CurrentCoordinates = {
+  latitude: number;
+  longitude: number;
+};
+
+export type DetectedCity = SelectedCity & CurrentCoordinates;
+
+export type CitySelectionDetail = SelectedCity & Partial<CurrentCoordinates>;
+
 export const selectedCityStorageKey = "ocalcadao:selected-city";
 export const selectedCityCookieName = "ocalcadao_city_id";
 export const cityChangeEventName = "ocalcadao:city-change";

@@ -26,6 +26,8 @@ export type BusinessFormValue = {
   complement: string;
   neighborhood: string;
   postalCode: string;
+  latitude: number | null;
+  longitude: number | null;
   isActive: boolean;
   logoUrl: string | null;
   coverUrl: string | null;
@@ -78,6 +80,16 @@ export function BusinessForm({
   const [loadingCities, setLoadingCities] = useState(false);
   const [detectingCity, setDetectingCity] = useState(false);
   const [cityError, setCityError] = useState("");
+  const [latitude, setLatitude] = useState(
+    business?.latitude === null || business?.latitude === undefined
+      ? ""
+      : String(business.latitude),
+  );
+  const [longitude, setLongitude] = useState(
+    business?.longitude === null || business?.longitude === undefined
+      ? ""
+      : String(business.longitude),
+  );
 
   async function loadCities(nextStateCode: string, preservedCityId = "") {
     if (!nextStateCode) {
@@ -105,6 +117,8 @@ export function BusinessForm({
     try {
       const city = await detectCurrentCity();
       setStateCode(city.stateCode);
+      setLatitude(String(city.latitude));
+      setLongitude(String(city.longitude));
       await loadCities(city.stateCode, String(city.id));
     } catch (reason) {
       setCityError(reason instanceof Error ? reason.message : "Não foi possível identificar a cidade.");
@@ -118,6 +132,8 @@ export function BusinessForm({
       {business && (
         <input type="hidden" name="business_id" value={business.id} />
       )}
+      <input type="hidden" name="latitude" value={latitude} />
+      <input type="hidden" name="longitude" value={longitude} />
 
       {state.message && (
         <div
@@ -213,6 +229,8 @@ export function BusinessForm({
                   const nextStateCode = event.target.value;
                   setStateCode(nextStateCode);
                   setCityId("");
+                  setLatitude("");
+                  setLongitude("");
                   void loadCities(nextStateCode);
                 }}
                 required
@@ -230,7 +248,11 @@ export function BusinessForm({
                 id="business-city"
                 name="city_id"
                 value={cityId}
-                onChange={(event) => setCityId(event.target.value)}
+                onChange={(event) => {
+                  setCityId(event.target.value);
+                  setLatitude("");
+                  setLongitude("");
+                }}
                 onFocus={() => {
                   if (stateCode && cities.length <= 1) {
                     void loadCities(stateCode, cityId);
@@ -249,6 +271,9 @@ export function BusinessForm({
             </label>
           </div>
           {cityError && <p role="alert" className="mt-2 text-sm font-semibold text-brand-dark">{cityError}</p>}
+          <p className="mt-2 text-xs font-semibold leading-5 text-muted">
+            Para aparecer por distância, use “Localização atual” enquanto estiver no endereço da loja.
+          </p>
           {fieldError(state, "city_id")}
         </div>
 

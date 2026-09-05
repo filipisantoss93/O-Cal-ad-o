@@ -32,6 +32,21 @@ function saveError(error: unknown): ActionState {
   return actionError("Não foi possível salvar a loja. Tente novamente.");
 }
 
+function optionalCoordinate(
+  formData: FormData,
+  name: "latitude" | "longitude",
+  minimum: number,
+  maximum: number,
+) {
+  const rawValue = formString(formData, name);
+  if (!rawValue) return null;
+  const value = Number(rawValue);
+  if (!Number.isFinite(value) || value < minimum || value > maximum) {
+    throw new ValidationError("Localização da loja inválida.", name);
+  }
+  return value;
+}
+
 export async function saveBusinessAction(
   _state: ActionState,
   formData: FormData,
@@ -117,6 +132,14 @@ export async function saveBusinessAction(
     const postalCode = normalizePostalCode(
       formString(formData, "postal_code"),
     );
+    const latitude = optionalCoordinate(formData, "latitude", -90, 90);
+    const longitude = optionalCoordinate(formData, "longitude", -180, 180);
+    if ((latitude === null) !== (longitude === null)) {
+      throw new ValidationError(
+        "Use novamente a localização atual da loja.",
+        "city_id",
+      );
+    }
     const logoFile = imageFromForm(formData, "logo");
     const coverFile = imageFromForm(formData, "cover");
 
@@ -155,6 +178,8 @@ export async function saveBusinessAction(
       complement,
       neighborhood,
       postal_code: postalCode,
+      latitude,
+      longitude,
       logo_path: logoPath,
       cover_path: coverPath,
       is_active: formData.get("is_active") === "on",

@@ -70,6 +70,8 @@ export default async function BusinessPage() {
         complement: business.complement ?? "",
         neighborhood: business.neighborhood,
         postalCode: business.postal_code ?? "",
+        latitude: business.latitude,
+        longitude: business.longitude,
         isActive: business.is_active,
         logoUrl: publicMediaUrl(supabase, business.logo_path),
         coverUrl: publicMediaUrl(supabase, business.cover_path),

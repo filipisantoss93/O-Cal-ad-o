@@ -9,6 +9,7 @@ import {
   WhatsAppIcon,
 } from "@/components/icons";
 import { PromotionCard } from "@/components/promotion-card";
+import { NearbyBusinesses } from "@/components/nearby-businesses";
 import { SearchForm } from "@/components/search-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -65,7 +66,7 @@ export default function Home() {
                     Perto de você
                   </p>
                   <h2 className="mt-1 text-xl font-black tracking-tight text-ink">
-                    Destaques da avenida
+                    Comércios próximos
                   </h2>
                 </div>
                 <span className="rounded-full bg-positive-soft px-3 py-1.5 text-xs font-black text-positive">
@@ -73,44 +74,7 @@ export default function Home() {
                 </span>
               </div>
 
-              <div className="mt-5 space-y-3">
-                {businesses.slice(0, 3).map((business, index) => (
-                  <Link
-                    key={business.id}
-                    href={`/loja/${business.slug}`}
-                    className="group flex items-center gap-3 rounded-2xl border border-line/80 p-3 transition hover:border-ink/15 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                  >
-                    <span
-                      className={`grid size-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${business.palette} text-sm font-black text-white`}
-                    >
-                      {business.initials}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-extrabold text-ink">
-                        {business.name}
-                      </span>
-                      <span className="mt-0.5 block truncate text-xs font-semibold text-muted">
-                        {business.categoryName} · {business.distance}
-                      </span>
-                    </span>
-                    <span className="text-xs font-black text-brand-dark">
-                      {index === 0
-                        ? "4,9 ★"
-                        : business.isOpen
-                          ? "Aberto"
-                          : "Fechado"}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-
-              <Link
-                href="/buscar"
-                className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-ink/10 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              >
-                Explorar todos
-                <ArrowRightIcon className="size-4" />
-              </Link>
+              <NearbyBusinesses />
             </aside>
           </div>
         </section>

@@ -2,6 +2,8 @@ import {
   cityChangeEventName,
   selectedCityCookieName,
   selectedCityStorageKey,
+  type CurrentCoordinates,
+  type DetectedCity,
   type SelectedCity,
 } from "@/lib/location";
 
@@ -13,13 +15,29 @@ export function readSelectedCity() {
     return null;
   }
 }
-export function saveSelectedCity(city: SelectedCity) {
-  window.localStorage.setItem(selectedCityStorageKey, JSON.stringify(city));
-  document.cookie = `${selectedCityCookieName}=${city.id}; Path=/; Max-Age=31536000; SameSite=Lax`;
-  window.dispatchEvent(new CustomEvent(cityChangeEventName, { detail: city }));
+export function saveSelectedCity(
+  city: SelectedCity,
+  coordinates?: CurrentCoordinates,
+) {
+  const storedCity: SelectedCity = {
+    id: city.id,
+    name: city.name,
+    stateCode: city.stateCode,
+    ...(city.ibgeCode ? { ibgeCode: city.ibgeCode } : {}),
+  };
+  window.localStorage.setItem(
+    selectedCityStorageKey,
+    JSON.stringify(storedCity),
+  );
+  document.cookie = `${selectedCityCookieName}=${storedCity.id}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  window.dispatchEvent(
+    new CustomEvent(cityChangeEventName, {
+      detail: { ...storedCity, ...coordinates },
+    }),
+  );
 }
 
-export async function detectCurrentCity(): Promise<SelectedCity> {
+export async function detectCurrentCity(): Promise<DetectedCity> {
   if (!navigator.geolocation) {
     throw new Error("Este aparelho não oferece acesso à localização.");
   }
@@ -59,5 +77,9 @@ export async function detectCurrentCity(): Promise<SelectedCity> {
     );
   }
 
-  return payload.city;
+  return {
+    ...payload.city,
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+  };
 }

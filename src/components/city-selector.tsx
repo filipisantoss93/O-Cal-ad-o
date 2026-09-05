@@ -101,7 +101,10 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
     setError("");
     try {
       const city = await detectCurrentCity();
-      saveSelectedCity(city);
+      saveSelectedCity(city, {
+        latitude: city.latitude,
+        longitude: city.longitude,
+      });
       setOpen(false);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Não foi possível obter sua localização.");
