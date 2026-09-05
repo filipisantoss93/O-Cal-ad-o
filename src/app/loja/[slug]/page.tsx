@@ -11,7 +11,8 @@ import {
 } from "@/components/icons";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { businesses, getBusinessBySlug } from "@/data/catalog";
+import { businesses } from "@/data/catalog";
+import { getPublicBusiness } from "@/lib/public-business";
 
 type BusinessPageProps = {
   params: Promise<{ slug: string }>;
@@ -25,7 +26,7 @@ export async function generateMetadata({
   params,
 }: BusinessPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const business = getBusinessBySlug(slug);
+  const business = await getPublicBusiness(slug);
 
   if (!business) {
     return { title: "Comércio não encontrado" };
@@ -39,7 +40,7 @@ export async function generateMetadata({
 
 export default async function BusinessPage({ params }: BusinessPageProps) {
   const { slug } = await params;
-  const business = getBusinessBySlug(slug);
+  const business = await getPublicBusiness(slug);
 
   if (!business) {
     notFound();
@@ -88,16 +89,24 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
                     )}
                   </h1>
                   <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-bold text-white/85">
-                    <span className="inline-flex items-center gap-1.5">
-                      <StarIcon className="size-4 fill-accent stroke-accent" />
-                      {business.rating.toLocaleString("pt-BR")} ({business.reviewCount})
-                    </span>
+                    {business.reviewCount > 0 ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <StarIcon className="size-4 fill-accent stroke-accent" />
+                        {business.rating.toLocaleString("pt-BR")} ({business.reviewCount})
+                      </span>
+                    ) : (
+                      <span>Nova no O Calçadão</span>
+                    )}
                     <span>{business.neighborhood}</span>
                   </p>
                 </div>
               </div>
               <span className="w-fit rounded-full bg-white px-4 py-2 text-sm font-black text-ink shadow-md">
-                {business.isOpen ? `Aberto · até ${business.closesAt}` : "Fechado agora"}
+                {business.hoursAvailable === false
+                  ? "Consulte o horário"
+                  : business.isOpen
+                    ? `Aberto · até ${business.closesAt}`
+                    : "Fechado agora"}
               </span>
             </div>
           </div>
@@ -136,8 +145,9 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
                   Produtos e serviços
                 </h2>
               </div>
-              <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                {business.products.map((product) => (
+              {business.products.length > 0 ? (
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  {business.products.map((product) => (
                   <article
                     key={product.id}
                     className="flex min-h-48 flex-col rounded-2xl border border-line bg-canvas p-5"
@@ -167,8 +177,13 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
                       </span>
                     </div>
                   </article>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-6 rounded-2xl bg-canvas p-5 text-sm font-semibold text-muted">
+                  A loja ainda não publicou produtos ou serviços. Fale diretamente pelo WhatsApp.
+                </p>
+              )}
             </section>
           </div>
 
@@ -215,7 +230,9 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
                 <div>
                   <dt className="font-black text-ink">Funcionamento</dt>
                   <dd className="mt-1 leading-6 text-muted">
-                    {business.isOpen
+                    {business.hoursAvailable === false
+                      ? "Horários ainda não informados"
+                      : business.isOpen
                       ? `Aberto agora, fecha às ${business.closesAt}`
                       : business.closesAt}
                   </dd>

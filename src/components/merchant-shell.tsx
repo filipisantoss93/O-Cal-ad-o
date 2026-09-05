@@ -7,12 +7,14 @@ import {
   StoreIcon,
   TagIcon,
   UserIcon,
+  ShieldCheckIcon,
 } from "@/components/icons";
 import { Logo } from "@/components/logo";
 
 type MerchantShellProps = {
   name: string;
   email: string;
+  isAdmin: boolean;
   children: ReactNode;
 };
 
@@ -26,6 +28,7 @@ const navigation = [
 export function MerchantShell({
   name,
   email,
+  isAdmin,
   children,
 }: MerchantShellProps) {
   const firstName = name.trim().split(/\s+/)[0] || "Comerciante";
@@ -74,6 +77,15 @@ export function MerchantShell({
               {label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link
+              href="/painel/admin"
+              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-positive/20 bg-positive-soft px-4 text-sm font-extrabold text-positive transition hover:border-positive/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-positive"
+            >
+              <ShieldCheckIcon className="size-4" />
+              Moderação
+            </Link>
+          )}
           <Link
             href="/"
             className="ml-auto inline-flex min-h-11 shrink-0 items-center rounded-xl px-3 text-sm font-extrabold text-brand-dark hover:underline"

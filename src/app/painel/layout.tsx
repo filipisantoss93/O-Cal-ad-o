@@ -17,7 +17,11 @@ export default async function MerchantLayout({
     "Comerciante";
 
   return (
-    <MerchantShell name={displayName} email={user.email ?? ""}>
+    <MerchantShell
+      name={displayName}
+      email={user.email ?? ""}
+      isAdmin={profile?.role === "admin"}
+    >
       {children}
     </MerchantShell>
   );
