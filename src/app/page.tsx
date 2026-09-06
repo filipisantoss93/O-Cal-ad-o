@@ -101,7 +101,7 @@ export default function Home() {
           <div className="mx-auto grid max-w-7xl overflow-hidden rounded-[2rem] border border-line bg-surface shadow-[0_24px_60px_rgba(31,45,42,0.10)] lg:grid-cols-[1.08fr_0.92fr] lg:items-stretch">
             <div className="relative min-h-[250px] sm:min-h-[360px] lg:min-h-[430px]">
               <img
-                src="/images/ocalcadao-comercio-local.webp?v=20260906-2"
+                src="/images/ocalcadao-comercio-local.jpg?v=20260906-3"
                 alt="Calçadão comercial amplo e movimentado, com lojas e serviços locais"
                 loading="eager"
                 decoding="async"
