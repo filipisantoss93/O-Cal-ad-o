@@ -56,7 +56,9 @@ export function BusinessCard({ business }: BusinessCardProps) {
           </div>
           <span className="inline-flex items-center gap-1 text-sm font-black text-ink">
             <StarIcon className="size-4 fill-accent stroke-accent-dark" />
-            {business.rating.toLocaleString("pt-BR")}
+            {business.reviewCount > 0
+              ? business.rating.toLocaleString("pt-BR")
+              : "Novo"}
           </span>
         </div>
 
@@ -71,7 +73,11 @@ export function BusinessCard({ business }: BusinessCardProps) {
           </span>
           <span className="inline-flex items-center gap-1.5">
             <ClockIcon className="size-4 text-brand" />
-            {business.isOpen ? `Até ${business.closesAt}` : business.closesAt}
+            {business.hoursAvailable === false
+              ? business.closesAt
+              : business.isOpen
+                ? `Até ${business.closesAt}`
+                : business.closesAt}
           </span>
         </div>
 

@@ -5,7 +5,8 @@ import { SearchIcon } from "@/components/icons";
 import { SearchForm } from "@/components/search-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { categories, filterBusinesses } from "@/data/catalog";
+import { categories } from "@/data/catalog";
+import { searchPublicBusinesses } from "@/lib/public-search";
 
 export const metadata: Metadata = {
   title: "Explorar comércios",
@@ -23,7 +24,7 @@ type SearchPageProps = {
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const { q = "", categoria } = await searchParams;
   const selectedCategory = categories.find((item) => item.slug === categoria);
-  const results = filterBusinesses(q, selectedCategory?.slug);
+  const results = await searchPublicBusinesses(q, selectedCategory?.slug);
   const hasFilter = Boolean(q.trim() || selectedCategory);
 
   return (
