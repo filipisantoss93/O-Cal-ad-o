@@ -118,8 +118,7 @@ export async function POST(request: Request) {
       if (second.distanceKm !== null) return 1;
       if (first.isFeatured !== second.isFeatured) return first.isFeatured ? -1 : 1;
       return first.name.localeCompare(second.name, "pt-BR");
-    })
-    .slice(0, 8);
+    });
 
   return Response.json(
     { businesses },

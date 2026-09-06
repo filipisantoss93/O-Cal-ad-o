@@ -2,6 +2,7 @@ import {
   cityChangeEventName,
   selectedCityCookieName,
   selectedCityStorageKey,
+  selectedCoordinatesStorageKey,
   type CurrentCoordinates,
   type DetectedCity,
   type SelectedCity,
@@ -29,6 +30,14 @@ export function saveSelectedCity(
     selectedCityStorageKey,
     JSON.stringify(storedCity),
   );
+  if (coordinates) {
+    window.sessionStorage.setItem(
+      selectedCoordinatesStorageKey,
+      JSON.stringify(coordinates),
+    );
+  } else {
+    window.sessionStorage.removeItem(selectedCoordinatesStorageKey);
+  }
   document.cookie = `${selectedCityCookieName}=${storedCity.id}; Path=/; Max-Age=31536000; SameSite=Lax`;
   window.dispatchEvent(
     new CustomEvent(cityChangeEventName, {

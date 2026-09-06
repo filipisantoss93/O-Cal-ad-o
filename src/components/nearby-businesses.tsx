@@ -6,7 +6,7 @@ import { ArrowRightIcon, LocateIcon } from "@/components/icons";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
-  type CitySelectionDetail,
+  selectedCoordinatesStorageKey,
   type CurrentCoordinates,
   type SelectedCity,
 } from "@/lib/location";
@@ -58,23 +58,28 @@ export function NearbyBusinesses() {
       return null;
     }
   }, [storedCity]);
-  const [coordinates, setCoordinates] = useState<CurrentCoordinates | null>(null);
+  const storedCoordinates = useSyncExternalStore(
+    (onChange) => {
+      window.addEventListener(cityChangeEventName, onChange);
+      return () => window.removeEventListener(cityChangeEventName, onChange);
+    },
+    () => window.sessionStorage.getItem(selectedCoordinatesStorageKey),
+    () => null,
+  );
+  const coordinates = useMemo(() => {
+    if (!storedCoordinates) return null;
+    try {
+      const value = JSON.parse(storedCoordinates) as CurrentCoordinates;
+      return Number.isFinite(value.latitude) && Number.isFinite(value.longitude)
+        ? value
+        : null;
+    } catch {
+      return null;
+    }
+  }, [storedCoordinates]);
   const [businesses, setBusinesses] = useState<NearbyBusiness[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const captureCoordinates = (event: Event) => {
-      const detail = (event as CustomEvent<CitySelectionDetail>).detail;
-      setCoordinates(
-        typeof detail?.latitude === "number" && typeof detail?.longitude === "number"
-          ? { latitude: detail.latitude, longitude: detail.longitude }
-          : null,
-      );
-    };
-    window.addEventListener(cityChangeEventName, captureCoordinates);
-    return () => window.removeEventListener(cityChangeEventName, captureCoordinates);
-  }, []);
 
   useEffect(() => {
     if (!city) return;

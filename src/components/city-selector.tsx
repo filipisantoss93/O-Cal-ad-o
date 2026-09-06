@@ -235,7 +235,7 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
             </button>
 
             <p className="mt-4 text-center text-xs font-semibold leading-5 text-muted">
-              A localização exata é usada apenas para identificar o município e não é armazenada.
+              A localização exata é usada para calcular distâncias e permanece somente nesta sessão.
             </p>
           </section>
         </div>

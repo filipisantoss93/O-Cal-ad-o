@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BusinessCard } from "@/components/business-card";
 import { SearchIcon } from "@/components/icons";
 import { SearchForm } from "@/components/search-form";
+import { SearchBusinessResults } from "@/components/search-business-results";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { categories } from "@/data/catalog";
@@ -98,11 +98,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             </div>
 
             {results.length > 0 ? (
-              <div className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-                {results.map((business) => (
-                  <BusinessCard key={business.id} business={business} />
-                ))}
-              </div>
+              <SearchBusinessResults businesses={results} />
             ) : (
               <div className="mt-7 flex min-h-72 flex-col items-center justify-center rounded-3xl border border-dashed border-line bg-surface px-6 text-center">
                 <span className="grid size-14 place-items-center rounded-2xl bg-canvas text-muted">
