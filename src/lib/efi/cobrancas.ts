@@ -23,6 +23,13 @@ type EfiSubscriptionLinkResponse = {
   };
 };
 
+type EfiPaymentLinkResponse = {
+  data?: {
+    charge_id?: number;
+    payment_url?: string;
+  };
+};
+
 export function hasEfiChargesConfig() {
   return Boolean(
     process.env.EFI_CLIENT_ID?.trim() && process.env.EFI_CLIENT_SECRET?.trim(),
@@ -94,27 +101,30 @@ async function efiRequest<T>(path: string, init: RequestInit) {
   return payload as T;
 }
 
-export async function createEfiCardSubscriptionLink(input: {
-  userId: string;
+function checkoutExpiration() {
+  const expireAt = new Date();
+  expireAt.setUTCDate(expireAt.getUTCDate() + 3);
+  return expireAt.toISOString().slice(0, 10);
+}
+
+async function createEfiRecurringLink(input: {
+  planName: string;
+  itemName: string;
   intervalMonths: 1 | 6 | 12;
   priceCents: number;
-  cycleLabel: string;
+  customId: string;
   notificationUrl: string;
 }) {
   const plan = await efiRequest<EfiPlanResponse>("/v1/plan", {
     method: "POST",
     body: JSON.stringify({
-      name: `O Calçadão Pro - ${input.cycleLabel}`,
+      name: input.planName,
       interval: input.intervalMonths,
     }),
   });
   const planId = plan.data?.plan_id;
   if (!planId) throw new Error("A Efí não retornou o plano da assinatura.");
 
-  const expireAt = new Date();
-  expireAt.setUTCDate(expireAt.getUTCDate() + 3);
-  const expireDate = expireAt.toISOString().slice(0, 10);
-  const customId = `ocalcadao:pro:${input.userId}:${Date.now()}`;
   const subscription = await efiRequest<EfiSubscriptionLinkResponse>(
     `/v1/plan/${planId}/subscription/one-step/link`,
     {
@@ -122,18 +132,18 @@ export async function createEfiCardSubscriptionLink(input: {
       body: JSON.stringify({
         items: [
           {
-            name: `Assinatura O Calçadão Pro - ${input.cycleLabel}`,
+            name: input.itemName,
             value: input.priceCents,
             amount: 1,
           },
         ],
         metadata: {
-          custom_id: customId,
+          custom_id: input.customId,
           notification_url: input.notificationUrl,
         },
         settings: {
           payment_method: "credit_card",
-          expire_at: expireDate,
+          expire_at: checkoutExpiration(),
           request_delivery_address: false,
         },
       }),
@@ -152,6 +162,82 @@ export async function createEfiCardSubscriptionLink(input: {
     chargeId: subscription.data?.charge?.id
       ? String(subscription.data.charge.id)
       : null,
+    paymentUrl,
+    customId: input.customId,
+  };
+}
+
+export async function createEfiCardSubscriptionLink(input: {
+  userId: string;
+  intervalMonths: 1 | 6 | 12;
+  priceCents: number;
+  cycleLabel: string;
+  notificationUrl: string;
+}) {
+  return createEfiRecurringLink({
+    planName: `O Calçadão Pro - ${input.cycleLabel}`,
+    itemName: `Assinatura O Calçadão Pro - ${input.cycleLabel}`,
+    intervalMonths: input.intervalMonths,
+    priceCents: input.priceCents,
+    customId: `ocalcadao:pro:${input.userId}:${Date.now()}`,
+    notificationUrl: input.notificationUrl,
+  });
+}
+
+export async function createEfiExtraStoreSubscriptionLink(input: {
+  userId: string;
+  priceCents: number;
+  notificationUrl: string;
+}) {
+  return createEfiRecurringLink({
+    planName: "O Calçadão - Loja adicional",
+    itemName: "O Calçadão - 1 loja adicional",
+    intervalMonths: 1,
+    priceCents: input.priceCents,
+    customId: `ocalcadao:extra_store:${input.userId}:${Date.now()}`,
+    notificationUrl: input.notificationUrl,
+  });
+}
+
+export async function createEfiOneTimePaymentLink(input: {
+  userId: string;
+  productCode: string;
+  itemName: string;
+  priceCents: number;
+  notificationUrl: string;
+}) {
+  const customId = `ocalcadao:${input.productCode}:${input.userId}:${Date.now()}`;
+  const payment = await efiRequest<EfiPaymentLinkResponse>(
+    "/v1/charge/one-step/link",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        items: [
+          {
+            name: input.itemName,
+            value: input.priceCents,
+            amount: 1,
+          },
+        ],
+        metadata: {
+          custom_id: customId,
+          notification_url: input.notificationUrl,
+        },
+        settings: {
+          payment_method: "all",
+          expire_at: checkoutExpiration(),
+          request_delivery_address: false,
+        },
+      }),
+    },
+  );
+  const chargeId = payment.data?.charge_id;
+  const paymentUrl = payment.data?.payment_url;
+  if (!chargeId || !paymentUrl) {
+    throw new Error("A Efí não retornou o link de pagamento.");
+  }
+  return {
+    chargeId: String(chargeId),
     paymentUrl,
     customId,
   };
