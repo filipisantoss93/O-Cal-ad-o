@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { BusinessCard } from "@/components/business-card";
 import { CategoryGrid } from "@/components/category-grid";
@@ -93,6 +94,42 @@ export default function Home() {
             />
             <div className="mt-7">
               <CategoryGrid categories={categories} />
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-canvas px-4 pb-14 sm:px-6 sm:pb-18 lg:px-8">
+          <div className="mx-auto grid max-w-7xl overflow-hidden rounded-[2rem] border border-line bg-surface shadow-[0_24px_60px_rgba(31,45,42,0.10)] lg:grid-cols-[1.08fr_0.92fr] lg:items-stretch">
+            <div className="relative min-h-[250px] sm:min-h-[360px] lg:min-h-[430px]">
+              <Image
+                src="/images/ocalcadao-comercio-local.webp"
+                alt="Calçadão comercial amplo e movimentado, com lojas e serviços locais"
+                fill
+                sizes="(max-width: 1024px) 100vw, 55vw"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-ink/20 via-transparent to-transparent" />
+            </div>
+
+            <div className="flex flex-col justify-center p-6 sm:p-9 lg:p-12">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
+                A rua comercial, agora digital
+              </p>
+              <h2 className="mt-3 text-3xl font-black tracking-[-0.045em] text-ink sm:text-4xl">
+                O comércio local no centro da cidade e na palma da sua mão.
+              </h2>
+              <p className="mt-4 max-w-xl text-base leading-7 text-muted">
+                O Calçadão reúne lojas, serviços e pequenos negócios em um só
+                lugar. Descubra o que existe perto de você antes mesmo de sair
+                de casa e fale diretamente com cada comércio.
+              </p>
+              <Link
+                href="/buscar"
+                className="mt-7 inline-flex w-fit items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+              >
+                Explorar o Centro Comercial
+                <ArrowRightIcon className="size-4" />
+              </Link>
             </div>
           </div>
         </section>
