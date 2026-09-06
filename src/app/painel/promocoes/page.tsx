@@ -1,15 +1,26 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRightIcon, StoreIcon, TagIcon } from "@/components/icons";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  AlertTriangleIcon,
+  ArrowRightIcon,
+  StoreIcon,
+  TagIcon,
+} from "@/components/icons";
 import {
   PromotionManager,
   type PromotionFormValue,
 } from "@/components/merchant/promotion-manager";
+import { getMerchantBillingSummary } from "@/lib/merchant/billing";
 import { getMerchantWorkspace } from "@/lib/merchant/dal";
 import { publicMediaUrl } from "@/lib/merchant/media";
 
 export const metadata: Metadata = {
   title: "Promoções",
+};
+
+type PromotionsPageProps = {
+  searchParams: Promise<{ loja?: string }>;
 };
 
 function dateInSaoPaulo(value: Date | string) {
@@ -24,12 +35,15 @@ function dateInSaoPaulo(value: Date | string) {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
-export default async function PromotionsPage() {
-  const { supabase, business } = await getMerchantWorkspace(
+export default async function PromotionsPage({
+  searchParams,
+}: PromotionsPageProps) {
+  const params = await searchParams;
+  const { supabase, user, businesses } = await getMerchantWorkspace(
     "/painel/promocoes",
   );
 
-  if (!business) {
+  if (businesses.length === 0) {
     return (
       <div>
         <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
@@ -39,7 +53,7 @@ export default async function PromotionsPage() {
           Primeiro, cadastre sua loja.
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
-          Toda promoção precisa estar ligada à sua vitrine digital.
+          Toda promoção precisa estar ligada a uma vitrine digital.
         </p>
         <div className="mt-8 rounded-[2rem] border border-line bg-surface p-7 shadow-sm">
           <span className="grid size-12 place-items-center rounded-2xl bg-brand/10 text-brand-dark">
@@ -63,10 +77,17 @@ export default async function PromotionsPage() {
     );
   }
 
-  const { data, error } = await supabase
+  const requestedId = Number(params.loja);
+  const business =
+    businesses.find(
+      (item) => Number.isSafeInteger(requestedId) && item.id === requestedId,
+    ) ?? businesses[0];
+  const billing = await getMerchantBillingSummary(supabase, user.id, businesses);
+  const rawSupabase = supabase as unknown as SupabaseClient<any>;
+  const { data, error } = await rawSupabase
     .from("promotions")
     .select(
-      "id, title, description, original_price, offer_price, starts_at, ends_at, image_path, is_active",
+      "id, title, description, original_price, offer_price, starts_at, ends_at, image_path, is_active, billing_suspended",
     )
     .eq("business_id", business.id)
     .order("created_at", { ascending: false });
@@ -81,11 +102,15 @@ export default async function PromotionsPage() {
     startsOn: dateInSaoPaulo(promotion.starts_at),
     endsOn: dateInSaoPaulo(promotion.ends_at),
     isActive: promotion.is_active,
+    billingSuspended: promotion.billing_suspended,
     imageUrl: publicMediaUrl(supabase, promotion.image_path),
   }));
   const todayDate = new Date();
   const suggestedEndDate = new Date(todayDate);
   suggestedEndDate.setDate(suggestedEndDate.getDate() + 7);
+  const promotionLimit = billing.promotionLimitByBusiness[business.id] ?? 0;
+  const canCreate =
+    !business.billing_suspended && promotions.length < promotionLimit;
 
   return (
     <div>
@@ -95,19 +120,63 @@ export default async function PromotionsPage() {
         </span>
         <div>
           <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
-            Ofertas da loja
+            Ofertas das lojas
           </p>
           <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-ink sm:text-4xl">
             Promoções
           </h1>
           <p className="mt-2 max-w-2xl text-base leading-7 text-muted">
-            Crie ofertas com período definido e controle quando cada uma fica
-            disponível.
+            Cada loja tem sua própria cota. Ao atingir o limite, você pode
+            comprar pacotes de 5, 10, 20 ou 50 promoções adicionais.
           </p>
         </div>
       </div>
 
-      {business.status !== "approved" && (
+      <section className="mt-7 rounded-2xl border border-line bg-surface p-3 shadow-sm">
+        <div className="flex gap-2 overflow-x-auto">
+          {businesses.map((item) => (
+            <Link
+              key={item.id}
+              href={`/painel/promocoes?loja=${item.id}`}
+              className={`min-w-48 rounded-xl border px-4 py-3 transition ${
+                item.id === business.id
+                  ? "border-brand/35 bg-brand/8"
+                  : "border-line bg-canvas hover:border-brand/25"
+              }`}
+            >
+              <span className="block truncate text-sm font-black text-ink">
+                {item.name}
+              </span>
+              <span className="mt-1 block text-xs font-bold text-muted">
+                {item.billing_suspended
+                  ? "Suspensa pelo plano"
+                  : `Limite: ${billing.promotionLimitByBusiness[item.id] ?? 0}`}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {business.billing_suspended && (
+        <div className="mt-6 flex gap-3 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-brand-dark">
+          <AlertTriangleIcon className="mt-0.5 size-5 shrink-0" />
+          <div>
+            <p className="text-sm font-black">Esta loja está suspensa pelo plano</p>
+            <p className="mt-1 text-sm leading-6">
+              As promoções permanecem salvas e serão liberadas automaticamente
+              quando a assinatura e a vaga da loja forem regularizadas.
+            </p>
+            <Link
+              href="/painel/assinatura"
+              className="mt-2 inline-flex text-sm font-black underline underline-offset-4"
+            >
+              Regularizar assinatura
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {business.status !== "approved" && !business.billing_suspended && (
         <div className="mt-6 rounded-2xl border border-accent-dark/15 bg-accent/20 p-4 text-sm font-bold leading-6 text-ink">
           Você já pode preparar suas promoções. Elas aparecerão para o público
           depois que a loja for aprovada.
@@ -116,9 +185,12 @@ export default async function PromotionsPage() {
 
       <div className="mt-8">
         <PromotionManager
+          businessId={business.id}
           promotions={promotions}
           today={dateInSaoPaulo(todayDate)}
           suggestedEndDate={dateInSaoPaulo(suggestedEndDate)}
+          limit={promotionLimit}
+          canCreate={canCreate}
         />
       </div>
     </div>
