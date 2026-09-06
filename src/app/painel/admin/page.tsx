@@ -98,7 +98,16 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     </p>
                   </div>
 
-                  <form action={moderateBusinessAction} className="w-full rounded-2xl bg-canvas p-4 lg:max-w-sm">
+                  <div className="w-full lg:max-w-sm">
+                    <Link
+                      href={`/loja/${business.slug}?preview=admin`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mb-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-ink/15 bg-white px-4 text-sm font-black text-ink transition hover:border-ink/30 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                    >
+                      Visualizar loja antes de moderar
+                    </Link>
+                  <form action={moderateBusinessAction} className="rounded-2xl bg-canvas p-4">
                     <input type="hidden" name="business_id" value={business.id} />
                     <label className="text-sm font-extrabold text-ink" htmlFor={`note-${business.id}`}>Motivo ou orientação</label>
                     <textarea
@@ -124,6 +133,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       )}
                     </div>
                   </form>
+                  </div>
                 </div>
               </article>
             );

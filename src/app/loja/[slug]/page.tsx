@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -12,10 +13,14 @@ import {
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { businesses } from "@/data/catalog";
-import { getPublicBusiness } from "@/lib/public-business";
+import {
+  getAdminBusinessPreview,
+  getPublicBusiness,
+} from "@/lib/public-business";
 
 type BusinessPageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 };
 
 export function generateStaticParams() {
@@ -24,7 +29,15 @@ export function generateStaticParams() {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: BusinessPageProps): Promise<Metadata> {
+  const { preview } = await searchParams;
+  if (preview === "admin") {
+    return {
+      title: "Pré-visualização administrativa",
+      robots: { index: false, follow: false },
+    };
+  }
   const { slug } = await params;
   const business = await getPublicBusiness(slug);
 
@@ -38,9 +51,16 @@ export async function generateMetadata({
   };
 }
 
-export default async function BusinessPage({ params }: BusinessPageProps) {
+export default async function BusinessPage({
+  params,
+  searchParams,
+}: BusinessPageProps) {
   const { slug } = await params;
-  const business = await getPublicBusiness(slug);
+  const { preview } = await searchParams;
+  const isAdminPreview = preview === "admin";
+  const business = isAdminPreview
+    ? await getAdminBusinessPreview(slug)
+    : await getPublicBusiness(slug);
 
   if (!business) {
     notFound();
@@ -56,24 +76,63 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
   return (
     <>
       <SiteHeader />
+      {isAdminPreview && (
+        <div className="border-b border-accent-dark/20 bg-accent/25 px-4 py-3 text-ink">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-black">Pré-visualização administrativa</p>
+              <p className="text-xs font-semibold text-muted">
+                Esta é a aparência da loja para o público após a aprovação.
+              </p>
+            </div>
+            <Link
+              href="/painel/admin"
+              className="inline-flex min-h-10 items-center rounded-xl border border-ink/15 bg-white px-4 text-sm font-black text-ink transition hover:border-ink/30"
+            >
+              Voltar para moderação
+            </Link>
+          </div>
+        </div>
+      )}
       <main className="min-h-[70vh] bg-canvas">
         <section
           className={`relative overflow-hidden bg-gradient-to-br ${business.palette}`}
         >
+          {business.coverUrl && (
+            <Image
+              src={business.coverUrl}
+              alt={`Capa da ${business.name}`}
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover"
+            />
+          )}
+          {business.coverUrl && <div className="absolute inset-0 bg-ink/55" />}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(255,255,255,0.24),transparent_30%)]" />
           <div className="relative mx-auto max-w-7xl px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-8">
             <Link
-              href="/buscar"
+              href={isAdminPreview ? "/painel/admin" : "/buscar"}
               className="inline-flex items-center gap-2 rounded-lg text-sm font-bold text-white/80 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white"
             >
               <span aria-hidden="true">←</span>
-              Voltar para a avenida
+              {isAdminPreview ? "Voltar para moderação" : "Voltar para a avenida"}
             </Link>
 
             <div className="mt-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex items-start gap-4 sm:items-center">
-                <span className="grid size-20 shrink-0 place-items-center rounded-3xl border border-white/35 bg-white/20 text-2xl font-black shadow-xl backdrop-blur-sm sm:size-24">
-                  {business.initials}
+                <span className="relative grid size-20 shrink-0 place-items-center overflow-hidden rounded-3xl border border-white/35 bg-white/20 text-2xl font-black shadow-xl backdrop-blur-sm sm:size-24">
+                  {business.logoUrl ? (
+                    <Image
+                      src={business.logoUrl}
+                      alt={`Logo da ${business.name}`}
+                      fill
+                      sizes="96px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    business.initials
+                  )}
                 </span>
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.14em] text-white/75">

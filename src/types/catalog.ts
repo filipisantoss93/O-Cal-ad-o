@@ -31,6 +31,8 @@ export type Business = {
   closesAt: string;
   initials: string;
   palette: string;
+  logoUrl?: string | null;
+  coverUrl?: string | null;
   verified: boolean;
   tags: string[];
   whatsapp: string | null;

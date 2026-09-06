@@ -1,9 +1,13 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { getBusinessBySlug } from "@/data/catalog";
+import { requireAdmin } from "@/lib/admin/dal";
+import { publicMediaUrl } from "@/lib/merchant/media";
 import { createClient } from "@/lib/supabase/server";
 import type { Business } from "@/types/catalog";
+import type { Database } from "@/types/database";
 
 const palettes = [
   "from-[#ef6a43] to-[#f5a640]",
@@ -61,21 +65,23 @@ function scheduleNow(hours: BusinessHour[], timezone: string) {
   };
 }
 
-export const getPublicBusiness = cache(async (slug: string): Promise<Business | null> => {
-  const demonstration = getBusinessBySlug(slug);
-  if (demonstration) return demonstration;
-
-  const supabase = await createClient();
-  const { data: business, error } = await supabase
+async function loadBusiness(
+  supabase: SupabaseClient<Database>,
+  slug: string,
+  publishedOnly: boolean,
+): Promise<Business | null> {
+  let query = supabase
     .from("businesses")
     .select(
-      "id, city_id, category_id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood",
+      "id, city_id, category_id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood, logo_path, cover_path",
     )
-    .eq("slug", slug)
-    .eq("status", "approved")
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
+    .eq("slug", slug);
+
+  if (publishedOnly) {
+    query = query.eq("status", "approved").eq("is_active", true);
+  }
+
+  const { data: business, error } = await query.limit(1).maybeSingle();
 
   if (error || !business) return null;
 
@@ -120,6 +126,8 @@ export const getPublicBusiness = cache(async (slug: string): Promise<Business | 
     ...schedule,
     initials: initials(business.name),
     palette: palettes[business.id % palettes.length],
+    logoUrl: publicMediaUrl(supabase, business.logo_path),
+    coverUrl: publicMediaUrl(supabase, business.cover_path),
     verified: true,
     tags: [category.name, business.neighborhood, city.name],
     whatsapp: business.whatsapp_e164.replace(/\D/g, ""),
@@ -131,4 +139,17 @@ export const getPublicBusiness = cache(async (slug: string): Promise<Business | 
       ...(item.promotional_price !== null ? { promotionalPrice: Number(item.promotional_price) } : {}),
     })),
   };
+}
+
+export const getPublicBusiness = cache(async (slug: string): Promise<Business | null> => {
+  const demonstration = getBusinessBySlug(slug);
+  if (demonstration) return demonstration;
+
+  const supabase = await createClient();
+  return loadBusiness(supabase, slug, true);
 });
+
+export async function getAdminBusinessPreview(slug: string) {
+  const { supabase } = await requireAdmin(`/loja/${slug}?preview=admin`);
+  return loadBusiness(supabase, slug, false);
+}
