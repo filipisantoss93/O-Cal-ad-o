@@ -4,9 +4,11 @@ import {
   ArrowRightIcon,
   EditIcon,
   PlusIcon,
+  SparklesIcon,
   StoreIcon,
   TagIcon,
 } from "@/components/icons";
+import { getMerchantBillingSummary } from "@/lib/merchant/billing";
 import { getMerchantWorkspace } from "@/lib/merchant/dal";
 
 export const metadata: Metadata = {
@@ -36,39 +38,49 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   },
 };
 
-const planLabels: Record<string, string> = {
-  free: "Grátis",
-  featured: "Destaque",
-};
-
 export default async function MerchantDashboard({
   searchParams,
 }: DashboardPageProps) {
   const params = await searchParams;
-  const { supabase, profile, business } = await getMerchantWorkspace("/painel");
+  const { supabase, user, profile, businesses } = await getMerchantWorkspace(
+    "/painel",
+  );
+  const billing = await getMerchantBillingSummary(supabase, user.id, businesses);
   const firstName = profile?.full_name?.split(/\s+/)[0] || "Comerciante";
+  const firstBusiness = businesses[0] ?? null;
+  const firstAvailableBusiness =
+    businesses.find((business) => !business.billing_suspended) ?? firstBusiness;
 
   let promotionsCount = 0;
   let activePromotions = 0;
-  if (business) {
+  if (businesses.length > 0) {
     const { data } = await supabase
       .from("promotions")
-      .select("id, is_active, starts_at, ends_at")
-      .eq("business_id", business.id);
-    const now = new Date().getTime();
+      .select("id, business_id, is_active, starts_at, ends_at")
+      .in(
+        "business_id",
+        businesses.map((business) => business.id),
+      );
+    const now = Date.now();
     promotionsCount = data?.length ?? 0;
     activePromotions =
       data?.filter(
         (promotion) =>
           promotion.is_active &&
           new Date(promotion.starts_at).getTime() <= now &&
-          new Date(promotion.ends_at).getTime() >= now,
+          new Date(promotion.ends_at).getTime() >= now &&
+          !businesses.find(
+            (business) => business.id === promotion.business_id,
+          )?.billing_suspended,
       ).length ?? 0;
   }
 
-  const status = business
-    ? statusLabels[business.status] ?? statusLabels.pending
+  const status = firstBusiness
+    ? statusLabels[firstBusiness.status] ?? statusLabels.pending
     : null;
+  const promotionHref = firstAvailableBusiness
+    ? `/painel/promocoes?loja=${firstAvailableBusiness.id}#nova-promocao`
+    : "/painel/loja";
 
   return (
     <div>
@@ -90,15 +102,14 @@ export default async function MerchantDashboard({
             Olá, {firstName}.
           </h1>
           <p className="mt-2 max-w-2xl text-base leading-7 text-muted">
-            Acompanhe sua presença no O Calçadão e mantenha sua vitrine pronta
-            para receber novos contatos.
+            Acompanhe suas lojas, promoções e limites do plano em um só lugar.
           </p>
         </div>
         <Link
-          href={business ? "/painel/promocoes#nova-promocao" : "/painel/loja"}
+          href={promotionHref}
           className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-black text-white shadow-[0_10px_24px_rgba(185,61,37,0.2)] transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
         >
-          {business ? (
+          {firstAvailableBusiness ? (
             <>
               <PlusIcon className="size-4" />
               Nova promoção
@@ -114,17 +125,28 @@ export default async function MerchantDashboard({
 
       <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <article className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
-          <p className="text-sm font-bold text-muted">Minha loja</p>
+          <p className="text-sm font-bold text-muted">Minhas lojas</p>
           <div className="mt-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-xl font-black text-ink">
-                {business?.name ?? "Não cadastrada"}
+              <p className="text-3xl font-black text-ink">
+                {billing.activeStoreCount}/{billing.storeLimit}
               </p>
-              {status && (
+              <p className="mt-2 text-xs font-bold text-muted">
+                {businesses.length === 0
+                  ? "Nenhuma cadastrada"
+                  : `${businesses.length} cadastrada${businesses.length === 1 ? "" : "s"}`}
+              </p>
+              {status && firstBusiness && (
                 <span
-                  className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-black ${status.className}`}
+                  className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-black ${
+                    firstBusiness.billing_suspended
+                      ? "border-brand/20 bg-brand/10 text-brand-dark"
+                      : status.className
+                  }`}
                 >
-                  {status.label}
+                  {firstBusiness.billing_suspended
+                    ? "Loja principal suspensa pelo plano"
+                    : status.label}
                 </span>
               )}
             </div>
@@ -149,12 +171,27 @@ export default async function MerchantDashboard({
 
         <article className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:col-span-2 lg:col-span-1">
           <p className="text-sm font-bold text-muted">Plano atual</p>
-          <p className="mt-4 text-xl font-black text-ink">
-            {business ? planLabels[business.plan] ?? business.plan : "Grátis"}
-          </p>
-          <p className="mt-2 text-xs font-bold text-muted">
-            Sem intermediação de pagamentos.
-          </p>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xl font-black text-ink">
+                {billing.proActive ? "Calçadão Pro" : "Grátis"}
+              </p>
+              <p className="mt-2 text-xs font-bold text-muted">
+                {billing.proActive
+                  ? `Até ${billing.storeLimit} lojas · 10 promoções base por loja`
+                  : "1 loja · 2 promoções por loja"}
+              </p>
+            </div>
+            <span className="grid size-11 place-items-center rounded-xl bg-brand/10 text-brand-dark">
+              <SparklesIcon className="size-5" />
+            </span>
+          </div>
+          <Link
+            href="/painel/assinatura"
+            className="mt-4 inline-flex text-sm font-black text-brand-dark underline underline-offset-4"
+          >
+            Gerenciar assinatura
+          </Link>
         </article>
       </section>
 
@@ -165,13 +202,13 @@ export default async function MerchantDashboard({
               Próximo passo
             </p>
             <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">
-              {business
-                ? "Mantenha sua vitrine atualizada"
+              {firstBusiness
+                ? "Mantenha suas vitrines atualizadas"
                 : "Cadastre os dados da sua loja"}
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-              {business
-                ? "Revise endereço, WhatsApp, imagens e informações públicas. Alterações importantes voltam para análise."
+              {firstBusiness
+                ? "Revise endereço, WhatsApp, horários, imagens e informações públicas de cada unidade."
                 : "Informe endereço, categoria, WhatsApp e imagens. A equipe fará uma análise antes da publicação."}
             </p>
           </div>
@@ -183,7 +220,7 @@ export default async function MerchantDashboard({
           href="/painel/loja"
           className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl border border-ink/10 px-4 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
-          {business ? "Editar minha loja" : "Começar cadastro"}
+          {firstBusiness ? "Gerenciar minhas lojas" : "Começar cadastro"}
           <ArrowRightIcon className="size-4" />
         </Link>
       </section>
