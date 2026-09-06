@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://ocalcadao.com.br"),
   title: {
-    default: "O Calçadão | Sua avenida digital",
+    default: "O Calçadão | Seu Centro Comercial",
     template: "%s | O Calçadão",
   },
   description:
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "pt_BR",
     siteName: "O Calçadão",
-    title: "O Calçadão | Sua avenida digital",
+    title: "O Calçadão | Seu Centro Comercial",
     description:
       "Encontre tudo o que sua cidade oferece e fale direto com o comércio local.",
   },

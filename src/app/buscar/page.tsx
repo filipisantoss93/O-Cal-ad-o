@@ -34,7 +34,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         <section className="border-b border-line bg-surface px-4 py-10 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
-              Avenida digital
+              Centro Comercial
             </p>
             <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-ink sm:text-4xl">
               Encontre na sua cidade
@@ -89,7 +89,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   {hasFilter ? "Resultados encontrados" : "Todos os comércios"}
                 </p>
                 <h2 className="mt-1 text-2xl font-black tracking-tight text-ink">
-                  {selectedCategory?.name ?? (q ? `Busca por “${q}”` : "Explore a avenida")}
+                  {selectedCategory?.name ?? (q ? `Busca por “${q}”` : "Explore o Centro Comercial")}
                 </h2>
               </div>
               <span className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-black text-muted">

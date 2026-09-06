@@ -1,6 +1,6 @@
 # O Calçadão
 
-O Calçadão é uma avenida digital para aproximar consumidores e comércios da
+O Calçadão é um Centro Comercial para aproximar consumidores e comércios da
 mesma cidade. No MVP, as pessoas encontram lojas, serviços, produtos e ofertas
 e iniciam o contato diretamente pelo WhatsApp. A plataforma não intermedeia
 pagamentos nesta primeira fase.

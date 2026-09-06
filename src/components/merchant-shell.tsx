@@ -90,7 +90,7 @@ export function MerchantShell({
             href="/"
             className="ml-auto inline-flex min-h-11 shrink-0 items-center rounded-xl px-3 text-sm font-extrabold text-brand-dark hover:underline"
           >
-            Ver avenida
+            Ver Centro Comercial
           </Link>
         </div>
       </nav>

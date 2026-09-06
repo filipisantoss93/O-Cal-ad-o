@@ -33,7 +33,7 @@ export default function Home() {
 
               <p className="mt-8 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.14em] text-brand-dark">
                 <SparklesIcon className="size-4" />
-                Sua avenida digital
+                Seu Centro Comercial
               </p>
               <h1 className="mt-3 max-w-3xl text-balance text-4xl font-black leading-[1.03] tracking-[-0.055em] text-ink sm:text-5xl lg:text-6xl">
                 Tudo o que sua cidade oferece, mais perto de você.
@@ -104,7 +104,7 @@ export default function Home() {
               title="Comércios em destaque"
               description="Vitrines locais para conhecer antes de sair de casa."
               linkHref="/buscar"
-              linkLabel="Explorar a avenida"
+              linkLabel="Explorar o Centro Comercial"
             />
             <div className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               {businesses.map((business) => (

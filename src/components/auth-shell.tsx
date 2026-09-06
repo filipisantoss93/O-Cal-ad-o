@@ -26,7 +26,7 @@ export function AuthShell({
             href="/"
             className="rounded-lg text-sm font-extrabold text-muted outline-none transition hover:text-ink focus-visible:ring-2 focus-visible:ring-brand"
           >
-            Voltar à avenida
+            Voltar ao Centro Comercial
           </Link>
         </div>
 

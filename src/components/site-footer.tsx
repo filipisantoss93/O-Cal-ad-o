@@ -8,7 +8,7 @@ export function SiteFooter() {
         <div className="max-w-sm">
           <Logo />
           <p className="mt-4 text-sm leading-6 text-muted">
-            A avenida digital que aproxima pessoas e negócios da mesma cidade.
+            O Centro Comercial que aproxima pessoas e negócios da mesma cidade.
           </p>
         </div>
 

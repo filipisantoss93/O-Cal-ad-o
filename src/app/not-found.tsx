@@ -8,7 +8,7 @@ export default function NotFound() {
           Erro 404
         </p>
         <h1 className="mt-3 text-4xl font-black tracking-[-0.045em] text-ink">
-          Este endereço não está na avenida.
+          Este endereço não está no Centro Comercial.
         </h1>
         <p className="mt-4 text-base leading-7 text-muted">
           A página pode ter mudado ou o comércio ainda não está disponível.

@@ -511,7 +511,7 @@ export function BusinessForm({
 
       <div className="flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
         <p className="max-w-xl text-xs font-semibold leading-5 text-muted">
-          Alterações em informações públicas podem passar por uma nova análise antes de aparecer na avenida.
+          Alterações em informações públicas podem passar por uma nova análise antes de aparecer no Centro Comercial.
         </p>
         <button
           type="submit"

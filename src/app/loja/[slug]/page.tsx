@@ -116,7 +116,7 @@ export default async function BusinessPage({
               className="inline-flex items-center gap-2 rounded-lg text-sm font-bold text-white/80 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white"
             >
               <span aria-hidden="true">←</span>
-              {isAdminPreview ? "Voltar para moderação" : "Voltar para a avenida"}
+              {isAdminPreview ? "Voltar para moderação" : "Voltar ao Centro Comercial"}
             </Link>
 
             <div className="mt-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">

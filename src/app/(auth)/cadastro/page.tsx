@@ -15,7 +15,7 @@ export default async function SignupPage() {
   return (
     <AuthShell
       eyebrow="Comece gratuitamente"
-      title="Coloque seu negócio na avenida digital."
+      title="Coloque seu negócio no Centro Comercial."
       description="Crie sua conta e prepare a vitrine que os consumidores da sua cidade vão encontrar."
       footer={
         <p>

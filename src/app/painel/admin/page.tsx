@@ -41,7 +41,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         <div>
           <p className="text-xs font-black uppercase tracking-[0.14em] text-positive">Administração</p>
           <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-ink sm:text-4xl">Moderação de lojas</h1>
-          <p className="mt-2 max-w-2xl text-base leading-7 text-muted">Revise os dados antes de publicar cada comércio na avenida.</p>
+          <p className="mt-2 max-w-2xl text-base leading-7 text-muted">Revise os dados antes de publicar cada comércio no Centro Comercial.</p>
         </div>
         <span className="inline-flex w-fit items-center gap-2 rounded-full bg-positive-soft px-4 py-2 text-sm font-black text-positive">
           <ShieldCheckIcon className="size-4" /> Acesso administrativo
