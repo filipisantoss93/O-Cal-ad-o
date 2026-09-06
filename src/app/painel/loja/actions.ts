@@ -47,6 +47,87 @@ function optionalCoordinate(
   return value;
 }
 
+function businessTime(formData: FormData, name: string) {
+  const value = formString(formData, name);
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
+    throw new ValidationError("Revise os horários informados.", name);
+  }
+  return value;
+}
+
+export async function saveBusinessHoursAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return actionError("Sua sessão expirou. Entre novamente.");
+
+    const { data: business, error: businessError } = await supabase
+      .from("businesses")
+      .select("id, slug")
+      .eq("owner_id", user.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (businessError || !business) {
+      return actionError("Cadastre sua loja antes de definir os horários.");
+    }
+
+    const alwaysOpen = formData.get("always_open") === "on";
+    const rows: TablesInsert<"business_hours">[] = [];
+
+    for (let weekday = 0; weekday <= 6; weekday += 1) {
+      const isClosed = !alwaysOpen && formString(formData, `day_${weekday}_closed`) === "true";
+      const opensAt = alwaysOpen
+        ? "00:00:00"
+        : isClosed
+          ? null
+          : businessTime(formData, `day_${weekday}_opens`);
+      const closesAt = alwaysOpen
+        ? "23:59:59"
+        : isClosed
+          ? null
+          : businessTime(formData, `day_${weekday}_closes`);
+
+      if (!isClosed && !alwaysOpen && opensAt === closesAt) {
+        throw new ValidationError(
+          "Abertura e fechamento precisam ser diferentes. Para funcionamento contínuo, marque “Aberto 24 horas”.",
+          `day_${weekday}_closes`,
+        );
+      }
+
+      rows.push({
+        business_id: business.id,
+        weekday,
+        opens_at: opensAt,
+        closes_at: closesAt,
+        is_closed: isClosed,
+        display_order: 0,
+      });
+    }
+
+    const { error } = await supabase.from("business_hours").upsert(rows, {
+      onConflict: "business_id,weekday,display_order",
+    });
+
+    if (error) {
+      return actionError("Não foi possível salvar os horários. Tente novamente.");
+    }
+
+    revalidatePath("/painel/loja");
+    revalidatePath("/painel/admin");
+    revalidatePath(`/loja/${business.slug}`);
+    return { status: "success", message: "Horários salvos com sucesso." };
+  } catch (error) {
+    return saveError(error);
+  }
+}
+
 export async function saveBusinessAction(
   _state: ActionState,
   formData: FormData,

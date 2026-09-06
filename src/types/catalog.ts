@@ -27,6 +27,7 @@ export type Business = {
   rating: number;
   reviewCount: number;
   isOpen: boolean;
+  alwaysOpen?: boolean;
   hoursAvailable?: boolean;
   closesAt: string;
   initials: string;

@@ -31,6 +31,22 @@ function scheduleNow(hours: BusinessHour[], timezone: string) {
   if (hours.length === 0) {
     return { hoursAvailable: false, isOpen: false, closesAt: "Consulte o horário" };
   }
+  const alwaysOpen =
+    new Set(hours.map((item) => item.weekday)).size === 7 &&
+    hours.every(
+      (item) =>
+        !item.is_closed &&
+        item.opens_at?.startsWith("00:00") &&
+        item.closes_at?.startsWith("23:59"),
+    );
+  if (alwaysOpen) {
+    return {
+      alwaysOpen: true,
+      hoursAvailable: true,
+      isOpen: true,
+      closesAt: "24 horas",
+    };
+  }
   const weekdayCodes = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,

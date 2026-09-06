@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { BusinessForm, type BusinessFormValue } from "@/components/merchant/business-form";
+import {
+  BusinessHoursForm,
+  type BusinessHourValue,
+} from "@/components/merchant/business-hours-form";
 import { AlertTriangleIcon, StoreIcon } from "@/components/icons";
 import { getMerchantWorkspace } from "@/lib/merchant/dal";
 import { publicMediaUrl } from "@/lib/merchant/media";
@@ -29,7 +33,7 @@ const statusLabels: Record<string, { label: string; className: string }> = {
 
 export default async function BusinessPage() {
   const { supabase, business } = await getMerchantWorkspace("/painel/loja");
-  const [statesResult, categoriesResult, cityResult] = await Promise.all([
+  const [statesResult, categoriesResult, cityResult, hoursResult] = await Promise.all([
     supabase
       .from("states")
       .select("code, name")
@@ -48,9 +52,22 @@ export default async function BusinessPage() {
           .eq("id", business.city_id)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
+    business
+      ? supabase
+          .from("business_hours")
+          .select("weekday, opens_at, closes_at, is_closed")
+          .eq("business_id", business.id)
+          .eq("display_order", 0)
+          .order("weekday")
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
-  if (statesResult.error || categoriesResult.error || cityResult.error) {
+  if (
+    statesResult.error ||
+    categoriesResult.error ||
+    cityResult.error ||
+    hoursResult.error
+  ) {
     throw new Error("Não foi possível carregar as opções da loja.");
   }
 
@@ -80,6 +97,14 @@ export default async function BusinessPage() {
   const status = business
     ? statusLabels[business.status] ?? statusLabels.pending
     : null;
+  const businessHours: BusinessHourValue[] = (hoursResult.data ?? []).map(
+    (hour) => ({
+      weekday: hour.weekday,
+      opensAt: hour.opens_at,
+      closesAt: hour.closes_at,
+      isClosed: hour.is_closed,
+    }),
+  );
 
   return (
     <div>
@@ -143,6 +168,23 @@ export default async function BusinessPage() {
           }))}
         />
       </section>
+
+      {business && (
+        <section className="mt-7 rounded-[2rem] border border-line bg-surface p-5 shadow-sm sm:p-8">
+          <div className="mb-6">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
+              Atendimento
+            </p>
+            <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">
+              Horário de funcionamento
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Informe quando sua loja está aberta ou marque funcionamento 24 horas.
+            </p>
+          </div>
+          <BusinessHoursForm hours={businessHours} />
+        </section>
+      )}
     </div>
   );
 }

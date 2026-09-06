@@ -161,7 +161,9 @@ export default async function BusinessPage({
                 </div>
               </div>
               <span className="w-fit rounded-full bg-white px-4 py-2 text-sm font-black text-ink shadow-md">
-                {business.hoursAvailable === false
+                {business.alwaysOpen
+                  ? "Aberto 24 horas"
+                  : business.hoursAvailable === false
                   ? "Consulte o horário"
                   : business.isOpen
                     ? `Aberto · até ${business.closesAt}`
@@ -289,7 +291,9 @@ export default async function BusinessPage({
                 <div>
                   <dt className="font-black text-ink">Funcionamento</dt>
                   <dd className="mt-1 leading-6 text-muted">
-                    {business.hoursAvailable === false
+                    {business.alwaysOpen
+                      ? "Aberto 24 horas, todos os dias"
+                      : business.hoursAvailable === false
                       ? "Horários ainda não informados"
                       : business.isOpen
                       ? `Aberto agora, fecha às ${business.closesAt}`
