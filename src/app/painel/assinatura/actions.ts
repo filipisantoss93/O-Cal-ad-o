@@ -65,12 +65,12 @@ async function isProActive(client: SupabaseClient<any>, userId: string) {
 }
 
 function assertCheckoutConfigured() {
-  if (!hasEfiChargesConfig()) {
-    redirect(
-      billingUrl({
-        erro: "efi_nao_configurada",
-      }),
-    );
+  const hasAdminKey = Boolean(
+    process.env.SUPABASE_SECRET_KEY?.trim() ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
+  );
+  if (!hasEfiChargesConfig() || !hasAdminKey) {
+    redirect(billingUrl({ erro: "efi_nao_configurada" }));
   }
 }
 
@@ -81,6 +81,10 @@ export async function startProCardCheckoutAction(formData: FormData) {
 
   const { supabase, user } = await currentUser();
   const client = asBillingClient(supabase);
+  if (await isProActive(client, user.id)) {
+    redirect(billingUrl({ erro: "pro_ja_ativo" }));
+  }
+
   const { data: price } = await client
     .from("billing_plan_prices")
     .select("price_cents, interval_months")
@@ -90,6 +94,7 @@ export async function startProCardCheckoutAction(formData: FormData) {
     .maybeSingle();
   if (!price) redirect(billingUrl({ erro: "preco_indisponivel" }));
 
+  let paymentUrl = "";
   try {
     const checkout = await createEfiCardSubscriptionLink({
       userId: user.id,
@@ -111,11 +116,12 @@ export async function startProCardCheckoutAction(formData: FormData) {
       status: "pending",
     });
     if (error) throw error;
-    redirect(checkout.paymentUrl);
+    paymentUrl = checkout.paymentUrl;
   } catch (error) {
     console.error("Erro ao iniciar assinatura Efí por cartão", error);
     redirect(billingUrl({ erro: "checkout_efi" }));
   }
+  redirect(paymentUrl);
 }
 
 export async function startProPixCheckoutAction(formData: FormData) {
@@ -125,6 +131,10 @@ export async function startProPixCheckoutAction(formData: FormData) {
 
   const { supabase, user } = await currentUser();
   const client = asBillingClient(supabase);
+  if (await isProActive(client, user.id)) {
+    redirect(billingUrl({ erro: "pro_ja_ativo" }));
+  }
+
   const { data: price } = await client
     .from("billing_plan_prices")
     .select("price_cents")
@@ -134,6 +144,7 @@ export async function startProPixCheckoutAction(formData: FormData) {
     .maybeSingle();
   if (!price) redirect(billingUrl({ erro: "preco_indisponivel" }));
 
+  let paymentUrl = "";
   try {
     const checkout = await createEfiOneTimePaymentLink({
       userId: user.id,
@@ -153,11 +164,12 @@ export async function startProPixCheckoutAction(formData: FormData) {
       status: "pending",
     });
     if (error) throw error;
-    redirect(checkout.paymentUrl);
+    paymentUrl = checkout.paymentUrl;
   } catch (error) {
     console.error("Erro ao iniciar assinatura Efí por Pix", error);
     redirect(billingUrl({ erro: "checkout_efi" }));
   }
+  redirect(paymentUrl);
 }
 
 export async function startExtraStoreCheckoutAction() {
@@ -176,6 +188,7 @@ export async function startExtraStoreCheckoutAction() {
     .maybeSingle();
   if (!product) redirect(billingUrl({ erro: "produto_indisponivel" }));
 
+  let paymentUrl = "";
   try {
     const checkout = await createEfiExtraStoreSubscriptionLink({
       userId: user.id,
@@ -196,11 +209,12 @@ export async function startExtraStoreCheckoutAction() {
       status: "pending",
     });
     if (error) throw error;
-    redirect(checkout.paymentUrl);
+    paymentUrl = checkout.paymentUrl;
   } catch (error) {
     console.error("Erro ao iniciar loja adicional Efí", error);
     redirect(billingUrl({ erro: "checkout_efi" }));
   }
+  redirect(paymentUrl);
 }
 
 export async function startPromotionPackCheckoutAction(formData: FormData) {
@@ -238,6 +252,7 @@ export async function startPromotionPackCheckoutAction(formData: FormData) {
   if (!business) redirect(billingUrl({ erro: "loja_invalida" }));
   if (!product) redirect(billingUrl({ erro: "produto_indisponivel" }));
 
+  let paymentUrl = "";
   try {
     const checkout = await createEfiOneTimePaymentLink({
       userId: user.id,
@@ -258,9 +273,10 @@ export async function startPromotionPackCheckoutAction(formData: FormData) {
       status: "pending",
     });
     if (error) throw error;
-    redirect(checkout.paymentUrl);
+    paymentUrl = checkout.paymentUrl;
   } catch (error) {
     console.error("Erro ao iniciar pacote de promoções Efí", error);
     redirect(billingUrl({ erro: "checkout_efi" }));
   }
+  redirect(paymentUrl);
 }
