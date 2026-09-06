@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import {
   ArrowRightIcon,
   ClockIcon,
+  LocateIcon,
   MapPinIcon,
   ShieldCheckIcon,
   StarIcon,
@@ -72,6 +73,7 @@ export default async function BusinessPage({
   const whatsappHref = business.whatsapp
     ? `https://wa.me/${business.whatsapp}?text=${whatsappMessage}`
     : null;
+  const directionsHref = business.directionsUrl ?? null;
 
   return (
     <>
@@ -255,26 +257,42 @@ export default async function BusinessPage({
               com a loja.
             </p>
 
-            {whatsappHref ? (
-              <a
-                href={whatsappHref}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1f9d61] px-5 text-sm font-black text-white transition hover:bg-[#17834f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f9d61] focus-visible:ring-offset-2"
-              >
-                <WhatsAppIcon className="size-5" />
-                Chamar no WhatsApp
-              </a>
-            ) : (
-              <span
-                className="mt-5 inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-[#dce8e2] px-5 text-center text-sm font-black text-[#4d6b5d]"
-                aria-disabled="true"
-                title="O contato será ativado quando os dados reais forem cadastrados"
-              >
-                <WhatsAppIcon className="size-5" />
-                Contato disponível após publicação
-              </span>
-            )}
+            <div className={`mt-5 grid gap-3 ${directionsHref ? "grid-cols-2" : "grid-cols-1"}`}>
+              {whatsappHref ? (
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Chamar no WhatsApp"
+                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1f9d61] px-3 text-sm font-black text-white transition hover:bg-[#17834f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f9d61] focus-visible:ring-offset-2"
+                >
+                  <WhatsAppIcon className="size-5 shrink-0" />
+                  WhatsApp
+                </a>
+              ) : (
+                <span
+                  className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-[#dce8e2] px-3 text-center text-xs font-black text-[#4d6b5d]"
+                  aria-disabled="true"
+                  title="O contato será ativado quando os dados reais forem cadastrados"
+                >
+                  <WhatsAppIcon className="size-5 shrink-0" />
+                  Contato indisponível
+                </span>
+              )}
+
+              {directionsHref && (
+                <a
+                  href={directionsHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Abrir rota até ${business.name}`}
+                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-brand/25 bg-brand/8 px-3 text-sm font-black text-brand-dark transition hover:border-brand/45 hover:bg-brand/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                >
+                  <LocateIcon className="size-5 shrink-0" />
+                  Como chegar
+                </a>
+              )}
+            </div>
 
             <dl className="mt-6 space-y-4 border-t border-line pt-6 text-sm">
               <div className="flex gap-3">

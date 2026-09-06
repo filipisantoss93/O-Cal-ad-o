@@ -21,6 +21,17 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join("").toLocaleUpperCase("pt-BR");
 }
 
+function directionsUrl(latitude: number | null, longitude: number | null) {
+  if (latitude === null || longitude === null) return null;
+  const destinationLatitude = Number(latitude);
+  const destinationLongitude = Number(longitude);
+  if (!Number.isFinite(destinationLatitude) || !Number.isFinite(destinationLongitude)) {
+    return null;
+  }
+  const destination = encodeURIComponent(`${destinationLatitude},${destinationLongitude}`);
+  return `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+}
+
 async function loadBusiness(
   supabase: SupabaseClient<Database>,
   slug: string,
@@ -29,7 +40,7 @@ async function loadBusiness(
   let query = supabase
     .from("businesses")
     .select(
-      "id, city_id, category_id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood, logo_path, cover_path",
+      "id, city_id, category_id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path",
     )
     .eq("slug", slug);
 
@@ -87,6 +98,7 @@ async function loadBusiness(
     verified: true,
     tags: [category.name, business.neighborhood, city.name],
     whatsapp: business.whatsapp_e164.replace(/\D/g, ""),
+    directionsUrl: directionsUrl(business.latitude, business.longitude),
     products: (itemsResult.data ?? []).map((item) => ({
       id: String(item.id),
       name: item.name,

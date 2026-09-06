@@ -37,6 +37,7 @@ export type Business = {
   verified: boolean;
   tags: string[];
   whatsapp: string | null;
+  directionsUrl?: string | null;
   products: Product[];
 };
 
