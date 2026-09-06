@@ -51,13 +51,20 @@ function initialSchedule(hours: BusinessHourValue[]): DaySchedule[] {
     return {
       ...day,
       opensAt: saved?.opensAt?.slice(0, 5) ?? "08:00",
-      closesAt: saved?.closesAt?.slice(0, 5) ?? (saturday ? "12:00" : "18:00"),
+      closesAt:
+        saved?.closesAt?.slice(0, 5) ?? (saturday ? "12:00" : "18:00"),
       isClosed: saved?.isClosed ?? sunday,
     };
   });
 }
 
-export function BusinessHoursForm({ hours }: { hours: BusinessHourValue[] }) {
+export function BusinessHoursForm({
+  businessId,
+  hours,
+}: {
+  businessId: number;
+  hours: BusinessHourValue[];
+}) {
   const [state, action, pending] = useActionState(
     saveBusinessHoursAction,
     initialActionState,
@@ -75,6 +82,7 @@ export function BusinessHoursForm({ hours }: { hours: BusinessHourValue[] }) {
 
   return (
     <form action={action} className="space-y-6">
+      <input type="hidden" name="business_id" value={businessId} />
       {state.message && (
         <div
           role={state.status === "success" ? "status" : "alert"}
@@ -128,7 +136,9 @@ export function BusinessHoursForm({ hours }: { hours: BusinessHourValue[] }) {
               role="switch"
               aria-checked={!day.isClosed}
               disabled={alwaysOpen || pending}
-              onClick={() => updateDay(day.weekday, { isClosed: !day.isClosed })}
+              onClick={() =>
+                updateDay(day.weekday, { isClosed: !day.isClosed })
+              }
               className={`min-h-10 rounded-xl border px-3 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${
                 day.isClosed
                   ? "border-line bg-white text-muted"
