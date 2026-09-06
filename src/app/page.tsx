@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { BusinessCard } from "@/components/business-card";
 import { CategoryGrid } from "@/components/category-grid";
@@ -101,12 +100,12 @@ export default function Home() {
         <section className="bg-canvas px-4 pb-14 sm:px-6 sm:pb-18 lg:px-8">
           <div className="mx-auto grid max-w-7xl overflow-hidden rounded-[2rem] border border-line bg-surface shadow-[0_24px_60px_rgba(31,45,42,0.10)] lg:grid-cols-[1.08fr_0.92fr] lg:items-stretch">
             <div className="relative min-h-[250px] sm:min-h-[360px] lg:min-h-[430px]">
-              <Image
-                src="/images/ocalcadao-comercio-local.webp"
+              <img
+                src="/images/ocalcadao-comercio-local.webp?v=20260906-2"
                 alt="Calçadão comercial amplo e movimentado, com lojas e serviços locais"
-                fill
-                sizes="(max-width: 1024px) 100vw, 55vw"
-                className="object-cover"
+                loading="eager"
+                decoding="async"
+                className="absolute inset-0 h-full w-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-ink/20 via-transparent to-transparent" />
             </div>
