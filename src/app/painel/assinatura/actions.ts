@@ -1,226 +1,102 @@
 "use server";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
-import {
-  createEfiCardSubscriptionLink,
-  createEfiExtraStoreSubscriptionLink,
-  createEfiOneTimePaymentLink,
-  hasEfiChargesConfig,
-} from "@/lib/efi/cobrancas";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/database";
-
-const cycles = {
-  monthly: { months: 1, label: "Mensal" },
-  semiannual: { months: 6, label: "Semestral" },
-  annual: { months: 12, label: "Anual" },
-} as const;
-
-type BillingCycle = keyof typeof cycles;
 
 function billingUrl(params: Record<string, string>) {
   const query = new URLSearchParams(params);
   return `/painel/assinatura?${query.toString()}`;
 }
 
-function baseUrl() {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") ||
-    "https://ocalcadao.com.br"
-  );
-}
+type CheckoutPayload = {
+  action: "pro_card" | "pro_pix" | "extra_store" | "promotion_pack";
+  billing_cycle?: string;
+  business_id?: number;
+  product_code?: string;
+};
 
-function notificationUrl() {
-  return `${baseUrl()}/api/billing/efi/notification`;
-}
+type CheckoutResponse = {
+  ok?: boolean;
+  payment_url?: string;
+  error?: string;
+};
 
-function asBillingClient(client: SupabaseClient<Database>) {
-  return client as unknown as SupabaseClient<any>;
-}
-
-async function currentUser() {
+async function startCheckout(payload: CheckoutPayload): Promise<never> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/entrar?next=%2Fpainel%2Fassinatura");
-  return { supabase, user };
-}
 
-async function isProActive(client: SupabaseClient<any>, userId: string) {
-  const now = new Date().toISOString();
-  const { data } = await client
-    .from("subscriptions")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("plan_code", "pro")
-    .eq("status", "active")
-    .lte("current_period_start", now)
-    .gt("current_period_end", now)
-    .limit(1)
-    .maybeSingle();
-  return Boolean(data);
-}
-
-function assertCheckoutConfigured() {
-  const hasAdminKey = Boolean(
-    process.env.SUPABASE_SECRET_KEY?.trim() ||
-      process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
-  );
-  if (!hasEfiChargesConfig() || !hasAdminKey) {
-    redirect(billingUrl({ erro: "efi_nao_configurada" }));
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    redirect("/entrar?next=%2Fpainel%2Fassinatura");
   }
+
+  const { url, publishableKey } = getSupabaseEnv();
+  let response: Response;
+
+  try {
+    response = await fetch(`${url}/functions/v1/efi-billing-checkout`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: publishableKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+  } catch (error) {
+    console.error("Falha ao chamar checkout no Supabase", error);
+    redirect(billingUrl({ erro: "checkout_efi" }));
+  }
+
+  let data: CheckoutResponse = {};
+  try {
+    data = (await response.json()) as CheckoutResponse;
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok || !data.payment_url) {
+    const errorCode =
+      typeof data.error === "string" && data.error.length <= 80
+        ? data.error
+        : "checkout_efi";
+    redirect(billingUrl({ erro: errorCode }));
+  }
+
+  redirect(data.payment_url);
 }
 
 export async function startProCardCheckoutAction(formData: FormData) {
-  assertCheckoutConfigured();
-  const cycle = String(formData.get("billing_cycle") ?? "") as BillingCycle;
-  if (!(cycle in cycles)) redirect(billingUrl({ erro: "periodo_invalido" }));
-
-  const { supabase, user } = await currentUser();
-  const client = asBillingClient(supabase);
-  if (await isProActive(client, user.id)) {
-    redirect(billingUrl({ erro: "pro_ja_ativo" }));
+  const cycle = String(formData.get("billing_cycle") ?? "");
+  if (!/^(monthly|semiannual|annual)$/.test(cycle)) {
+    redirect(billingUrl({ erro: "periodo_invalido" }));
   }
-
-  const { data: price } = await client
-    .from("billing_plan_prices")
-    .select("price_cents, interval_months")
-    .eq("plan_code", "pro")
-    .eq("billing_cycle", cycle)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (!price) redirect(billingUrl({ erro: "preco_indisponivel" }));
-
-  let paymentUrl = "";
-  try {
-    const checkout = await createEfiCardSubscriptionLink({
-      userId: user.id,
-      intervalMonths: cycles[cycle].months,
-      priceCents: price.price_cents,
-      cycleLabel: cycles[cycle].label,
-      notificationUrl: notificationUrl(),
-    });
-    const admin = createAdminClient() as unknown as SupabaseClient<any>;
-    const { error } = await admin.from("subscriptions").insert({
-      user_id: user.id,
-      plan_code: "pro",
-      billing_cycle: cycle,
-      payment_method: "credit_card",
-      provider: "efi",
-      provider_plan_id: checkout.planId,
-      provider_subscription_id: checkout.subscriptionId,
-      provider_charge_id: checkout.chargeId,
-      status: "pending",
-    });
-    if (error) throw error;
-    paymentUrl = checkout.paymentUrl;
-  } catch (error) {
-    console.error("Erro ao iniciar assinatura Efí por cartão", error);
-    redirect(billingUrl({ erro: "checkout_efi" }));
-  }
-  redirect(paymentUrl);
+  return startCheckout({ action: "pro_card", billing_cycle: cycle });
 }
 
 export async function startProPixCheckoutAction(formData: FormData) {
-  assertCheckoutConfigured();
-  const cycle = String(formData.get("billing_cycle") ?? "") as BillingCycle;
-  if (!(cycle in cycles)) redirect(billingUrl({ erro: "periodo_invalido" }));
-
-  const { supabase, user } = await currentUser();
-  const client = asBillingClient(supabase);
-  if (await isProActive(client, user.id)) {
-    redirect(billingUrl({ erro: "pro_ja_ativo" }));
+  const cycle = String(formData.get("billing_cycle") ?? "");
+  if (!/^(monthly|semiannual|annual)$/.test(cycle)) {
+    redirect(billingUrl({ erro: "periodo_invalido" }));
   }
-
-  const { data: price } = await client
-    .from("billing_plan_prices")
-    .select("price_cents")
-    .eq("plan_code", "pro")
-    .eq("billing_cycle", cycle)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (!price) redirect(billingUrl({ erro: "preco_indisponivel" }));
-
-  let paymentUrl = "";
-  try {
-    const checkout = await createEfiOneTimePaymentLink({
-      userId: user.id,
-      productCode: `pro_${cycle}`,
-      itemName: `O Calçadão Pro - ${cycles[cycle].label}`,
-      priceCents: price.price_cents,
-      notificationUrl: notificationUrl(),
-    });
-    const admin = createAdminClient() as unknown as SupabaseClient<any>;
-    const { error } = await admin.from("subscriptions").insert({
-      user_id: user.id,
-      plan_code: "pro",
-      billing_cycle: cycle,
-      payment_method: "pix",
-      provider: "efi",
-      provider_charge_id: checkout.chargeId,
-      status: "pending",
-    });
-    if (error) throw error;
-    paymentUrl = checkout.paymentUrl;
-  } catch (error) {
-    console.error("Erro ao iniciar assinatura Efí por Pix", error);
-    redirect(billingUrl({ erro: "checkout_efi" }));
-  }
-  redirect(paymentUrl);
+  return startCheckout({ action: "pro_pix", billing_cycle: cycle });
 }
 
 export async function startExtraStoreCheckoutAction() {
-  assertCheckoutConfigured();
-  const { supabase, user } = await currentUser();
-  const client = asBillingClient(supabase);
-  if (!(await isProActive(client, user.id))) {
-    redirect(billingUrl({ erro: "pro_necessario" }));
-  }
-
-  const { data: product } = await client
-    .from("billing_products")
-    .select("code, price_cents")
-    .eq("code", "extra_store")
-    .eq("is_active", true)
-    .maybeSingle();
-  if (!product) redirect(billingUrl({ erro: "produto_indisponivel" }));
-
-  let paymentUrl = "";
-  try {
-    const checkout = await createEfiExtraStoreSubscriptionLink({
-      userId: user.id,
-      priceCents: product.price_cents,
-      notificationUrl: notificationUrl(),
-    });
-    const admin = createAdminClient() as unknown as SupabaseClient<any>;
-    const { error } = await admin.from("billing_addons").insert({
-      user_id: user.id,
-      business_id: null,
-      product_code: product.code,
-      quantity: 1,
-      payment_method: "credit_card",
-      provider: "efi",
-      provider_plan_id: checkout.planId,
-      provider_subscription_id: checkout.subscriptionId,
-      provider_charge_id: checkout.chargeId,
-      status: "pending",
-    });
-    if (error) throw error;
-    paymentUrl = checkout.paymentUrl;
-  } catch (error) {
-    console.error("Erro ao iniciar loja adicional Efí", error);
-    redirect(billingUrl({ erro: "checkout_efi" }));
-  }
-  redirect(paymentUrl);
+  return startCheckout({ action: "extra_store" });
 }
 
 export async function startPromotionPackCheckoutAction(formData: FormData) {
-  assertCheckoutConfigured();
   const productCode = String(formData.get("product_code") ?? "");
   const businessId = Number(formData.get("business_id"));
+
   if (!/^promo_(5|10|20|50)$/.test(productCode)) {
     redirect(billingUrl({ erro: "produto_invalido" }));
   }
@@ -228,55 +104,9 @@ export async function startPromotionPackCheckoutAction(formData: FormData) {
     redirect(billingUrl({ erro: "loja_invalida" }));
   }
 
-  const { supabase, user } = await currentUser();
-  const client = asBillingClient(supabase);
-  if (!(await isProActive(client, user.id))) {
-    redirect(billingUrl({ erro: "pro_necessario" }));
-  }
-
-  const [{ data: business }, { data: product }] = await Promise.all([
-    client
-      .from("businesses")
-      .select("id")
-      .eq("id", businessId)
-      .eq("owner_id", user.id)
-      .maybeSingle(),
-    client
-      .from("billing_products")
-      .select("code, name, price_cents, kind")
-      .eq("code", productCode)
-      .eq("kind", "promotion_pack")
-      .eq("is_active", true)
-      .maybeSingle(),
-  ]);
-  if (!business) redirect(billingUrl({ erro: "loja_invalida" }));
-  if (!product) redirect(billingUrl({ erro: "produto_indisponivel" }));
-
-  let paymentUrl = "";
-  try {
-    const checkout = await createEfiOneTimePaymentLink({
-      userId: user.id,
-      productCode: product.code,
-      itemName: `O Calçadão - ${product.name}`,
-      priceCents: product.price_cents,
-      notificationUrl: notificationUrl(),
-    });
-    const admin = createAdminClient() as unknown as SupabaseClient<any>;
-    const { error } = await admin.from("billing_addons").insert({
-      user_id: user.id,
-      business_id: businessId,
-      product_code: product.code,
-      quantity: 1,
-      payment_method: "pix",
-      provider: "efi",
-      provider_charge_id: checkout.chargeId,
-      status: "pending",
-    });
-    if (error) throw error;
-    paymentUrl = checkout.paymentUrl;
-  } catch (error) {
-    console.error("Erro ao iniciar pacote de promoções Efí", error);
-    redirect(billingUrl({ erro: "checkout_efi" }));
-  }
-  redirect(paymentUrl);
+  return startCheckout({
+    action: "promotion_pack",
+    business_id: businessId,
+    product_code: productCode,
+  });
 }
