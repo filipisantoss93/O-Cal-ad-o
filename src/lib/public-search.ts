@@ -1,6 +1,7 @@
 import "server-only";
 
 import { filterBusinesses } from "@/data/catalog";
+import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";
 import { createClient } from "@/lib/supabase/server";
 import type { Business } from "@/types/catalog";
 
@@ -37,7 +38,7 @@ export async function searchPublicBusinesses(
   const { data: rows, error } = await supabase
     .from("businesses")
     .select(
-      "id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code)",
+      "id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone)",
     )
     .eq("status", "approved")
     .eq("is_active", true)
@@ -47,18 +48,33 @@ export async function searchPublicBusinesses(
   if (error || !rows?.length) return demonstrations;
 
   const businessIds = rows.map((row) => row.id);
-  const { data: catalogItems } = await supabase
-    .from("catalog_items")
-    .select("business_id, name, description")
-    .in("business_id", businessIds)
-    .eq("is_active", true)
-    .limit(500);
+  const [catalogItemsResult, hoursResult] = await Promise.all([
+    supabase
+      .from("catalog_items")
+      .select("business_id, name, description")
+      .in("business_id", businessIds)
+      .eq("is_active", true)
+      .limit(500),
+    supabase
+      .from("business_hours")
+      .select("business_id, weekday, opens_at, closes_at, is_closed")
+      .in("business_id", businessIds)
+      .order("weekday")
+      .order("display_order"),
+  ]);
 
   const itemTerms = new Map<number, string[]>();
-  for (const item of catalogItems ?? []) {
+  for (const item of catalogItemsResult.data ?? []) {
     const terms = itemTerms.get(item.business_id) ?? [];
     terms.push(item.name, item.description ?? "");
     itemTerms.set(item.business_id, terms);
+  }
+
+  const hoursByBusiness = new Map<number, BusinessHour[]>();
+  for (const item of hoursResult.data ?? []) {
+    const hours = hoursByBusiness.get(item.business_id) ?? [];
+    hours.push(item);
+    hoursByBusiness.set(item.business_id, hours);
   }
 
   const normalizedQuery = normalized(query?.trim() ?? "");
@@ -81,6 +97,10 @@ export async function searchPublicBusinesses(
     .map((row): Business => {
       const category = row.categories!;
       const city = row.cities!;
+      const schedule = getBusinessSchedule(
+        hoursByBusiness.get(row.id) ?? [],
+        city.timezone,
+      );
       return {
         id: String(row.id),
         slug: row.slug,
@@ -93,9 +113,7 @@ export async function searchPublicBusinesses(
         distance: city ? `${city.name} - ${city.state_code}` : "Comércio local",
         rating: 0,
         reviewCount: 0,
-        isOpen: false,
-        hoursAvailable: false,
-        closesAt: "Consulte o horário",
+        ...schedule,
         initials: initials(row.name),
         palette: palettes[row.id % palettes.length],
         verified: true,

@@ -29,7 +29,11 @@ export function BusinessCard({ business }: BusinessCardProps) {
               : "bg-ink/85 text-white"
           }`}
         >
-          {business.isOpen ? "Aberto agora" : "Fechado"}
+          {business.alwaysOpen
+            ? "Aberto 24h"
+            : business.isOpen
+              ? "Aberto agora"
+              : "Fechado"}
         </span>
       </div>
 
@@ -73,7 +77,9 @@ export function BusinessCard({ business }: BusinessCardProps) {
           </span>
           <span className="inline-flex items-center gap-1.5">
             <ClockIcon className="size-4 text-brand" />
-            {business.hoursAvailable === false
+            {business.alwaysOpen
+              ? "Aberto 24 horas"
+              : business.hoursAvailable === false
               ? business.closesAt
               : business.isOpen
                 ? `Até ${business.closesAt}`
