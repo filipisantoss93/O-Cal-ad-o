@@ -80,6 +80,9 @@ export function BusinessForm({
   const [loadingCities, setLoadingCities] = useState(false);
   const [detectingCity, setDetectingCity] = useState(false);
   const [cityError, setCityError] = useState("");
+  const [locationCaptured, setLocationCaptured] = useState(
+    business?.latitude !== null && business?.latitude !== undefined,
+  );
   const [latitude, setLatitude] = useState(
     business?.latitude === null || business?.latitude === undefined
       ? ""
@@ -120,6 +123,7 @@ export function BusinessForm({
       setLatitude(String(city.latitude));
       setLongitude(String(city.longitude));
       await loadCities(city.stateCode, String(city.id));
+      setLocationCaptured(true);
     } catch (reason) {
       setCityError(reason instanceof Error ? reason.message : "Não foi possível identificar a cidade.");
     } finally {
@@ -231,6 +235,8 @@ export function BusinessForm({
                   setCityId("");
                   setLatitude("");
                   setLongitude("");
+                  setLocationCaptured(false);
+                  setCityError("");
                   void loadCities(nextStateCode);
                 }}
                 required
@@ -252,6 +258,8 @@ export function BusinessForm({
                   setCityId(event.target.value);
                   setLatitude("");
                   setLongitude("");
+                  setLocationCaptured(false);
+                  setCityError("");
                 }}
                 onFocus={() => {
                   if (stateCode && cities.length <= 1) {
@@ -271,6 +279,11 @@ export function BusinessForm({
             </label>
           </div>
           {cityError && <p role="alert" className="mt-2 text-sm font-semibold text-brand-dark">{cityError}</p>}
+          {locationCaptured && !cityError && (
+            <p role="status" className="mt-2 text-sm font-bold text-positive">
+              Localização capturada. Toque em “Salvar alterações” para gravar na loja.
+            </p>
+          )}
           <p className="mt-2 text-xs font-semibold leading-5 text-muted">
             Para aparecer por distância, use “Localização atual” enquanto estiver no endereço da loja.
           </p>
