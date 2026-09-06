@@ -4,6 +4,7 @@ import { logoutAction } from "@/app/(auth)/actions";
 import {
   HomeIcon,
   LogOutIcon,
+  SparklesIcon,
   StoreIcon,
   TagIcon,
   UserIcon,
@@ -20,8 +21,9 @@ type MerchantShellProps = {
 
 const navigation = [
   { href: "/painel", label: "Visão geral", icon: HomeIcon },
-  { href: "/painel/loja", label: "Minha loja", icon: StoreIcon },
+  { href: "/painel/loja", label: "Minhas lojas", icon: StoreIcon },
   { href: "/painel/promocoes", label: "Promoções", icon: TagIcon },
+  { href: "/painel/assinatura", label: "Assinatura", icon: SparklesIcon },
   { href: "/painel/perfil", label: "Minha conta", icon: UserIcon },
 ];
 

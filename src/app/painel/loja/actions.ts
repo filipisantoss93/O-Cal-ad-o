@@ -66,23 +66,29 @@ export async function saveBusinessHoursAction(
     } = await supabase.auth.getUser();
     if (!user) return actionError("Sua sessão expirou. Entre novamente.");
 
+    const businessId = Number(formString(formData, "business_id"));
+    if (!Number.isSafeInteger(businessId) || businessId <= 0) {
+      return actionError("Loja não encontrada.");
+    }
+
     const { data: business, error: businessError } = await supabase
       .from("businesses")
       .select("id, slug")
+      .eq("id", businessId)
       .eq("owner_id", user.id)
-      .order("created_at", { ascending: true })
-      .limit(1)
       .maybeSingle();
 
     if (businessError || !business) {
-      return actionError("Cadastre sua loja antes de definir os horários.");
+      return actionError("Loja não encontrada.");
     }
 
     const alwaysOpen = formData.get("always_open") === "on";
     const rows: TablesInsert<"business_hours">[] = [];
 
     for (let weekday = 0; weekday <= 6; weekday += 1) {
-      const isClosed = !alwaysOpen && formString(formData, `day_${weekday}_closed`) === "true";
+      const isClosed =
+        !alwaysOpen &&
+        formString(formData, `day_${weekday}_closed`) === "true";
       const opensAt = alwaysOpen
         ? "00:00:00"
         : isClosed
@@ -147,23 +153,28 @@ export async function saveBusinessAction(
 
     const requestedBusinessValue = formString(formData, "business_id");
     const requestedBusinessId = Number(requestedBusinessValue);
-    const { data: existingRows, error: existingError } = await supabase
-      .from("businesses")
-      .select("id, owner_id, logo_path, cover_path, status")
-      .eq("owner_id", user.id)
-      .order("created_at", { ascending: true })
-      .limit(1);
-    if (existingError) {
-      return actionError("Não foi possível localizar sua loja.");
-    }
-    const existing = existingRows?.[0] ?? null;
-    if (
-      requestedBusinessValue &&
-      (!Number.isSafeInteger(requestedBusinessId) ||
-        requestedBusinessId <= 0 ||
-        existing?.id !== requestedBusinessId)
-    ) {
-      return actionError("Loja não encontrada.");
+    let existing:
+      | {
+          id: number;
+          owner_id: string;
+          logo_path: string | null;
+          cover_path: string | null;
+          status: string;
+        }
+      | null = null;
+
+    if (requestedBusinessValue) {
+      if (!Number.isSafeInteger(requestedBusinessId) || requestedBusinessId <= 0) {
+        return actionError("Loja não encontrada.");
+      }
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("id, owner_id, logo_path, cover_path, status")
+        .eq("id", requestedBusinessId)
+        .eq("owner_id", user.id)
+        .maybeSingle();
+      if (error || !data) return actionError("Loja não encontrada.");
+      existing = data;
     }
 
     const name = requiredText(formData, "name", "Nome da loja", 2, 120);
@@ -292,6 +303,11 @@ export async function saveBusinessAction(
           "slug",
         );
       }
+      if (result.error.message.includes("BILLING_STORE_LIMIT")) {
+        return actionError(
+          "Você atingiu o limite de lojas do seu plano. Acesse Assinatura para ativar o Pro ou comprar uma loja adicional.",
+        );
+      }
       return actionError("Não foi possível salvar a loja. Revise os dados.");
     }
 
@@ -302,6 +318,8 @@ export async function saveBusinessAction(
 
     revalidatePath("/painel");
     revalidatePath("/painel/loja");
+    revalidatePath("/painel/promocoes");
+    revalidatePath("/painel/assinatura");
     return {
       status: "success",
       message: existing
