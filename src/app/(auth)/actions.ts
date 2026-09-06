@@ -14,8 +14,17 @@ import {
 } from "@/lib/validation";
 
 function appUrl() {
+  if (process.env.VERCEL_ENV === "production") {
+    return "https://ocalcadao.com.br";
+  }
+
   const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
+
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return "http://localhost:3000";
 }
