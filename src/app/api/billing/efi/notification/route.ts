@@ -45,16 +45,21 @@ export async function POST(request: Request) {
       const status = event.status?.current?.trim();
       if (!eventId || !status) continue;
 
+      const subscriptionId = event.identifiers?.subscription_id
+        ? String(event.identifiers.subscription_id)
+        : null;
+      const chargeId = event.identifiers?.charge_id
+        ? String(event.identifiers.charge_id)
+        : null;
+      const providerObjectId = subscriptionId ?? chargeId ?? "unknown";
+      const eventType = event.type ?? "unknown";
+
       const { error } = await admin.rpc("process_efi_billing_event", {
-        p_event_key: `efi:${token}:${eventId}`,
-        p_event_type: event.type ?? "unknown",
+        p_event_key: `efi:${providerObjectId}:${eventType}:${eventId}:${status}`,
+        p_event_type: eventType,
         p_status: status,
-        p_subscription_id: event.identifiers?.subscription_id
-          ? String(event.identifiers.subscription_id)
-          : null,
-        p_charge_id: event.identifiers?.charge_id
-          ? String(event.identifiers.charge_id)
-          : null,
+        p_subscription_id: subscriptionId,
+        p_charge_id: chargeId,
         p_payload: event,
       });
 
