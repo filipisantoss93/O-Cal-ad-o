@@ -12,7 +12,6 @@ import {
   startProPixCheckoutAction,
   startPromotionPackCheckoutAction,
 } from "@/app/painel/assinatura/actions";
-import { hasEfiChargesConfig } from "@/lib/efi/cobrancas";
 import { getMerchantBillingSummary } from "@/lib/merchant/billing";
 import { getMerchantWorkspace } from "@/lib/merchant/dal";
 
@@ -38,7 +37,7 @@ const paymentLabels: Record<string, string> = {
 
 const errorMessages: Record<string, string> = {
   efi_nao_configurada:
-    "A cobrança Efí ainda não está configurada no servidor. O cadastro e os limites já funcionam, mas o checkout permanece bloqueado até as credenciais serem adicionadas.",
+    "A cobrança Efí ainda não está configurada no Supabase. O cadastro e os limites já funcionam, mas o checkout depende das credenciais nas Edge Functions.",
   checkout_efi:
     "Não foi possível abrir o checkout da Efí. Nenhum benefício foi liberado sem confirmação de pagamento.",
   periodo_invalido: "Período de assinatura inválido.",
@@ -74,11 +73,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
     "/painel/assinatura",
   );
   const billing = await getMerchantBillingSummary(supabase, user.id, businesses);
-  const providerConfigured = Boolean(
-    hasEfiChargesConfig() &&
-      (process.env.SUPABASE_SECRET_KEY?.trim() ||
-        process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
-  );
+  const providerConfigured = true;
   const selectedId = Number(params.loja);
   const selectedBusiness =
     businesses.find(
@@ -128,8 +123,8 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
       {!providerConfigured && (
         <div className="mt-6 rounded-2xl border border-accent-dark/20 bg-accent/20 p-4 text-sm font-bold leading-6 text-ink">
           Checkout em preparação: é necessário configurar as credenciais da Efí
-          e a chave administrativa do Supabase no ambiente do servidor. Nenhuma
-          cobrança é simulada ou liberada manualmente.
+          nas Edge Functions do Supabase. Nenhuma cobrança é simulada ou liberada
+          manualmente.
         </div>
       )}
 
@@ -181,7 +176,10 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         </article>
       </section>
 
-      <section className="mt-8 rounded-[2rem] border border-line bg-surface p-5 shadow-sm sm:p-8">
+      <section
+        id="calcadao-pro"
+        className="mt-8 scroll-mt-40 rounded-[2rem] border border-line bg-surface p-5 shadow-sm sm:p-8"
+      >
         <div className="max-w-3xl">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
             Calçadão Pro
@@ -315,7 +313,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             </form>
           ) : (
             <a
-              href="#calçadao-pro"
+              href="#calcadao-pro"
               className="text-sm font-black text-brand-dark underline underline-offset-4"
             >
               Ative o Pro para comprar vagas extras
