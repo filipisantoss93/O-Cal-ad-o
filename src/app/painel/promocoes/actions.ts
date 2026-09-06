@@ -31,13 +31,16 @@ function promotionError(error: unknown): ActionState {
 async function ownedBusiness(
   supabase: SupabaseClient<Database>,
   userId: string,
+  businessId: number,
 ) {
+  if (!Number.isSafeInteger(businessId) || businessId <= 0) {
+    return { data: null, error: new Error("Loja inválida.") };
+  }
   return supabase
     .from("businesses")
     .select("id")
+    .eq("id", businessId)
     .eq("owner_id", userId)
-    .order("created_at", { ascending: true })
-    .limit(1)
     .maybeSingle();
 }
 
@@ -58,11 +61,11 @@ export async function savePromotionAction(
     if (!user) return actionError("Sua sessão expirou. Entre novamente.");
     cleanupUserId = user.id;
 
-    const businessResult = await ownedBusiness(supabase, user.id);
+    const businessId = Number(formString(formData, "business_id"));
+    const businessResult = await ownedBusiness(supabase, user.id, businessId);
     if (businessResult.error || !businessResult.data) {
-      return actionError("Cadastre sua loja antes de criar uma promoção.");
+      return actionError("Loja não encontrada.");
     }
-    const businessId = businessResult.data.id;
 
     const promotionId = Number(formString(formData, "promotion_id"));
     let existing = null;
@@ -152,6 +155,16 @@ export async function savePromotionAction(
 
     if (result.error) {
       await removeMerchantImages(supabase, user.id, uploadedPaths);
+      if (result.error.message.includes("BILLING_PROMOTION_LIMIT")) {
+        return actionError(
+          "Você atingiu o limite de promoções desta loja. Compre um pacote adicional de 5, 10, 20 ou 50 promoções.",
+        );
+      }
+      if (result.error.message.includes("BILLING_BUSINESS_SUSPENDED")) {
+        return actionError(
+          "Esta loja está suspensa pelo plano. Regularize a assinatura para voltar a publicar promoções.",
+        );
+      }
       return actionError("Não foi possível salvar a promoção. Revise os dados.");
     }
 
@@ -160,6 +173,7 @@ export async function savePromotionAction(
     }
     revalidatePath("/painel");
     revalidatePath("/painel/promocoes");
+    revalidatePath("/painel/assinatura");
     return {
       status: "success",
       message: existing ? "Promoção atualizada." : "Promoção criada.",
@@ -182,7 +196,8 @@ export async function togglePromotionAction(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
-  const businessResult = await ownedBusiness(supabase, user.id);
+  const businessId = Number(formString(formData, "business_id"));
+  const businessResult = await ownedBusiness(supabase, user.id, businessId);
   if (!businessResult.data) return;
   const promotionId = Number(formString(formData, "promotion_id"));
   if (!Number.isSafeInteger(promotionId) || promotionId <= 0) return;
@@ -191,7 +206,7 @@ export async function togglePromotionAction(formData: FormData) {
     .from("promotions")
     .update({ is_active: formString(formData, "next_active") === "true" })
     .eq("id", promotionId)
-    .eq("business_id", businessResult.data.id);
+    .eq("business_id", businessId);
   revalidatePath("/painel");
   revalidatePath("/painel/promocoes");
 }
@@ -202,7 +217,8 @@ export async function deletePromotionAction(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
-  const businessResult = await ownedBusiness(supabase, user.id);
+  const businessId = Number(formString(formData, "business_id"));
+  const businessResult = await ownedBusiness(supabase, user.id, businessId);
   if (!businessResult.data) return;
   const promotionId = Number(formString(formData, "promotion_id"));
   if (!Number.isSafeInteger(promotionId) || promotionId <= 0) return;
@@ -211,7 +227,7 @@ export async function deletePromotionAction(formData: FormData) {
     .from("promotions")
     .select("id, image_path")
     .eq("id", promotionId)
-    .eq("business_id", businessResult.data.id)
+    .eq("business_id", businessId)
     .maybeSingle();
   if (!promotion) return;
 
@@ -219,10 +235,11 @@ export async function deletePromotionAction(formData: FormData) {
     .from("promotions")
     .delete()
     .eq("id", promotion.id)
-    .eq("business_id", businessResult.data.id);
+    .eq("business_id", businessId);
   if (!error) {
     await removeMerchantImages(supabase, user.id, [promotion.image_path]);
   }
   revalidatePath("/painel");
   revalidatePath("/painel/promocoes");
+  revalidatePath("/painel/assinatura");
 }
