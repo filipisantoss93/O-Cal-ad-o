@@ -7,6 +7,12 @@ type FeaturedItemsRequest = {
   cityId?: unknown;
 };
 
+type BusinessSummary = {
+  slug: string;
+  name: string;
+  whatsapp_e164: string;
+};
+
 type CatalogRow = {
   id: number;
   business_id: number;
@@ -18,6 +24,7 @@ type CatalogRow = {
   promotional_price: number | null;
   image_path: string | null;
   updated_at: string;
+  businesses: BusinessSummary | BusinessSummary[] | null;
 };
 
 function publicPriceMode(value: string): CatalogPriceMode {
@@ -39,38 +46,22 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = await createClient();
-  const { data: businesses, error: businessError } = await supabase
-    .from("businesses")
-    .select("id, slug, name, whatsapp_e164")
-    .eq("city_id", cityId)
-    .eq("status", "approved")
-    .eq("is_active", true)
-    .eq("billing_suspended", false);
-
-  if (businessError) {
-    return NextResponse.json(
-      { error: "Não foi possível consultar os comércios." },
-      { status: 500 },
-    );
-  }
-  if (!businesses?.length) {
-    return NextResponse.json({ items: [] }, { headers: { "Cache-Control": "no-store" } });
-  }
-
-  const businessIds = businesses.map((business) => business.id);
-  const businessById = new Map(
-    businesses.map((business) => [business.id, business]),
-  );
   const { data, error } = await supabase
     .from("catalog_items")
-    .select("id, business_id, kind, price_mode, name, description, price, promotional_price, image_path, updated_at")
-    .in("business_id", businessIds)
+    .select(
+      "id, business_id, kind, price_mode, name, description, price, promotional_price, image_path, updated_at, businesses!inner(slug, name, whatsapp_e164, city_id, status, is_active, billing_suspended)",
+    )
     .eq("is_active", true)
     .eq("is_featured", true)
+    .eq("businesses.city_id", cityId)
+    .eq("businesses.status", "approved")
+    .eq("businesses.is_active", true)
+    .eq("businesses.billing_suspended", false)
     .order("updated_at", { ascending: false })
-    .limit(8);
+    .limit(6);
 
   if (error) {
+    console.error("[api/itens-destaque] query failed", error.message);
     return NextResponse.json(
       { error: "Não foi possível consultar os itens em destaque." },
       { status: 500 },
@@ -79,8 +70,11 @@ export async function POST(request: NextRequest) {
 
   const rows = (data ?? []) as unknown as CatalogRow[];
   const items: FeaturedCatalogItem[] = rows.flatMap((item) => {
-    const business = businessById.get(item.business_id);
+    const business = Array.isArray(item.businesses)
+      ? item.businesses[0]
+      : item.businesses;
     if (!business) return [];
+
     return [{
       id: String(item.id),
       businessSlug: business.slug,
