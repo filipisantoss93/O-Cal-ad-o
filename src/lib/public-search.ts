@@ -1,7 +1,6 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { filterBusinesses } from "@/data/catalog";
 import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";
 import { createClient } from "@/lib/supabase/server";
 import type { Business } from "@/types/catalog";
@@ -33,8 +32,10 @@ function normalized(value: string) {
 export async function searchPublicBusinesses(
   query?: string,
   categorySlug?: string,
+  cityId?: number,
 ): Promise<Business[]> {
-  const demonstrations = filterBusinesses(query, categorySlug);
+  if (!cityId || !Number.isInteger(cityId) || cityId <= 0) return [];
+
   const supabase = await createClient();
   const businessClient = supabase as unknown as SupabaseClient<any>;
   const { data: rows, error } = await businessClient
@@ -44,10 +45,11 @@ export async function searchPublicBusinesses(
     )
     .eq("status", "approved")
     .eq("is_active", true)
+    .eq("city_id", cityId)
     .order("name")
     .limit(100);
 
-  if (error || !rows?.length) return demonstrations;
+  if (error || !rows?.length) return [];
 
   const businessIds = rows.map((row: any) => row.id);
   const [catalogItemsResult, hoursResult] = await Promise.all([
@@ -80,7 +82,7 @@ export async function searchPublicBusinesses(
   }
 
   const normalizedQuery = normalized(query?.trim() ?? "");
-  const realBusinesses = rows
+  return rows
     .filter((row: any) => {
       const category = row.categories;
       if (!category || (categorySlug && category.slug !== categorySlug)) return false;
@@ -113,7 +115,7 @@ export async function searchPublicBusinesses(
         categoryName: category.name,
         neighborhood: row.neighborhood,
         address: [row.street, row.address_number, row.complement].filter(Boolean).join(", "),
-        distance: city ? `${city.name} - ${city.state_code}` : "Comércio local",
+        distance: `${city.name} - ${city.state_code}`,
         rating: 0,
         reviewCount: 0,
         ...schedule,
@@ -125,10 +127,4 @@ export async function searchPublicBusinesses(
         products: [],
       };
     });
-
-  const realSlugs = new Set(realBusinesses.map((business) => business.slug));
-  return [
-    ...realBusinesses,
-    ...demonstrations.filter((business) => !realSlugs.has(business.slug)),
-  ];
 }
