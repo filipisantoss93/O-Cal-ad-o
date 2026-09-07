@@ -126,7 +126,11 @@ export function BusinessForm({
       await loadCities(city.stateCode, String(city.id));
       setLocationCaptured(true);
     } catch (reason) {
-      setCityError(reason instanceof Error ? reason.message : "Não foi possível identificar a cidade.");
+      setCityError(
+        reason instanceof Error
+          ? reason.message
+          : "Não foi possível identificar a cidade.",
+      );
     } finally {
       setDetectingCity(false);
     }
@@ -224,7 +228,10 @@ export function BusinessForm({
             </button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="text-sm font-extrabold text-ink" htmlFor="business-state">
+            <label
+              className="text-sm font-extrabold text-ink"
+              htmlFor="business-state"
+            >
               Estado
               <select
                 className={inputClass}
@@ -242,13 +249,20 @@ export function BusinessForm({
                 }}
                 required
               >
-                <option value="" disabled>Selecione</option>
+                <option value="" disabled>
+                  Selecione
+                </option>
                 {states.map((state) => (
-                  <option key={state.code} value={state.code}>{state.name}</option>
+                  <option key={state.code} value={state.code}>
+                    {state.name}
+                  </option>
                 ))}
               </select>
             </label>
-            <label className="text-sm font-extrabold text-ink" htmlFor="business-city">
+            <label
+              className="text-sm font-extrabold text-ink"
+              htmlFor="business-city"
+            >
               Cidade
               <select
                 className={inputClass}
@@ -274,19 +288,30 @@ export function BusinessForm({
                   {loadingCities ? "Carregando..." : "Selecione"}
                 </option>
                 {cities.map((city) => (
-                  <option key={city.id} value={city.id}>{city.name}</option>
+                  <option key={city.id} value={city.id}>
+                    {city.name}
+                  </option>
                 ))}
               </select>
             </label>
           </div>
-          {cityError && <p role="alert" className="mt-2 text-sm font-semibold text-brand-dark">{cityError}</p>}
+          {cityError && (
+            <p
+              role="alert"
+              className="mt-2 text-sm font-semibold text-brand-dark"
+            >
+              {cityError}
+            </p>
+          )}
           {locationCaptured && !cityError && (
             <p role="status" className="mt-2 text-sm font-bold text-positive">
-              Localização capturada. Toque em “Salvar alterações” para gravar na loja.
+              Localização capturada. Toque em “Salvar alterações” para gravar na
+              loja.
             </p>
           )}
           <p className="mt-2 text-xs font-semibold leading-5 text-muted">
-            Para aparecer por distância, use “Localização atual” enquanto estiver no endereço da loja.
+            Para aparecer por distância, use “Localização atual” enquanto estiver
+            no endereço da loja.
           </p>
           {fieldError(state, "city_id")}
         </div>
@@ -312,7 +337,8 @@ export function BusinessForm({
             ))}
           </select>
           <p className="mt-1.5 text-xs font-semibold leading-5 text-muted">
-            Escolha apenas a categoria ampla que melhor representa o negócio. Os detalhes entram nas tags abaixo.
+            Escolha apenas a categoria ampla que melhor representa o negócio. Os
+            detalhes entram nas tags abaixo.
           </p>
           {fieldError(state, "category_id")}
         </div>
@@ -332,7 +358,9 @@ export function BusinessForm({
             placeholder="Ex.: mecânica diesel, troca de óleo, scanner, suspensão"
           />
           <p className="mt-1.5 text-xs font-semibold leading-5 text-muted">
-            Informe de 3 a 12 termos específicos, separados por vírgula. Use produtos, serviços, especialidades ou características que seus clientes pesquisariam. Não crie subcategorias.
+            {business
+              ? "Para trocar as tags, informe de 3 a 12 termos separados por vírgula. Se deixar em branco, as tags atuais serão mantidas."
+              : "Informe de 3 a 12 termos específicos, separados por vírgula. Use produtos, serviços, especialidades ou características que seus clientes pesquisariam."}
           </p>
           {fieldError(state, "tags")}
         </div>
@@ -402,7 +430,7 @@ export function BusinessForm({
             defaultValue={business?.websiteUrl}
             placeholder="instagram.com/sualoja"
           />
-          {fieldError(state, "public_email")}
+          {fieldError(state, "website_url")}
         </div>
       </fieldset>
 
@@ -527,7 +555,8 @@ export function BusinessForm({
               Manter loja ativa
             </span>
             <span className="mt-1 block text-xs font-semibold leading-5 text-muted">
-              Desmarque para ocultar temporariamente a loja depois que ela estiver publicada.
+              Desmarque para ocultar temporariamente a loja depois que ela estiver
+              publicada.
             </span>
           </span>
         </label>
@@ -535,14 +564,19 @@ export function BusinessForm({
 
       <div className="flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
         <p className="max-w-xl text-xs font-semibold leading-5 text-muted">
-          Alterações em informações públicas podem passar por uma nova análise antes de aparecer no Centro Comercial.
+          Alterações em informações públicas podem passar por uma nova análise antes
+          de aparecer no Centro Comercial.
         </p>
         <button
           type="submit"
           disabled={pending}
           className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl bg-brand px-6 text-base font-black text-white shadow-[0_10px_24px_rgba(185,61,37,0.2)] transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-65"
         >
-          {pending ? "Salvando..." : business ? "Salvar alterações" : "Cadastrar loja"}
+          {pending
+            ? "Salvando..."
+            : business
+              ? "Salvar alterações"
+              : "Cadastrar loja"}
         </button>
       </div>
     </form>
