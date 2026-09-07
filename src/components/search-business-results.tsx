@@ -73,8 +73,14 @@ export function SearchBusinessResults({
       return null;
     }
   }, [storedCoordinates]);
+  const distanceBusinessIds = useMemo(
+    () => businesses
+      .map((business) => Number(business.id))
+      .filter((id) => Number.isSafeInteger(id) && id > 0),
+    [businesses],
+  );
   const locationKey = city && coordinates
-    ? `${city.id}:${coordinates.latitude}:${coordinates.longitude}`
+    ? `${city.id}:${coordinates.latitude}:${coordinates.longitude}:${distanceBusinessIds.join(",")}`
     : null;
   const [distanceResult, setDistanceResult] = useState<{
     locationKey: string;
@@ -116,7 +122,7 @@ export function SearchBusinessResults({
   }, [businesses, highlightKey, highlightResult]);
 
   useEffect(() => {
-    if (!city || !coordinates || !locationKey) return;
+    if (!city || !coordinates || !locationKey || distanceBusinessIds.length === 0) return;
 
     const controller = new AbortController();
     const loadDistances = async () => {
@@ -128,6 +134,7 @@ export function SearchBusinessResults({
             cityId: city.id,
             latitude: coordinates.latitude,
             longitude: coordinates.longitude,
+            businessIds: distanceBusinessIds,
           }),
           cache: "no-store",
           signal: controller.signal,
@@ -151,7 +158,7 @@ export function SearchBusinessResults({
     };
     void loadDistances();
     return () => controller.abort();
-  }, [city, coordinates, locationKey]);
+  }, [city, coordinates, distanceBusinessIds, locationKey]);
 
   useEffect(() => {
     if (!city || !highlightKey) return;
