@@ -27,10 +27,7 @@ type CancelAddonResponse = {
   error?: string;
 };
 
-async function authenticatedBillingRequest(
-  functionName: string,
-  payload: Record<string, unknown>,
-) {
+async function getBillingAuth() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -45,11 +42,19 @@ async function authenticatedBillingRequest(
   }
 
   const { url, publishableKey } = getSupabaseEnv();
-  return fetch(`${url}/functions/v1/${functionName}`, {
+  return { url, publishableKey, accessToken: session.access_token };
+}
+
+async function callBillingFunction(
+  functionName: string,
+  payload: unknown,
+  auth: Awaited<ReturnType<typeof getBillingAuth>>,
+) {
+  return fetch(`${auth.url}/functions/v1/${functionName}`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      apikey: publishableKey,
+      Authorization: `Bearer ${auth.accessToken}`,
+      apikey: auth.publishableKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
@@ -58,10 +63,11 @@ async function authenticatedBillingRequest(
 }
 
 async function startCheckout(payload: CheckoutPayload): Promise<never> {
+  const auth = await getBillingAuth();
   let response: Response;
 
   try {
-    response = await authenticatedBillingRequest("efi-billing-checkout", payload);
+    response = await callBillingFunction("efi-billing-checkout", payload, auth);
   } catch (error) {
     console.error("Falha ao chamar checkout no Supabase", error);
     redirect(billingUrl({ erro: "checkout_efi" }));
@@ -129,11 +135,14 @@ export async function cancelAddonAction(formData: FormData) {
     redirect(`${billingUrl({ erro: "adicional_invalido" })}#meus-adicionais`);
   }
 
+  const auth = await getBillingAuth();
   let response: Response;
   try {
-    response = await authenticatedBillingRequest("efi-billing-addon-cancel", {
-      addon_id: addonId,
-    });
+    response = await callBillingFunction(
+      "efi-billing-addon-cancel",
+      { addon_id: addonId },
+      auth,
+    );
   } catch (error) {
     console.error("Falha ao cancelar adicional no Supabase", error);
     redirect(`${billingUrl({ erro: "cancelamento_efi" })}#meus-adicionais`);
