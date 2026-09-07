@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import { createClient } from "@/lib/supabase/server";
-import type { FeaturedCatalogItem } from "@/types/catalog";
+import type { CatalogPriceMode, FeaturedCatalogItem } from "@/types/catalog";
 
 type FeaturedItemsRequest = {
   cityId?: unknown;
@@ -11,6 +11,7 @@ type CatalogRow = {
   id: number;
   business_id: number;
   kind: string;
+  price_mode: string;
   name: string;
   description: string | null;
   price: number | null;
@@ -18,6 +19,11 @@ type CatalogRow = {
   image_path: string | null;
   updated_at: string;
 };
+
+function publicPriceMode(value: string): CatalogPriceMode {
+  if (value === "from" || value === "consult") return value;
+  return "fixed";
+}
 
 export async function POST(request: NextRequest) {
   let body: FeaturedItemsRequest;
@@ -57,11 +63,10 @@ export async function POST(request: NextRequest) {
   );
   const { data, error } = await supabase
     .from("catalog_items")
-    .select("id, business_id, kind, name, description, price, promotional_price, image_path, updated_at")
+    .select("id, business_id, kind, price_mode, name, description, price, promotional_price, image_path, updated_at")
     .in("business_id", businessIds)
     .eq("is_active", true)
     .eq("is_featured", true)
-    .not("price", "is", null)
     .order("updated_at", { ascending: false })
     .limit(8);
 
@@ -72,19 +77,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const rows = (data ?? []) as CatalogRow[];
+  const rows = (data ?? []) as unknown as CatalogRow[];
   const items: FeaturedCatalogItem[] = rows.flatMap((item) => {
     const business = businessById.get(item.business_id);
-    if (!business || item.price === null) return [];
+    if (!business) return [];
     return [{
       id: String(item.id),
       businessSlug: business.slug,
       businessName: business.name,
       kind: item.kind === "service" ? "service" : "product",
+      priceMode: publicPriceMode(item.price_mode),
       name: item.name,
       description:
         item.description || "Consulte disponibilidade diretamente com o comércio.",
-      price: Number(item.price),
+      price: item.price === null ? null : Number(item.price),
       ...(item.promotional_price !== null
         ? { promotionalPrice: Number(item.promotional_price) }
         : {}),
