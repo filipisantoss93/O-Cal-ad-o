@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { setFeaturedPromotionAction } from "@/app/painel/promocoes/actions";
 import {
   AlertTriangleIcon,
   ArrowRightIcon,
+  StarIcon,
   StoreIcon,
   TagIcon,
 } from "@/components/icons";
@@ -13,6 +15,20 @@ import {
 import { getMerchantBillingSummary } from "@/lib/merchant/billing";
 import { getMerchantWorkspace } from "@/lib/merchant/dal";
 import { publicMediaUrl } from "@/lib/merchant/media";
+
+type PromotionRow = {
+  id: number;
+  title: string;
+  description: string | null;
+  original_price: number | null;
+  offer_price: number;
+  starts_at: string;
+  ends_at: string;
+  image_path: string | null;
+  is_active: boolean;
+  is_featured: boolean;
+  billing_suspended: boolean;
+};
 
 export const metadata: Metadata = {
   title: "Promoções",
@@ -84,14 +100,13 @@ export default async function PromotionsPage({
   const billing = await getMerchantBillingSummary(supabase, user.id, businesses);
   const { data, error } = await supabase
     .from("promotions")
-    .select(
-      "id, title, description, original_price, offer_price, starts_at, ends_at, image_path, is_active, billing_suspended",
-    )
+    .select("*")
     .eq("business_id", business.id)
     .order("created_at", { ascending: false });
   if (error) throw new Error("Não foi possível carregar as promoções.");
 
-  const promotions: PromotionFormValue[] = (data ?? []).map((promotion) => ({
+  const rows = (data ?? []) as unknown as PromotionRow[];
+  const promotions: PromotionFormValue[] = rows.map((promotion) => ({
     id: promotion.id,
     title: promotion.title,
     description: promotion.description ?? "",
@@ -179,6 +194,68 @@ export default async function PromotionsPage({
           Você já pode preparar suas promoções. Elas aparecerão para o público
           depois que a loja for aprovada.
         </div>
+      )}
+
+      {rows.length > 0 && (
+        <section className="mt-8 rounded-[2rem] border border-line bg-surface p-5 shadow-sm sm:p-7">
+          <div className="flex items-start gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent/30 text-ink">
+              <StarIcon className="size-5" />
+            </span>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
+                Oferta em destaque
+              </p>
+              <h2 className="mt-1 text-xl font-black text-ink">
+                Escolha a promoção que aparece primeiro
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-muted">
+                Cada loja pode ter uma oferta destacada por vez. Trocar o destaque não apaga as outras promoções.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {rows.map((promotion) => (
+              <article
+                key={promotion.id}
+                className={`rounded-2xl border p-4 ${
+                  promotion.is_featured
+                    ? "border-accent-dark/30 bg-accent/20"
+                    : "border-line bg-canvas"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-black text-ink">{promotion.title}</p>
+                    <p className="mt-1 text-xs font-bold text-muted">
+                      {promotion.is_active ? "Ativa" : "Pausada"}
+                    </p>
+                  </div>
+                  {promotion.is_featured && (
+                    <span className="rounded-full bg-ink px-2.5 py-1 text-[0.65rem] font-black text-white">
+                      DESTAQUE
+                    </span>
+                  )}
+                </div>
+                <form action={setFeaturedPromotionAction} className="mt-4">
+                  <input type="hidden" name="business_id" value={business.id} />
+                  <input type="hidden" name="promotion_id" value={promotion.id} />
+                  <input
+                    type="hidden"
+                    name="next_featured"
+                    value={promotion.is_featured ? "false" : "true"}
+                  />
+                  <button
+                    type="submit"
+                    className="min-h-10 w-full rounded-xl border border-ink/15 bg-white px-3 text-sm font-black text-ink transition hover:border-brand/35"
+                  >
+                    {promotion.is_featured ? "Remover destaque" : "Destacar esta oferta"}
+                  </button>
+                </form>
+              </article>
+            ))}
+          </div>
+        </section>
       )}
 
       <div className="mt-8">
