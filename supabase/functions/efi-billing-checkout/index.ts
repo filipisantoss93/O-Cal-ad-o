@@ -9,14 +9,12 @@ const cycles = {
 
 type BillingCycle = keyof typeof cycles;
 type CheckoutAction = "pro_card" | "pro_pix" | "extra_store" | "promotion_pack";
-
 type CheckoutBody = {
   action?: CheckoutAction;
   billing_cycle?: string;
   business_id?: number;
   product_code?: string;
 };
-
 type EfiAuthorizeResponse = { access_token?: string };
 type EfiPlanResponse = { data?: { plan_id?: number } };
 type EfiSubscriptionLinkResponse = {
@@ -43,6 +41,19 @@ function json(body: unknown, status = 200) {
   });
 }
 
+class EfiRequestError extends Error {
+  path: string;
+  status: number;
+  payload: unknown;
+  constructor(path: string, status: number, payload: unknown) {
+    super("EFI_REQUEST_REJECTED");
+    this.name = "EfiRequestError";
+    this.path = path;
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
 function getEfiConfig() {
   const clientId = Deno.env.get("EFI_CLIENT_ID")?.trim();
   const clientSecret = Deno.env.get("EFI_CLIENT_SECRET")?.trim();
@@ -63,7 +74,7 @@ async function readJson(response: Response) {
   try {
     return JSON.parse(text) as unknown;
   } catch {
-    throw new Error("EFI_INVALID_JSON");
+    return { invalid_json: true, preview: text.slice(0, 500) };
   }
 }
 
@@ -81,8 +92,7 @@ async function getAccessToken() {
   });
   const payload = (await readJson(response)) as EfiAuthorizeResponse;
   if (!response.ok || !payload.access_token) {
-    console.error("Efí OAuth falhou", { status: response.status });
-    throw new Error("EFI_AUTH_FAILED");
+    throw new EfiRequestError("/v1/authorize", response.status, payload);
   }
   return { baseUrl: config.baseUrl, token: payload.access_token };
 }
@@ -99,8 +109,7 @@ async function efiRequest<T>(path: string, init: RequestInit) {
   });
   const payload = await readJson(response);
   if (!response.ok) {
-    console.error("Efí recusou cobrança", { path, status: response.status });
-    throw new Error("EFI_REQUEST_REJECTED");
+    throw new EfiRequestError(path, response.status, payload);
   }
   return payload as T;
 }
@@ -117,6 +126,13 @@ function notificationUrl() {
   return `${supabaseUrl}/functions/v1/efi-billing-webhook`;
 }
 
+function safeCustomId(parts: Array<string | number>) {
+  return parts
+    .join("_")
+    .replace(/[^a-zA-Z0-9_-]/g, "_")
+    .slice(0, 255);
+}
+
 async function createRecurringLink(input: {
   planName: string;
   itemName: string;
@@ -131,35 +147,48 @@ async function createRecurringLink(input: {
   const planId = plan.data?.plan_id;
   if (!planId) throw new Error("EFI_PLAN_ID_MISSING");
 
-  const subscription = await efiRequest<EfiSubscriptionLinkResponse>(
-    `/v1/plan/${planId}/subscription/one-step/link`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        items: [{ name: input.itemName, value: input.priceCents, amount: 1 }],
-        metadata: {
-          custom_id: input.customId,
-          notification_url: notificationUrl(),
-        },
-        settings: {
-          payment_method: "credit_card",
-          expire_at: checkoutExpiration(),
-          request_delivery_address: false,
-        },
-      }),
-    },
-  );
+  try {
+    const subscription = await efiRequest<EfiSubscriptionLinkResponse>(
+      `/v1/plan/${planId}/subscription/one-step/link`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          items: [{ name: input.itemName, value: input.priceCents, amount: 1 }],
+          metadata: {
+            custom_id: safeCustomId([input.customId]),
+            notification_url: notificationUrl(),
+          },
+          settings: {
+            payment_method: "credit_card",
+            expire_at: checkoutExpiration(),
+            request_delivery_address: false,
+          },
+        }),
+      },
+    );
 
-  const subscriptionId = subscription.data?.subscription_id;
-  const paymentUrl = subscription.data?.payment_url;
-  if (!subscriptionId || !paymentUrl) throw new Error("EFI_SUBSCRIPTION_LINK_MISSING");
+    const subscriptionId = subscription.data?.subscription_id;
+    const paymentUrl = subscription.data?.payment_url;
+    if (!subscriptionId || !paymentUrl) {
+      throw new Error("EFI_SUBSCRIPTION_LINK_MISSING");
+    }
 
-  return {
-    planId: String(planId),
-    subscriptionId: String(subscriptionId),
-    chargeId: subscription.data?.charge?.id ? String(subscription.data.charge.id) : null,
-    paymentUrl,
-  };
+    return {
+      planId: String(planId),
+      subscriptionId: String(subscriptionId),
+      chargeId: subscription.data?.charge?.id
+        ? String(subscription.data.charge.id)
+        : null,
+      paymentUrl,
+    };
+  } catch (error) {
+    try {
+      await efiRequest(`/v1/plan/${planId}`, { method: "DELETE" });
+    } catch (cleanupError) {
+      console.error("Falha ao limpar plano Efí órfão", cleanupError);
+    }
+    throw error;
+  }
 }
 
 async function createOneTimeLink(input: {
@@ -168,22 +197,30 @@ async function createOneTimeLink(input: {
   itemName: string;
   priceCents: number;
 }) {
-  const customId = `ocalcadao:${input.productCode}:${input.userId}:${Date.now()}`;
-  const payment = await efiRequest<EfiPaymentLinkResponse>("/v1/charge/one-step/link", {
-    method: "POST",
-    body: JSON.stringify({
-      items: [{ name: input.itemName, value: input.priceCents, amount: 1 }],
-      metadata: {
-        custom_id: customId,
-        notification_url: notificationUrl(),
-      },
-      settings: {
-        payment_method: "all",
-        expire_at: checkoutExpiration(),
-        request_delivery_address: false,
-      },
-    }),
-  });
+  const customId = safeCustomId([
+    "ocalcadao",
+    input.productCode,
+    input.userId,
+    Date.now(),
+  ]);
+  const payment = await efiRequest<EfiPaymentLinkResponse>(
+    "/v1/charge/one-step/link",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        items: [{ name: input.itemName, value: input.priceCents, amount: 1 }],
+        metadata: {
+          custom_id: customId,
+          notification_url: notificationUrl(),
+        },
+        settings: {
+          payment_method: "all",
+          expire_at: checkoutExpiration(),
+          request_delivery_address: false,
+        },
+      }),
+    },
+  );
   const chargeId = payment.data?.charge_id;
   const paymentUrl = payment.data?.payment_url;
   if (!chargeId || !paymentUrl) throw new Error("EFI_PAYMENT_LINK_MISSING");
@@ -229,10 +266,43 @@ async function isProActive(admin: ReturnType<typeof adminClient>, userId: string
   return Boolean(data);
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
+async function logCheckoutError(
+  admin: ReturnType<typeof adminClient>,
+  body: CheckoutBody,
+  error: unknown,
+) {
+  const diagnosticId = crypto.randomUUID();
+  const provider = error instanceof EfiRequestError
+    ? { path: error.path, status: error.status, payload: error.payload }
+    : { message: error instanceof Error ? error.message : "unknown_error" };
+  try {
+    await admin.from("billing_provider_events").insert({
+      event_key: `efi:checkout_error:${diagnosticId}`,
+      provider: "efi",
+      provider_event_id: diagnosticId,
+      event_type: "checkout_error",
+      payload: {
+        diagnostic_id: diagnosticId,
+        action: body.action ?? null,
+        billing_cycle: body.billing_cycle ?? null,
+        business_id: body.business_id ?? null,
+        product_code: body.product_code ?? null,
+        provider,
+      },
+    });
+  } catch (logError) {
+    console.error("Falha ao registrar diagnóstico Efí", logError);
+  }
+  return diagnosticId;
+}
 
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return json({ ok: false, error: "method_not_allowed" }, 405);
+  }
   if (!getEfiConfig()) {
     return json({ ok: false, error: "efi_nao_configurada" }, 503);
   }
@@ -252,7 +322,9 @@ Deno.serve(async (req: Request) => {
   try {
     if (body.action === "pro_card" || body.action === "pro_pix") {
       const cycle = body.billing_cycle as BillingCycle;
-      if (!(cycle in cycles)) return json({ ok: false, error: "periodo_invalido" }, 400);
+      if (!(cycle in cycles)) {
+        return json({ ok: false, error: "periodo_invalido" }, 400);
+      }
       if (await isProActive(admin, user.id)) {
         return json({ ok: false, error: "pro_ja_ativo" }, 409);
       }
@@ -265,7 +337,9 @@ Deno.serve(async (req: Request) => {
         .eq("is_active", true)
         .maybeSingle();
       if (priceError) throw priceError;
-      if (!price) return json({ ok: false, error: "preco_indisponivel" }, 404);
+      if (!price) {
+        return json({ ok: false, error: "preco_indisponivel" }, 404);
+      }
 
       if (body.action === "pro_card") {
         const checkout = await createRecurringLink({
@@ -273,7 +347,7 @@ Deno.serve(async (req: Request) => {
           itemName: `Assinatura O Calçadão Pro - ${cycles[cycle].label}`,
           intervalMonths: cycles[cycle].months,
           priceCents: price.price_cents,
-          customId: `ocalcadao:pro:${user.id}:${Date.now()}`,
+          customId: safeCustomId(["ocalcadao", "pro", user.id, Date.now()]),
         });
         const { error } = await admin.from("subscriptions").insert({
           user_id: user.id,
@@ -320,14 +394,16 @@ Deno.serve(async (req: Request) => {
         .eq("is_active", true)
         .maybeSingle();
       if (productError) throw productError;
-      if (!product) return json({ ok: false, error: "produto_indisponivel" }, 404);
+      if (!product) {
+        return json({ ok: false, error: "produto_indisponivel" }, 404);
+      }
 
       const checkout = await createRecurringLink({
         planName: "O Calçadão - Loja adicional",
         itemName: "O Calçadão - 1 loja adicional",
         intervalMonths: 1,
         priceCents: product.price_cents,
-        customId: `ocalcadao:extra_store:${user.id}:${Date.now()}`,
+        customId: safeCustomId(["ocalcadao", "extra_store", user.id, Date.now()]),
       });
       const { error } = await admin.from("billing_addons").insert({
         user_id: user.id,
@@ -358,15 +434,29 @@ Deno.serve(async (req: Request) => {
         return json({ ok: false, error: "pro_necessario" }, 403);
       }
 
-      const [{ data: business, error: businessError }, { data: product, error: productError }] = await Promise.all([
-        admin.from("businesses").select("id").eq("id", businessId).eq("owner_id", user.id).maybeSingle(),
-        admin.from("billing_products").select("code, name, price_cents, kind").eq("code", productCode).eq("kind", "promotion_pack").eq("is_active", true).maybeSingle(),
+      const [businessResult, productResult] = await Promise.all([
+        admin.from("businesses")
+          .select("id")
+          .eq("id", businessId)
+          .eq("owner_id", user.id)
+          .maybeSingle(),
+        admin.from("billing_products")
+          .select("code, name, price_cents, kind")
+          .eq("code", productCode)
+          .eq("kind", "promotion_pack")
+          .eq("is_active", true)
+          .maybeSingle(),
       ]);
-      if (businessError) throw businessError;
-      if (productError) throw productError;
-      if (!business) return json({ ok: false, error: "loja_invalida" }, 404);
-      if (!product) return json({ ok: false, error: "produto_indisponivel" }, 404);
+      if (businessResult.error) throw businessResult.error;
+      if (productResult.error) throw productResult.error;
+      if (!businessResult.data) {
+        return json({ ok: false, error: "loja_invalida" }, 404);
+      }
+      if (!productResult.data) {
+        return json({ ok: false, error: "produto_indisponivel" }, 404);
+      }
 
+      const product = productResult.data;
       const checkout = await createOneTimeLink({
         userId: user.id,
         productCode: product.code,
@@ -389,10 +479,14 @@ Deno.serve(async (req: Request) => {
 
     return json({ ok: false, error: "acao_invalida" }, 400);
   } catch (error) {
-    console.error("Falha no checkout Efí", error instanceof Error ? error.message : error);
+    const diagnosticId = await logCheckoutError(admin, body, error);
+    console.error("Falha no checkout Efí", {
+      diagnosticId,
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
     if (error instanceof Error && error.message === "EFI_NOT_CONFIGURED") {
-      return json({ ok: false, error: "efi_nao_configurada" }, 503);
+      return json({ ok: false, error: "efi_nao_configurada", diagnostic_id: diagnosticId }, 503);
     }
-    return json({ ok: false, error: "checkout_efi" }, 502);
+    return json({ ok: false, error: "checkout_efi", diagnostic_id: diagnosticId }, 502);
   }
 });
