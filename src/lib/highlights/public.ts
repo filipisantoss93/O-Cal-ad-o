@@ -15,6 +15,11 @@ const palettes = [
 
 type Placement = "city" | "category" | "combo";
 
+export type FeaturedCampaignCandidate = {
+  campaignId: number;
+  businessId: number;
+};
+
 export type RegionalBanner = {
   campaignId: number;
   imageUrl: string;
@@ -35,17 +40,15 @@ function initials(name: string) {
     .toLocaleUpperCase("pt-BR");
 }
 
-export async function getPublicFeaturedBusinesses(
+export async function getPublicFeaturedCampaignCandidates(
   supabase: SupabaseClient<Database>,
   cityId: number,
   categoryId?: number,
-): Promise<Business[]> {
+): Promise<FeaturedCampaignCandidate[]> {
   const now = new Date().toISOString();
   let query = supabase
     .from("highlight_campaigns")
-    .select(
-      "id, placement, businesses!inner(id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone))",
-    )
+    .select("id, business_id, businesses!inner(id)")
     .eq("city_id", cityId)
     .eq("status", "active")
     .lte("starts_at", now)
@@ -64,18 +67,63 @@ export async function getPublicFeaturedBusinesses(
     query = query.in("placement", ["city", "combo"]);
   }
 
-  const { data: campaigns, error } = await query.limit(100);
+  const { data, error } = await query.limit(100);
+  if (error || !data?.length) return [];
+
+  return data.flatMap((campaign): FeaturedCampaignCandidate[] => {
+    const campaignId = Number(campaign.id);
+    const businessId = Number(campaign.business_id);
+    if (
+      !Number.isSafeInteger(campaignId) || campaignId <= 0 ||
+      !Number.isSafeInteger(businessId) || businessId <= 0
+    ) {
+      return [];
+    }
+    return [{ campaignId, businessId }];
+  });
+}
+
+export async function getPublicFeaturedBusinesses(
+  supabase: SupabaseClient<Database>,
+  campaignIds: number[],
+): Promise<Business[]> {
+  if (campaignIds.length === 0) return [];
+
+  const now = new Date().toISOString();
+  const { data: campaigns, error } = await supabase
+    .from("highlight_campaigns")
+    .select(
+      "id, placement, businesses!inner(id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone))",
+    )
+    .in("id", campaignIds)
+    .eq("status", "active")
+    .lte("starts_at", now)
+    .gt("ends_at", now)
+    .eq("businesses.status", "approved")
+    .eq("businesses.is_active", true)
+    .eq("businesses.billing_suspended", false)
+    .not("businesses.logo_path", "is", null)
+    .not("businesses.cover_path", "is", null);
+
   if (error || !campaigns?.length) return [];
 
   const businessIds = campaigns
-    .map((campaign) => Number(campaign.businesses?.id))
+    .map((campaign) => {
+      const row = Array.isArray(campaign.businesses)
+        ? campaign.businesses[0]
+        : campaign.businesses;
+      return Number(row?.id);
+    })
     .filter((id) => Number.isSafeInteger(id) && id > 0);
-  const { data: hours } = await supabase
-    .from("business_hours")
-    .select("business_id, weekday, opens_at, closes_at, is_closed")
-    .in("business_id", businessIds)
-    .order("weekday")
-    .order("display_order");
+
+  const { data: hours } = businessIds.length
+    ? await supabase
+        .from("business_hours")
+        .select("business_id, weekday, opens_at, closes_at, is_closed")
+        .in("business_id", businessIds)
+        .order("weekday")
+        .order("display_order")
+    : { data: [] as BusinessHour[] };
 
   const hoursByBusiness = new Map<number, BusinessHour[]>();
   for (const item of hours ?? []) {
@@ -84,8 +132,14 @@ export async function getPublicFeaturedBusinesses(
     hoursByBusiness.set(item.business_id, businessHours);
   }
 
-  return campaigns.flatMap((campaign): Business[] => {
-    const row = campaign.businesses;
+  const campaignById = new Map(campaigns.map((campaign) => [Number(campaign.id), campaign]));
+
+  return campaignIds.flatMap((campaignId): Business[] => {
+    const campaign = campaignById.get(campaignId);
+    if (!campaign) return [];
+    const row = Array.isArray(campaign.businesses)
+      ? campaign.businesses[0]
+      : campaign.businesses;
     if (!row?.categories || !row.cities) return [];
     const category = Array.isArray(row.categories)
       ? row.categories[0]
