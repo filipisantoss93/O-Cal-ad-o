@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/admin/dal";
 import { getBusinessSchedule } from "@/lib/business-hours";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import { createClient } from "@/lib/supabase/server";
-import type { Business } from "@/types/catalog";
+import type { Business, CatalogPriceMode } from "@/types/catalog";
 import type { Database } from "@/types/database";
 
 const palettes = [
@@ -16,8 +16,25 @@ const palettes = [
   "from-[#7c3d71] to-[#d66e9e]",
 ];
 
+type PublicCatalogRow = {
+  id: number;
+  kind: string;
+  price_mode: string;
+  name: string;
+  description: string | null;
+  price: number | null;
+  promotional_price: number | null;
+  image_path: string | null;
+  is_featured: boolean;
+};
+
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join("").toLocaleUpperCase("pt-BR");
+}
+
+function publicPriceMode(value: string): CatalogPriceMode {
+  if (value === "from" || value === "consult") return value;
+  return "fixed";
 }
 
 function directionsUrls(latitude: number | null, longitude: number | null) {
@@ -69,10 +86,9 @@ async function loadBusiness(
     supabase.from("cities").select("name, state_code, timezone").eq("id", business.city_id).maybeSingle(),
     supabase
       .from("catalog_items")
-      .select("id, kind, name, description, price, promotional_price, image_path, is_featured")
+      .select("id, kind, price_mode, name, description, price, promotional_price, image_path, is_featured")
       .eq("business_id", business.id)
       .eq("is_active", true)
-      .not("price", "is", null)
       .order("is_featured", { ascending: false })
       .order("name")
       .limit(24),
@@ -105,6 +121,7 @@ async function loadBusiness(
   const city = cityResult.data;
   if (!category || !city) return null;
   const schedule = getBusinessSchedule(hoursResult.data ?? [], city.timezone);
+  const catalogItems = (itemsResult.data ?? []) as unknown as PublicCatalogRow[];
 
   return {
     id: String(business.id),
@@ -136,12 +153,13 @@ async function loadBusiness(
     tags: [category.name, business.neighborhood, city.name],
     whatsapp: business.whatsapp_e164.replace(/\D/g, ""),
     ...directionsUrls(business.latitude, business.longitude),
-    products: (itemsResult.data ?? []).map((item) => ({
+    products: catalogItems.map((item) => ({
       id: String(item.id),
       kind: item.kind === "service" ? "service" : "product",
+      priceMode: publicPriceMode(item.price_mode),
       name: item.name,
       description: item.description || "Consulte disponibilidade diretamente com a loja.",
-      price: Number(item.price),
+      price: item.price === null ? null : Number(item.price),
       ...(item.promotional_price !== null ? { promotionalPrice: Number(item.promotional_price) } : {}),
       imageUrl: publicMediaUrl(supabase, item.image_path),
       isFeatured: item.is_featured,
