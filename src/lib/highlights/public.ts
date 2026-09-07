@@ -14,6 +14,7 @@ const palettes = [
 ];
 
 type Placement = "city" | "category" | "combo";
+type BusinessHourRow = BusinessHour & { business_id: number };
 
 export type FeaturedCampaignCandidate = {
   campaignId: number;
@@ -116,17 +117,18 @@ export async function getPublicFeaturedBusinesses(
     })
     .filter((id) => Number.isSafeInteger(id) && id > 0);
 
-  const { data: hours } = businessIds.length
+  const hoursResult = businessIds.length
     ? await supabase
         .from("business_hours")
         .select("business_id, weekday, opens_at, closes_at, is_closed")
         .in("business_id", businessIds)
         .order("weekday")
         .order("display_order")
-    : { data: [] as BusinessHour[] };
+    : { data: [] as BusinessHourRow[] };
+  const hours = (hoursResult.data ?? []) as BusinessHourRow[];
 
   const hoursByBusiness = new Map<number, BusinessHour[]>();
-  for (const item of hours ?? []) {
+  for (const item of hours) {
     const businessHours = hoursByBusiness.get(item.business_id) ?? [];
     businessHours.push(item);
     hoursByBusiness.set(item.business_id, businessHours);
