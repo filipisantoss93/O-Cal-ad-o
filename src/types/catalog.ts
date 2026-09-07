@@ -24,6 +24,7 @@ export type FeaturedCatalogItem = {
   id: string;
   businessSlug: string;
   businessName: string;
+  whatsapp: string | null;
   kind: "product" | "service";
   priceMode: CatalogPriceMode;
   name: string;
