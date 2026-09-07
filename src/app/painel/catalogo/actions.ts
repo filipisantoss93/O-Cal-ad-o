@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { normalizeCatalogPriceMode } from "@/lib/catalog-pricing";
 import {
   imageFromForm,
   removeMerchantImages,
@@ -14,6 +15,12 @@ import {
   parseMoney,
   requiredText,
 } from "@/lib/validation";
+import type { CatalogPriceMode } from "@/types/catalog";
+import type { Database } from "@/types/database";
+
+type CatalogItemWrite = Database["public"]["Tables"]["catalog_items"]["Update"] & {
+  price_mode: CatalogPriceMode;
+};
 
 function catalogUrl(businessId: number, params: Record<string, string> = {}) {
   const query = new URLSearchParams({ loja: String(businessId), ...params });
@@ -76,12 +83,20 @@ export async function saveCatalogItemAction(formData: FormData) {
       "A descrição",
       1200,
     );
-    const price = parseMoney(formString(formData, "price"), "price");
-    const promotionalPrice = parseMoney(
-      formString(formData, "promotional_price"),
-      "promotional_price",
-      false,
+    const priceMode = normalizeCatalogPriceMode(
+      kind,
+      formString(formData, "price_mode"),
     );
+    const price = priceMode === "consult"
+      ? null
+      : parseMoney(formString(formData, "price"), "price");
+    const promotionalPrice = priceMode === "fixed"
+      ? parseMoney(
+          formString(formData, "promotional_price"),
+          "promotional_price",
+          false,
+        )
+      : null;
     if (
       promotionalPrice !== null &&
       price !== null &&
@@ -112,10 +127,11 @@ export async function saveCatalogItemAction(formData: FormData) {
       if (resetError) throw resetError;
     }
 
-    const values = {
+    const values: CatalogItemWrite = {
       kind,
       name,
       description,
+      price_mode: priceMode,
       price,
       promotional_price: promotionalPrice,
       image_path: imagePath,
@@ -125,12 +141,16 @@ export async function saveCatalogItemAction(formData: FormData) {
     const result = existing
       ? await supabase
           .from("catalog_items")
-          .update(values)
+          .update(
+            values as Database["public"]["Tables"]["catalog_items"]["Update"],
+          )
           .eq("id", existing.id)
           .eq("business_id", businessId)
       : await supabase
           .from("catalog_items")
-          .insert({ ...values, business_id: businessId });
+          .insert(
+            { ...values, business_id: businessId } as Database["public"]["Tables"]["catalog_items"]["Insert"],
+          );
 
     if (result.error) throw result.error;
     if (newImagePath) {
