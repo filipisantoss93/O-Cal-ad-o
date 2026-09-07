@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: businesses, error: businessError } = await supabase
     .from("businesses")
-    .select("id, slug, name")
+    .select("id, slug, name, whatsapp_e164")
     .eq("city_id", cityId)
     .eq("status", "approved")
     .eq("is_active", true)
@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
       id: String(item.id),
       businessSlug: business.slug,
       businessName: business.name,
+      whatsapp: business.whatsapp_e164?.replace(/\D/g, "") || null,
       kind: item.kind === "service" ? "service" : "product",
       priceMode: publicPriceMode(item.price_mode),
       name: item.name,
