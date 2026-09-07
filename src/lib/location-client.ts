@@ -1,10 +1,12 @@
 import {
   cityChangeEventName,
+  locationSelectionModeStorageKey,
   selectedCityCookieName,
   selectedCityStorageKey,
   selectedCoordinatesStorageKey,
   type CurrentCoordinates,
   type DetectedCity,
+  type LocationSelectionMode,
   type SelectedCity,
 } from "@/lib/location";
 
@@ -16,6 +18,30 @@ export function readSelectedCity() {
     return null;
   }
 }
+
+export function readLocationSelectionMode(): LocationSelectionMode | null {
+  try {
+    const storedMode = window.localStorage.getItem(locationSelectionModeStorageKey);
+    if (storedMode === "auto" || storedMode === "manual") return storedMode;
+
+    const storedCoordinates = window.sessionStorage.getItem(
+      selectedCoordinatesStorageKey,
+    );
+    if (!storedCoordinates) return null;
+
+    const coordinates = JSON.parse(storedCoordinates) as CurrentCoordinates;
+    const hasValidCoordinates =
+      Number.isFinite(coordinates.latitude) &&
+      Number.isFinite(coordinates.longitude);
+    if (!hasValidCoordinates) return null;
+
+    window.localStorage.setItem(locationSelectionModeStorageKey, "auto");
+    return "auto";
+  } catch {
+    return null;
+  }
+}
+
 export function saveSelectedCity(
   city: SelectedCity,
   coordinates?: CurrentCoordinates,
@@ -29,6 +55,10 @@ export function saveSelectedCity(
   window.localStorage.setItem(
     selectedCityStorageKey,
     JSON.stringify(storedCity),
+  );
+  window.localStorage.setItem(
+    locationSelectionModeStorageKey,
+    coordinates ? "auto" : "manual",
   );
   if (coordinates) {
     window.sessionStorage.setItem(
@@ -64,12 +94,12 @@ export async function detectCurrentCity(): Promise<DetectedCity> {
 
   let position: GeolocationPosition;
   try {
-    // A leitura aproximada costuma responder mais rápido no Safari do iPhone e
-    // já é suficiente para identificar município e ordenar lojas próximas.
+    // Fazemos uma nova leitura a cada atualização para não reutilizar uma
+    // posição antiga quando o usuário estiver em trânsito.
     position = await getPosition({
       enableHighAccuracy: false,
       timeout: 20_000,
-      maximumAge: 300_000,
+      maximumAge: 0,
     });
   } catch (firstError) {
     const error = firstError as GeolocationPositionError;
