@@ -8,6 +8,7 @@ export type Category = {
 
 export type Product = {
   id: string;
+  kind: "product" | "service";
   name: string;
   description: string;
   price: number;
