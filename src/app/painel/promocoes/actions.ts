@@ -44,6 +44,13 @@ async function ownedBusiness(
     .maybeSingle();
 }
 
+function revalidatePromotionViews() {
+  revalidatePath("/");
+  revalidatePath("/painel");
+  revalidatePath("/painel/promocoes");
+  revalidatePath("/painel/assinatura");
+}
+
 export async function savePromotionAction(
   _state: ActionState,
   formData: FormData,
@@ -171,9 +178,7 @@ export async function savePromotionAction(
     if (imageFile) {
       await removeMerchantImages(supabase, user.id, [existing?.image_path]);
     }
-    revalidatePath("/painel");
-    revalidatePath("/painel/promocoes");
-    revalidatePath("/painel/assinatura");
+    revalidatePromotionViews();
     return {
       status: "success",
       message: existing ? "Promoção atualizada." : "Promoção criada.",
@@ -188,6 +193,44 @@ export async function savePromotionAction(
     }
     return promotionError(error);
   }
+}
+
+export async function setFeaturedPromotionAction(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const businessId = Number(formString(formData, "business_id"));
+  const promotionId = Number(formString(formData, "promotion_id"));
+  const nextFeatured = formString(formData, "next_featured") === "true";
+  const businessResult = await ownedBusiness(supabase, user.id, businessId);
+  if (
+    !businessResult.data ||
+    !Number.isSafeInteger(promotionId) ||
+    promotionId <= 0
+  ) return;
+
+  const promotionsTable = (supabase as unknown as {
+    from: (table: string) => {
+      update: (values: Record<string, unknown>) => {
+        eq: (column: string, value: unknown) => unknown;
+      };
+    };
+  }).from("promotions") as any;
+
+  if (nextFeatured) {
+    await promotionsTable
+      .update({ is_featured: false })
+      .eq("business_id", businessId);
+  }
+  await promotionsTable
+    .update({ is_featured: nextFeatured })
+    .eq("business_id", businessId)
+    .eq("id", promotionId);
+
+  revalidatePromotionViews();
 }
 
 export async function togglePromotionAction(formData: FormData) {
@@ -207,8 +250,7 @@ export async function togglePromotionAction(formData: FormData) {
     .update({ is_active: formString(formData, "next_active") === "true" })
     .eq("id", promotionId)
     .eq("business_id", businessId);
-  revalidatePath("/painel");
-  revalidatePath("/painel/promocoes");
+  revalidatePromotionViews();
 }
 
 export async function deletePromotionAction(formData: FormData) {
@@ -239,7 +281,5 @@ export async function deletePromotionAction(formData: FormData) {
   if (!error) {
     await removeMerchantImages(supabase, user.id, [promotion.image_path]);
   }
-  revalidatePath("/painel");
-  revalidatePath("/painel/promocoes");
-  revalidatePath("/painel/assinatura");
+  revalidatePromotionViews();
 }
