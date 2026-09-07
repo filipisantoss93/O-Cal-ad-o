@@ -140,9 +140,9 @@ export function NearbyBusinesses() {
 
   if (!city) {
     return (
-      <div className="mt-5 rounded-2xl border border-dashed border-line bg-canvas p-5 text-center">
-        <LocateIcon className="mx-auto size-6 text-brand" />
-        <p className="mt-3 text-sm font-black text-ink">Informe sua localização</p>
+      <div className="mt-4 rounded-xl border border-dashed border-line bg-canvas p-4 text-center sm:mt-5 sm:rounded-2xl sm:p-5">
+        <LocateIcon className="mx-auto size-5 text-brand sm:size-6" />
+        <p className="mt-2 text-sm font-black text-ink sm:mt-3">Informe sua localização</p>
         <p className="mt-1 text-xs font-semibold leading-5 text-muted">
           Use o botão “Escolher cidade” para encontrar os comércios mais próximos.
         </p>
@@ -152,21 +152,21 @@ export function NearbyBusinesses() {
 
   if (loading) {
     return (
-      <div className="mt-5 space-y-3" aria-live="polite" aria-label="Carregando comércios próximos">
+      <div className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3" aria-live="polite" aria-label="Carregando comércios próximos">
         {[0, 1, 2].map((item) => (
-          <div key={item} className="h-[74px] animate-pulse rounded-2xl bg-canvas" />
+          <div key={item} className={`h-[68px] animate-pulse rounded-xl bg-canvas sm:h-[74px] sm:rounded-2xl ${item === 2 ? "hidden sm:block" : ""}`} />
         ))}
       </div>
     );
   }
 
   if (error) {
-    return <p role="alert" className="mt-5 rounded-2xl bg-brand/8 p-4 text-sm font-bold text-brand-dark">{error}</p>;
+    return <p role="alert" className="mt-4 rounded-xl bg-brand/8 p-3.5 text-sm font-bold text-brand-dark sm:mt-5 sm:rounded-2xl sm:p-4">{error}</p>;
   }
 
   if (businesses.length === 0) {
     return (
-      <div className="mt-5 rounded-2xl border border-dashed border-line bg-canvas p-5 text-center">
+      <div className="mt-4 rounded-xl border border-dashed border-line bg-canvas p-4 text-center sm:mt-5 sm:rounded-2xl sm:p-5">
         <p className="text-sm font-black text-ink">Nenhum comércio publicado em {city.name}</p>
         <p className="mt-1 text-xs font-semibold leading-5 text-muted">
           Novas vitrines aparecerão aqui depois de aprovadas.
@@ -177,21 +177,21 @@ export function NearbyBusinesses() {
 
   return (
     <>
-      <p className="mt-4 text-xs font-bold text-muted">
+      <p className="mt-3 text-[11px] font-bold text-muted sm:mt-4 sm:text-xs">
         {coordinates ? `Ordenados pela distância em ${city.name}` : `Comércios de ${city.name}`}
       </p>
-      <div className="mt-3 space-y-3">
-        {businesses.slice(0, 3).map((business) => (
+      <div className="mt-2.5 space-y-2.5 sm:mt-3 sm:space-y-3">
+        {businesses.slice(0, 3).map((business, index) => (
           <Link
             key={business.id}
             href={`/loja/${business.slug}`}
-            className="group flex items-center gap-3 rounded-2xl border border-line/80 p-3 transition hover:border-ink/15 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className={`group items-center gap-2.5 rounded-xl border border-line/80 p-2.5 transition hover:border-ink/15 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:gap-3 sm:rounded-2xl sm:p-3 ${index === 2 ? "hidden sm:flex" : "flex"}`}
           >
-            <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand to-accent-dark text-sm font-black text-white">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand to-accent-dark text-xs font-black text-white sm:size-12 sm:text-sm">
               {initials(business.name)}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-2 truncate font-extrabold text-ink">
+              <span className="flex items-center gap-2 truncate text-sm font-extrabold text-ink sm:text-base">
                 <span className="truncate">{business.name}</span>
                 {business.isFeatured && (
                   <span className="shrink-0 rounded-full bg-accent/35 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-ink">
@@ -199,11 +199,11 @@ export function NearbyBusinesses() {
                   </span>
                 )}
               </span>
-              <span className="mt-0.5 block truncate text-xs font-semibold text-muted">
+              <span className="mt-0.5 block truncate text-[11px] font-semibold text-muted sm:text-xs">
                 {business.categoryName} · {business.neighborhood}
               </span>
             </span>
-            <span className="shrink-0 text-xs font-black text-brand-dark">
+            <span className="shrink-0 text-[11px] font-black text-brand-dark sm:text-xs">
               {formatDistance(business.distanceKm)}
             </span>
           </Link>
@@ -211,7 +211,7 @@ export function NearbyBusinesses() {
       </div>
       <Link
         href="/buscar"
-        className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-ink/10 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-ink/10 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:mt-4"
       >
         Explorar todos
         <ArrowRightIcon className="size-4" />
