@@ -212,20 +212,24 @@ export async function setFeaturedPromotionAction(formData: FormData) {
     promotionId <= 0
   ) return;
 
-  const promotionsTable = (supabase as unknown as {
-    from: (table: string) => {
-      update: (values: Record<string, unknown>) => {
-        eq: (column: string, value: unknown) => unknown;
-      };
-    };
-  }).from("promotions") as any;
+  const { data: promotion } = await supabase
+    .from("promotions")
+    .select("id")
+    .eq("id", promotionId)
+    .eq("business_id", businessId)
+    .maybeSingle();
+  if (!promotion) return;
 
   if (nextFeatured) {
-    await promotionsTable
+    const { error: resetError } = await supabase
+      .from("promotions")
       .update({ is_featured: false })
       .eq("business_id", businessId);
+    if (resetError) return;
   }
-  await promotionsTable
+
+  await supabase
+    .from("promotions")
     .update({ is_featured: nextFeatured })
     .eq("business_id", businessId)
     .eq("id", promotionId);
