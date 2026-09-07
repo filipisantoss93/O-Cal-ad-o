@@ -1,16 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon, StarIcon } from "@/components/icons";
+import { catalogPricePresentation } from "@/lib/catalog-pricing";
 import type { FeaturedCatalogItem } from "@/types/catalog";
 
-function money(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
 export function FeaturedItemCard({ item }: { item: FeaturedCatalogItem }) {
+  const price = catalogPricePresentation(
+    item.priceMode,
+    item.price,
+    item.promotionalPrice,
+  );
+
   return (
     <article className="flex min-h-64 flex-col overflow-hidden rounded-3xl border border-line bg-surface shadow-sm">
       {item.imageUrl ? (
@@ -41,13 +41,13 @@ export function FeaturedItemCard({ item }: { item: FeaturedCatalogItem }) {
         <p className="mt-2 text-sm leading-6 text-muted">{item.description}</p>
         <div className="mt-auto flex items-end justify-between gap-4 pt-5">
           <div>
-            {item.promotionalPrice !== undefined ? (
+            {price.original ? (
               <span className="block text-xs font-bold text-muted line-through">
-                {money(item.price)}
+                {price.original}
               </span>
             ) : null}
             <span className="text-lg font-black text-ink">
-              {money(item.promotionalPrice ?? item.price)}
+              {price.primary}
             </span>
           </div>
           <Link
