@@ -20,6 +20,22 @@ import {
 } from "@/lib/validation";
 import type { Database } from "@/types/database";
 
+type PromotionFeatureUpdateQuery = {
+  eq: (column: string, value: unknown) => PromotionFeatureUpdateQuery;
+};
+
+type PromotionFeatureTable = {
+  update: (values: { is_featured: boolean }) => PromotionFeatureUpdateQuery;
+};
+
+function promotionFeatureTable(supabase: SupabaseClient<Database>) {
+  return (
+    supabase as unknown as {
+      from: (table: "promotions") => PromotionFeatureTable;
+    }
+  ).from("promotions");
+}
+
 function promotionError(error: unknown): ActionState {
   if (error instanceof ValidationError) {
     return actionError(error.message, error.field);
@@ -220,16 +236,14 @@ export async function setFeaturedPromotionAction(formData: FormData) {
     .maybeSingle();
   if (!promotion) return;
 
+  const featuredTable = promotionFeatureTable(supabase);
   if (nextFeatured) {
-    const { error: resetError } = await supabase
-      .from("promotions")
+    await featuredTable
       .update({ is_featured: false })
       .eq("business_id", businessId);
-    if (resetError) return;
   }
 
-  await supabase
-    .from("promotions")
+  await featuredTable
     .update({ is_featured: nextFeatured })
     .eq("business_id", businessId)
     .eq("id", promotionId);
