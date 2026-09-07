@@ -6,12 +6,15 @@ export type Category = {
   accent: string;
 };
 
+export type CatalogPriceMode = "fixed" | "from" | "consult";
+
 export type Product = {
   id: string;
   kind: "product" | "service";
+  priceMode: CatalogPriceMode;
   name: string;
   description: string;
-  price: number;
+  price: number | null;
   promotionalPrice?: number;
   imageUrl?: string | null;
   isFeatured?: boolean;
@@ -22,9 +25,10 @@ export type FeaturedCatalogItem = {
   businessSlug: string;
   businessName: string;
   kind: "product" | "service";
+  priceMode: CatalogPriceMode;
   name: string;
   description: string;
-  price: number;
+  price: number | null;
   promotionalPrice?: number;
   imageUrl?: string | null;
 };
