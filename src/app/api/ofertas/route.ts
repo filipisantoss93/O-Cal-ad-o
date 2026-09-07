@@ -7,6 +7,11 @@ type OffersRequest = {
   cityId?: unknown;
 };
 
+type BusinessSummary = {
+  slug: string;
+  name: string;
+};
+
 type PromotionRow = {
   id: number;
   business_id: number;
@@ -18,6 +23,7 @@ type PromotionRow = {
   ends_at: string;
   is_featured: boolean;
   created_at: string;
+  businesses: BusinessSummary | BusinessSummary[] | null;
 };
 
 const palettes = ["bg-[#fff0df]", "bg-[#e5f1ef]", "bg-[#ffe9f2]", "bg-[#edf0ff]"];
@@ -52,37 +58,26 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = await createClient();
-  const { data: businesses, error: businessError } = await supabase
-    .from("businesses")
-    .select("id, slug, name")
-    .eq("city_id", cityId)
-    .eq("status", "approved")
-    .eq("is_active", true)
-    .eq("billing_suspended", false);
-
-  if (businessError) {
-    return NextResponse.json(
-      { error: "Não foi possível consultar os comércios." },
-      { status: 500 },
-    );
-  }
-  if (!businesses?.length) {
-    return NextResponse.json({ promotions: [] }, { headers: { "Cache-Control": "no-store" } });
-  }
-
-  const businessIds = businesses.map((business) => business.id);
-  const businessById = new Map(
-    businesses.map((business) => [business.id, business]),
-  );
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("promotions")
-    .select("*")
-    .in("business_id", businessIds)
+    .select(
+      "id, business_id, title, description, original_price, offer_price, image_path, ends_at, is_featured, created_at, businesses!inner(slug, name, city_id, status, is_active, billing_suspended)",
+    )
     .eq("is_active", true)
     .eq("billing_suspended", false)
-    .limit(24);
+    .lte("starts_at", now)
+    .gt("ends_at", now)
+    .eq("businesses.city_id", cityId)
+    .eq("businesses.status", "approved")
+    .eq("businesses.is_active", true)
+    .eq("businesses.billing_suspended", false)
+    .order("is_featured", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(6);
 
   if (error) {
+    console.error("[api/ofertas] query failed", error.message);
     return NextResponse.json(
       { error: "Não foi possível consultar as ofertas." },
       { status: 500 },
@@ -90,38 +85,34 @@ export async function POST(request: NextRequest) {
   }
 
   const rows = (data ?? []) as unknown as PromotionRow[];
-  const promotions: Promotion[] = rows
-    .sort((first, second) => {
-      if (first.is_featured !== second.is_featured) {
-        return first.is_featured ? -1 : 1;
-      }
-      return new Date(second.created_at).getTime() - new Date(first.created_at).getTime();
-    })
-    .slice(0, 6)
-    .flatMap((promotion, index) => {
-      const business = businessById.get(promotion.business_id);
-      if (!business) return [];
-      const originalPrice =
-        promotion.original_price === null ? null : Number(promotion.original_price);
-      const offerPrice = Number(promotion.offer_price);
-      return [{
-        id: String(promotion.id),
-        businessSlug: business.slug,
-        businessName: business.name,
-        title: promotion.title,
-        description: promotion.description || "Oferta publicada pelo comércio local.",
-        badge: promotion.is_featured
-          ? "DESTAQUE"
-          : discountBadge(originalPrice, offerPrice),
-        symbol: "🏷️",
-        palette: palettes[index % palettes.length],
-        expiresLabel: expirationLabel(promotion.ends_at),
-        originalPrice,
-        offerPrice,
-        imageUrl: publicMediaUrl(supabase, promotion.image_path),
-        isFeatured: promotion.is_featured,
-      }];
-    });
+  const promotions: Promotion[] = rows.flatMap((promotion, index) => {
+    const business = Array.isArray(promotion.businesses)
+      ? promotion.businesses[0]
+      : promotion.businesses;
+    if (!business) return [];
+
+    const originalPrice =
+      promotion.original_price === null ? null : Number(promotion.original_price);
+    const offerPrice = Number(promotion.offer_price);
+
+    return [{
+      id: String(promotion.id),
+      businessSlug: business.slug,
+      businessName: business.name,
+      title: promotion.title,
+      description: promotion.description || "Oferta publicada pelo comércio local.",
+      badge: promotion.is_featured
+        ? "DESTAQUE"
+        : discountBadge(originalPrice, offerPrice),
+      symbol: "🏷️",
+      palette: palettes[index % palettes.length],
+      expiresLabel: expirationLabel(promotion.ends_at),
+      originalPrice,
+      offerPrice,
+      imageUrl: publicMediaUrl(supabase, promotion.image_path),
+      isFeatured: promotion.is_featured,
+    }];
+  });
 
   return NextResponse.json(
     { promotions },
