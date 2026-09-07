@@ -18,6 +18,7 @@ import {
   getAdminBusinessPreview,
   getPublicBusiness,
 } from "@/lib/public-business";
+import type { CatalogPriceMode } from "@/types/catalog";
 
 type BusinessPageProps = {
   params: Promise<{ slug: string }>;
@@ -230,7 +231,7 @@ export default async function BusinessPage({
                     <div className="flex flex-1 flex-col p-5">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-xs font-black uppercase tracking-wider text-muted">
-                          {business.categoryName}
+                          {product.kind === "service" ? "Serviço" : "Produto"}
                         </span>
                         {product.isFeatured ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-accent/30 px-2.5 py-1 text-[0.65rem] font-black text-ink">
@@ -246,13 +247,13 @@ export default async function BusinessPage({
                       </p>
                       <div className="mt-auto flex items-end justify-between gap-3 pt-5">
                         <div>
-                          {product.promotionalPrice !== undefined && (
+                          {product.promotionalPrice !== undefined && product.price !== null && (
                             <span className="block text-xs text-muted line-through">
                               {formatCurrency(product.price)}
                             </span>
                           )}
                           <span className="text-xl font-black text-ink">
-                            {formatCurrency(product.promotionalPrice ?? product.price)}
+                            {formatCurrency(product.promotionalPrice ?? product.price, product.priceMode)}
                           </span>
                         </div>
                         <span className="grid size-10 place-items-center rounded-xl bg-surface text-brand shadow-sm">
@@ -376,9 +377,14 @@ export default async function BusinessPage({
   );
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
+function formatCurrency(
+  value: number | null,
+  priceMode: CatalogPriceMode = "fixed",
+) {
+  if (priceMode === "consult" || value === null) return "Valor sob consulta";
+  const formatted = new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
   }).format(value);
+  return priceMode === "from" ? `A partir de ${formatted}` : formatted;
 }
