@@ -37,11 +37,7 @@ export function CityPromotions() {
   } | null>(null);
 
   useEffect(() => {
-    if (!city) {
-      setResult(null);
-      return;
-    }
-    setResult(null);
+    if (!city) return;
     const controller = new AbortController();
 
     const load = async () => {
