@@ -31,17 +31,14 @@ export function FeaturedCatalogItems() {
       return null;
     }
   }, [storedCity]);
+  const cityId = city?.id ?? null;
   const [result, setResult] = useState<{
     cityId: number;
     items: FeaturedCatalogItem[];
   } | null>(null);
 
   useEffect(() => {
-    if (!city) {
-      setResult(null);
-      return;
-    }
-    setResult(null);
+    if (cityId === null) return;
     const controller = new AbortController();
 
     const load = async () => {
@@ -49,13 +46,13 @@ export function FeaturedCatalogItems() {
         const response = await fetch("/api/itens-destaque", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cityId: city.id }),
+          body: JSON.stringify({ cityId }),
           cache: "no-store",
           signal: controller.signal,
         });
         if (!response.ok) return;
         const payload = (await response.json()) as { items?: FeaturedCatalogItem[] };
-        setResult({ cityId: city.id, items: payload.items ?? [] });
+        setResult({ cityId, items: payload.items ?? [] });
       } catch (error) {
         if (!controller.signal.aborted) {
           console.error("[itens-destaque] lookup failed", error);
@@ -65,7 +62,7 @@ export function FeaturedCatalogItems() {
 
     void load();
     return () => controller.abort();
-  }, [city]);
+  }, [cityId]);
 
   if (!city) {
     return (
