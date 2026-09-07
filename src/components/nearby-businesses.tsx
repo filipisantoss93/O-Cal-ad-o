@@ -98,20 +98,28 @@ export function NearbyBusinesses() {
           cache: "no-store",
           signal: controller.signal,
         });
-        const payload = (await response.json()) as {
-          businesses?: NearbyBusiness[];
-          error?: string;
-        };
-        if (!response.ok) throw new Error(payload.error);
+
+        let payload: { businesses?: NearbyBusiness[]; error?: string } = {};
+        try {
+          payload = (await response.json()) as {
+            businesses?: NearbyBusiness[];
+            error?: string;
+          };
+        } catch {
+          if (!response.ok) {
+            throw new Error("Não foi possível carregar os comércios próximos.");
+          }
+        }
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Não foi possível carregar os comércios próximos.");
+        }
         setBusinesses(payload.businesses ?? []);
       } catch (reason: unknown) {
         if (controller.signal.aborted) return;
+        console.error("[nearby-businesses] load failed", reason);
         setBusinesses([]);
-        setError(
-          reason instanceof Error && reason.message
-            ? reason.message
-            : "Não foi possível carregar os comércios próximos.",
-        );
+        setError("Não foi possível carregar os comércios próximos. Tente novamente.");
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
