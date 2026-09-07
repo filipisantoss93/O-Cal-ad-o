@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import type { Business } from "@/types/catalog";
 
 const palettes = [
@@ -59,9 +59,9 @@ export async function searchPublicBusinesses(
     return emptyResult(page);
   }
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const offset = (page - 1) * PUBLIC_SEARCH_PAGE_SIZE;
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     fn: "search_public_business_ids",
     args: {
       p_city_id: number;
