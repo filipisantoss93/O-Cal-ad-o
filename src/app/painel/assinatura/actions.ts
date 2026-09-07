@@ -22,7 +22,15 @@ type CheckoutResponse = {
   error?: string;
 };
 
-async function startCheckout(payload: CheckoutPayload): Promise<never> {
+type CancelAddonResponse = {
+  ok?: boolean;
+  error?: string;
+};
+
+async function authenticatedBillingRequest(
+  functionName: string,
+  payload: Record<string, unknown>,
+) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -37,19 +45,23 @@ async function startCheckout(payload: CheckoutPayload): Promise<never> {
   }
 
   const { url, publishableKey } = getSupabaseEnv();
+  return fetch(`${url}/functions/v1/${functionName}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: publishableKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+}
+
+async function startCheckout(payload: CheckoutPayload): Promise<never> {
   let response: Response;
 
   try {
-    response = await fetch(`${url}/functions/v1/efi-billing-checkout`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        apikey: publishableKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    });
+    response = await authenticatedBillingRequest("efi-billing-checkout", payload);
   } catch (error) {
     console.error("Falha ao chamar checkout no Supabase", error);
     redirect(billingUrl({ erro: "checkout_efi" }));
@@ -109,4 +121,38 @@ export async function startPromotionPackCheckoutAction(formData: FormData) {
     business_id: businessId,
     product_code: productCode,
   });
+}
+
+export async function cancelAddonAction(formData: FormData) {
+  const addonId = Number(formData.get("addon_id"));
+  if (!Number.isSafeInteger(addonId) || addonId <= 0) {
+    redirect(`${billingUrl({ erro: "adicional_invalido" })}#meus-adicionais`);
+  }
+
+  let response: Response;
+  try {
+    response = await authenticatedBillingRequest("efi-billing-addon-cancel", {
+      addon_id: addonId,
+    });
+  } catch (error) {
+    console.error("Falha ao cancelar adicional no Supabase", error);
+    redirect(`${billingUrl({ erro: "cancelamento_efi" })}#meus-adicionais`);
+  }
+
+  let data: CancelAddonResponse = {};
+  try {
+    data = (await response.json()) as CancelAddonResponse;
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok || !data.ok) {
+    const errorCode =
+      typeof data.error === "string" && data.error.length <= 80
+        ? data.error
+        : "cancelamento_efi";
+    redirect(`${billingUrl({ erro: errorCode })}#meus-adicionais`);
+  }
+
+  redirect(`${billingUrl({ sucesso: "adicional_cancelado" })}#meus-adicionais`);
 }
