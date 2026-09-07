@@ -4,31 +4,29 @@ type NearbyRequest = {
   cityId?: unknown;
   latitude?: unknown;
   longitude?: unknown;
+  businessIds?: unknown;
+};
+
+type NearbyRow = {
+  id: number;
+  slug: string;
+  name: string;
+  neighborhood: string;
+  category_name: string;
+  distance_km: number | null;
+  highlight_campaign_id: number | null;
 };
 
 function validCoordinate(value: unknown, minimum: number, maximum: number) {
   return typeof value === "number" && Number.isFinite(value) && value >= minimum && value <= maximum;
 }
 
-function distanceInKilometers(
-  latitude: number,
-  longitude: number,
-  businessLatitude: number,
-  businessLongitude: number,
-) {
-  const radians = (degrees: number) => (degrees * Math.PI) / 180;
-  const earthRadius = 6_371;
-  const latitudeDelta = radians(businessLatitude - latitude);
-  const longitudeDelta = radians(businessLongitude - longitude);
-  const startLatitude = radians(latitude);
-  const endLatitude = radians(businessLatitude);
-  const haversine =
-    Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(startLatitude) *
-      Math.cos(endLatitude) *
-      Math.sin(longitudeDelta / 2) ** 2;
-
-  return earthRadius * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+function parseBusinessIds(value: unknown) {
+  if (value === undefined) return null;
+  if (!Array.isArray(value) || value.length === 0 || value.length > 24) return undefined;
+  const ids = value.map(Number);
+  if (ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) return undefined;
+  return [...new Set(ids)];
 }
 
 export async function POST(request: Request) {
@@ -52,96 +50,49 @@ export async function POST(request: Request) {
     return Response.json({ error: "Coordenadas inválidas." }, { status: 400 });
   }
 
+  const businessIds = parseBusinessIds(body.businessIds);
+  if (businessIds === undefined) {
+    return Response.json({ error: "Lista de comércios inválida." }, { status: 400 });
+  }
+
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("businesses")
-    .select(
-      "id, slug, name, neighborhood, latitude, longitude, category_id, categories(name)",
-    )
-    .eq("city_id", cityId)
-    .eq("status", "approved")
-    .eq("is_active", true)
-    .eq("billing_suspended", false)
-    .limit(100);
+  const rpc = supabase.rpc as unknown as (
+    fn: "get_public_nearby_businesses",
+    args: {
+      p_city_id: number;
+      p_latitude: number | null;
+      p_longitude: number | null;
+      p_business_ids: number[] | null;
+      p_limit: number;
+    },
+  ) => Promise<{ data: NearbyRow[] | null; error: { message: string } | null }>;
+
+  const { data, error } = await rpc("get_public_nearby_businesses", {
+    p_city_id: cityId,
+    p_latitude: coordinatesAreValid ? (body.latitude as number) : null,
+    p_longitude: coordinatesAreValid ? (body.longitude as number) : null,
+    p_business_ids: businessIds,
+    p_limit: businessIds?.length ?? 3,
+  });
 
   if (error) {
-    console.error("[api/comercios-proximos] query failed", {
-      code: error.code,
-      message: error.message,
-    });
+    console.error("[api/comercios-proximos] query failed", error.message);
     return Response.json(
       { error: "Não foi possível carregar os comércios próximos." },
       { status: 500 },
     );
   }
 
-  const businessIds = (data ?? []).map((business) => business.id);
-  const now = new Date().toISOString();
-  const highlightsResult = businessIds.length
-    ? await supabase
-        .from("highlight_campaigns")
-        .select("id, business_id, businesses!inner(status, is_active, billing_suspended, logo_path, cover_path)")
-        .in("business_id", businessIds)
-        .in("placement", ["city", "combo"])
-        .eq("status", "active")
-        .lte("starts_at", now)
-        .gt("ends_at", now)
-        .eq("businesses.status", "approved")
-        .eq("businesses.is_active", true)
-        .eq("businesses.billing_suspended", false)
-        .not("businesses.logo_path", "is", null)
-        .not("businesses.cover_path", "is", null)
-    : { data: [] as Array<{ id: number; business_id: number }> };
-  const highlightedBusinesses = new Map(
-    (highlightsResult.data ?? []).map(
-      (campaign: { id: number; business_id: number }) => [
-        campaign.business_id,
-        campaign.id,
-      ],
-    ),
-  );
-  const businesses = (data ?? [])
-    .map((business) => {
-      const businessLatitude = Number(business.latitude);
-      const businessLongitude = Number(business.longitude);
-      const hasBusinessCoordinates =
-        business.latitude !== null &&
-        business.longitude !== null &&
-        Number.isFinite(businessLatitude) &&
-        Number.isFinite(businessLongitude);
-      const distanceKm =
-        coordinatesAreValid && hasBusinessCoordinates
-          ? distanceInKilometers(
-              body.latitude as number,
-              body.longitude as number,
-              businessLatitude,
-              businessLongitude,
-            )
-          : null;
-      const category = Array.isArray(business.categories)
-        ? business.categories[0]
-        : business.categories;
-
-      return {
-        id: business.id,
-        slug: business.slug,
-        name: business.name,
-        neighborhood: business.neighborhood,
-        categoryName: category?.name ?? "Comércio local",
-        distanceKm,
-        isFeatured: highlightedBusinesses.has(business.id),
-        highlightCampaignId: highlightedBusinesses.get(business.id) ?? null,
-      };
-    })
-    .sort((first, second) => {
-      if (first.isFeatured !== second.isFeatured) return first.isFeatured ? -1 : 1;
-      if (first.distanceKm !== null && second.distanceKm !== null) {
-        return first.distanceKm - second.distanceKm;
-      }
-      if (first.distanceKm !== null) return -1;
-      if (second.distanceKm !== null) return 1;
-      return first.name.localeCompare(second.name, "pt-BR");
-    });
+  const businesses = (data ?? []).map((business) => ({
+    id: business.id,
+    slug: business.slug,
+    name: business.name,
+    neighborhood: business.neighborhood,
+    categoryName: business.category_name,
+    distanceKm: business.distance_km,
+    isFeatured: business.highlight_campaign_id !== null,
+    highlightCampaignId: business.highlight_campaign_id,
+  }));
 
   return Response.json(
     { businesses },
