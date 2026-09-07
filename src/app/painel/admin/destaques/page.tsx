@@ -54,6 +54,49 @@ const placementLabels: Record<string, string> = {
   banner: "Banner regional",
 };
 
+const packageGroups = [
+  {
+    placement: "category",
+    number: "01",
+    eyebrow: "Categoria",
+    title: "Destaque por categoria",
+    description:
+      "Prioriza a loja dentro da categoria correspondente na cidade selecionada pelo consumidor.",
+    panelClass: "border-brand/20 bg-brand/5",
+    badgeClass: "bg-brand text-white",
+  },
+  {
+    placement: "city",
+    number: "02",
+    eyebrow: "Cidade",
+    title: "Destaque na cidade",
+    description:
+      "Exibe a loja entre os destaques gerais para consumidores daquela cidade, independentemente da categoria.",
+    panelClass: "border-positive/20 bg-positive-soft/60",
+    badgeClass: "bg-positive text-white",
+  },
+  {
+    placement: "combo",
+    number: "03",
+    eyebrow: "Cidade + categoria",
+    title: "Destaque combinado",
+    description:
+      "Entrega as duas posições ao mesmo tempo: destaque geral da cidade e prioridade dentro da categoria.",
+    panelClass: "border-accent-dark/20 bg-accent/15",
+    badgeClass: "bg-accent-dark text-ink",
+  },
+  {
+    placement: "banner",
+    number: "04",
+    eyebrow: "Banner regional",
+    title: "Banner na página inicial",
+    description:
+      "Publicidade visual rotativa na tela inicial, exibida somente para a cidade/região contratada e sujeita à moderação.",
+    panelClass: "border-ink/15 bg-ink/[0.035]",
+    badgeClass: "bg-ink text-white",
+  },
+] as const;
+
 const pauseReasonLabels: Record<string, string> = {
   business_unavailable: "Loja temporariamente inelegível",
   payment_dispute: "Pagamento em contestação",
@@ -199,24 +242,93 @@ export default async function AdminHighlightsPage({
 
       <section id="precos" className="mt-8 scroll-mt-40 rounded-[2rem] border border-line bg-surface p-5 shadow-sm sm:p-8">
         <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">Catálogo comercial</p>
-        <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">Preços dos pacotes</h2>
-        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {data.packages.map((item) => (
-            <form key={item.code} action={updateHighlightPackageAction} className="rounded-2xl border border-line bg-canvas p-5">
-              <input type="hidden" name="code" value={item.code} />
-              <p className="text-xs font-black uppercase tracking-wide text-brand-dark">{placementLabels[item.placement]}</p>
-              <p className="mt-1 font-black text-ink">{item.duration_days} dias</p>
-              <label className="mt-4 block text-sm font-bold text-muted">
-                Preço em reais
-                <input name="price" type="number" min="1" max="10000" step="0.01" required defaultValue={(item.price_cents / 100).toFixed(2)} className="mt-2 min-h-11 w-full rounded-xl border border-line bg-white px-3 font-black text-ink" />
-              </label>
-              <label className="mt-4 flex items-center gap-2 text-sm font-bold text-ink">
-                <input name="enabled" value="true" type="checkbox" defaultChecked={item.is_active} className="size-4 accent-[var(--color-brand)]" />
-                Disponível para venda
-              </label>
-              <button type="submit" className="mt-4 min-h-10 rounded-xl bg-ink px-4 text-sm font-black text-white">Salvar pacote</button>
-            </form>
-          ))}
+        <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">Preços por modalidade</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+          Cada bloco representa um produto publicitário diferente. Ajuste os períodos e preços sem misturar categoria, cidade, combo e banner regional.
+        </p>
+
+        <div className="mt-6 space-y-5">
+          {packageGroups.map((group) => {
+            const groupPackages = data.packages.filter(
+              (item) => item.placement === group.placement,
+            );
+
+            return (
+              <section
+                key={group.placement}
+                aria-labelledby={`pacotes-${group.placement}`}
+                className={`rounded-3xl border p-4 sm:p-6 ${group.panelClass}`}
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <span
+                      aria-hidden="true"
+                      className={`grid size-10 shrink-0 place-items-center rounded-2xl text-xs font-black ${group.badgeClass}`}
+                    >
+                      {group.number}
+                    </span>
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-[0.14em] text-muted">
+                        {group.eyebrow}
+                      </p>
+                      <h3 id={`pacotes-${group.placement}`} className="mt-1 text-xl font-black tracking-tight text-ink">
+                        {group.title}
+                      </h3>
+                      <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-muted">
+                        {group.description}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="w-fit rounded-full border border-line/80 bg-white/80 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-muted">
+                    {groupPackages.length} períodos
+                  </span>
+                </div>
+
+                <div className="mt-5 grid gap-3 md:grid-cols-3">
+                  {groupPackages.map((item) => (
+                    <form
+                      key={item.code}
+                      action={updateHighlightPackageAction}
+                      className="rounded-2xl border border-line bg-surface p-5 shadow-sm"
+                    >
+                      <input type="hidden" name="code" value={item.code} />
+                      <p className="text-xs font-black uppercase tracking-wide text-muted">Período</p>
+                      <p className="mt-1 text-lg font-black text-ink">{item.duration_days} dias</p>
+                      <label className="mt-4 block text-sm font-bold text-muted">
+                        Preço em reais
+                        <input
+                          name="price"
+                          type="number"
+                          min="1"
+                          max="10000"
+                          step="0.01"
+                          required
+                          defaultValue={(item.price_cents / 100).toFixed(2)}
+                          className="mt-2 min-h-11 w-full rounded-xl border border-line bg-white px-3 font-black text-ink"
+                        />
+                      </label>
+                      <label className="mt-4 flex items-center gap-2 text-sm font-bold text-ink">
+                        <input
+                          name="enabled"
+                          value="true"
+                          type="checkbox"
+                          defaultChecked={item.is_active}
+                          className="size-4 accent-[var(--color-brand)]"
+                        />
+                        Disponível para venda
+                      </label>
+                      <button
+                        type="submit"
+                        className="mt-4 min-h-10 rounded-xl bg-ink px-4 text-sm font-black text-white"
+                      >
+                        Salvar {item.duration_days} dias
+                      </button>
+                    </form>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
       </section>
 
