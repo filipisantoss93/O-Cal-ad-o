@@ -47,6 +47,37 @@ function optionalCoordinate(
   return value;
 }
 
+function businessTags(formData: FormData, required: boolean) {
+  const rawValue = formString(formData, "tags");
+  if (!rawValue && !required) return null;
+
+  const tags = rawValue
+    .split(/[,;\n]+/)
+    .map((tag) => tag.trim().replace(/^#+/, "").replace(/\s+/g, " "))
+    .filter(Boolean);
+  const uniqueTags = Array.from(
+    new Map(tags.map((tag) => [tag.toLocaleLowerCase("pt-BR"), tag])).values(),
+  );
+
+  if (uniqueTags.length < 3) {
+    throw new ValidationError(
+      "Adicione pelo menos 3 tags específicas para ajudar os clientes a encontrar sua loja.",
+      "tags",
+    );
+  }
+  if (uniqueTags.length > 12) {
+    throw new ValidationError("Use no máximo 12 tags.", "tags");
+  }
+  if (uniqueTags.some((tag) => tag.length < 2 || tag.length > 40)) {
+    throw new ValidationError(
+      "Cada tag deve ter entre 2 e 40 caracteres.",
+      "tags",
+    );
+  }
+
+  return uniqueTags;
+}
+
 function businessTime(formData: FormData, name: string) {
   const value = formString(formData, name);
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
@@ -144,6 +175,7 @@ export async function saveBusinessAction(
 
   try {
     const supabase = await createClient();
+    const businessClient = supabase as unknown as SupabaseClient<any>;
     cleanupClient = supabase;
     const {
       data: { user },
@@ -160,6 +192,7 @@ export async function saveBusinessAction(
           logo_path: string | null;
           cover_path: string | null;
           status: string;
+          tags: string[];
         }
       | null = null;
 
@@ -167,9 +200,9 @@ export async function saveBusinessAction(
       if (!Number.isSafeInteger(requestedBusinessId) || requestedBusinessId <= 0) {
         return actionError("Loja não encontrada.");
       }
-      const { data, error } = await supabase
+      const { data, error } = await businessClient
         .from("businesses")
-        .select("id, owner_id, logo_path, cover_path, status")
+        .select("id, owner_id, logo_path, cover_path, status, tags")
         .eq("id", requestedBusinessId)
         .eq("owner_id", user.id)
         .maybeSingle();
@@ -185,6 +218,7 @@ export async function saveBusinessAction(
       "category_id",
       "uma categoria",
     );
+    const tags = businessTags(formData, !existing) ?? existing?.tags ?? [];
     const description = optionalText(
       formData,
       "description",
@@ -261,6 +295,7 @@ export async function saveBusinessAction(
       category_id: categoryId,
       slug,
       name,
+      tags,
       description,
       whatsapp_e164: whatsapp,
       public_email: publicEmail,
@@ -275,21 +310,21 @@ export async function saveBusinessAction(
       logo_path: logoPath,
       cover_path: coverPath,
       is_active: formData.get("is_active") === "on",
-    } satisfies TablesUpdate<"businesses">;
+    };
     const insertData = {
       ...editableData,
       owner_id: user.id,
-    } satisfies TablesInsert<"businesses">;
+    };
 
     const result = existing
-      ? await supabase
+      ? await businessClient
           .from("businesses")
           .update(editableData)
           .eq("id", existing.id)
           .eq("owner_id", user.id)
           .select("id, status")
           .single()
-      : await supabase
+      : await businessClient
           .from("businesses")
           .insert(insertData)
           .select("id, status")
