@@ -17,8 +17,6 @@ export function LocationAutoRefresh() {
   const hiddenAtRef = useRef<number | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
     const refreshLocation = async () => {
       if (refreshingRef.current || readLocationSelectionMode() !== "auto") return;
 
@@ -27,7 +25,6 @@ export function LocationAutoRefresh() {
 
       try {
         const city = await detectCurrentCity();
-        if (cancelled) return;
 
         saveSelectedCity(city, {
           latitude: city.latitude,
@@ -74,7 +71,6 @@ export function LocationAutoRefresh() {
     window.addEventListener("pageshow", handlePageShow);
 
     return () => {
-      cancelled = true;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("pageshow", handlePageShow);
     };
