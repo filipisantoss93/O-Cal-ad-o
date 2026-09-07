@@ -15,6 +15,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { CitySelector } from "@/components/city-selector";
 import { FeaturedBusinesses } from "@/components/featured-businesses";
+import { RegionalPaidBanners } from "@/components/regional-paid-banners";
 import { businesses, categories, promotions } from "@/data/catalog";
 
 export default function Home() {
@@ -79,6 +80,8 @@ export default function Home() {
             </aside>
           </div>
         </section>
+
+        <RegionalPaidBanners />
 
         <section
           id="categorias"

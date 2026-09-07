@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";
+import { publicMediaUrl } from "@/lib/merchant/media";
 import type { Business } from "@/types/catalog";
 import type { Database } from "@/types/database";
 
@@ -13,6 +14,16 @@ const palettes = [
 ];
 
 type Placement = "city" | "category" | "combo";
+
+export type RegionalBanner = {
+  campaignId: number;
+  imageUrl: string;
+  title: string;
+  description: string;
+  businessName: string;
+  businessSlug: string;
+  cityName: string;
+};
 
 function initials(name: string) {
   return name
@@ -111,6 +122,58 @@ export async function getPublicFeaturedBusinesses(
       tags: [category.name, row.neighborhood, city.name],
       whatsapp: row.whatsapp_e164.replace(/\D/g, ""),
       products: [],
+    }];
+  });
+}
+
+export async function getPublicRegionalBanners(
+  supabase: SupabaseClient<Database>,
+  cityId: number,
+): Promise<RegionalBanner[]> {
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("highlight_campaigns")
+    .select(
+      "id, creative_image_path, creative_title, creative_description, businesses!inner(name, slug), cities!inner(name)",
+    )
+    .eq("placement", "banner")
+    .eq("city_id", cityId)
+    .eq("creative_status", "approved")
+    .eq("status", "active")
+    .lte("starts_at", now)
+    .gt("ends_at", now)
+    .eq("businesses.status", "approved")
+    .eq("businesses.is_active", true)
+    .eq("businesses.billing_suspended", false)
+    .limit(20);
+
+  if (error || !data?.length) return [];
+
+  return data.flatMap((campaign): RegionalBanner[] => {
+    const business = Array.isArray(campaign.businesses)
+      ? campaign.businesses[0]
+      : campaign.businesses;
+    const city = Array.isArray(campaign.cities)
+      ? campaign.cities[0]
+      : campaign.cities;
+    const imageUrl = publicMediaUrl(supabase, campaign.creative_image_path);
+    if (
+      !business ||
+      !city ||
+      !imageUrl ||
+      !campaign.creative_title ||
+      !campaign.creative_description
+    ) {
+      return [];
+    }
+    return [{
+      campaignId: campaign.id,
+      imageUrl,
+      title: campaign.creative_title,
+      description: campaign.creative_description,
+      businessName: business.name,
+      businessSlug: business.slug,
+      cityName: city.name,
     }];
   });
 }

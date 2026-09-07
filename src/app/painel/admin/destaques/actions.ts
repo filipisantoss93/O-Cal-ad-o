@@ -23,7 +23,7 @@ export async function updateHighlightPackageAction(formData: FormData) {
   const isActive = formData.get("enabled") === "true";
   const priceCents = Math.round(price * 100);
   if (
-    !/^(category|city|combo)_(7|15|30)$/.test(code) ||
+    !/^(category|city|combo|banner)_(7|15|30)$/.test(code) ||
     !Number.isSafeInteger(priceCents) ||
     priceCents < 100 ||
     priceCents > 1_000_000
@@ -48,7 +48,7 @@ export async function updateHighlightCapacityAction(formData: FormData) {
   const maxActive = Number(formData.get("max_active"));
   const isActive = formData.get("enabled") === "true";
   if (
-    !/^(city|category)$/.test(code) ||
+    !/^(city|category|banner)$/.test(code) ||
     !Number.isSafeInteger(maxActive) ||
     maxActive < 1 ||
     maxActive > 100
@@ -140,4 +140,33 @@ export async function manageHighlightCampaignAction(formData: FormData) {
   revalidatePath("/painel/destaques");
   revalidatePath("/painel/admin/destaques");
   redirect(adminUrl({ sucesso: intent }));
+}
+
+export async function reviewBannerCampaignAction(formData: FormData) {
+  const { supabase } = await requireAdmin("/painel/admin/destaques");
+  const campaignId = Number(formData.get("campaign_id"));
+  const decision = String(formData.get("decision") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 500);
+  if (
+    !Number.isSafeInteger(campaignId) || campaignId <= 0 ||
+    !/^(approve|reject)$/.test(decision) ||
+    (decision === "reject" && reason.length < 3)
+  ) {
+    redirect(adminUrl({ erro: "revisao_banner_invalida" }));
+  }
+  const { data, error } = await supabase.rpc("admin_review_banner_campaign", {
+    p_campaign_id: campaignId,
+    p_decision: decision,
+    p_reason: reason || undefined,
+  });
+  if (error || data !== true) {
+    const mapped = error?.message.includes("HIGHLIGHT_NO_AVAILABILITY")
+      ? "sem_vagas"
+      : "revisao_banner";
+    redirect(adminUrl({ erro: mapped }));
+  }
+  revalidatePath("/");
+  revalidatePath("/painel/destaques");
+  revalidatePath("/painel/admin/destaques");
+  redirect(adminUrl({ sucesso: decision === "approve" ? "banner_aprovado" : "banner_rejeitado" }));
 }

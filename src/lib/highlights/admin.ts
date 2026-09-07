@@ -48,7 +48,7 @@ export async function getAdminHighlights(
   let campaignsQuery = supabase
     .from("highlight_campaigns")
     .select(
-      "id, business_id, package_code, placement, duration_days, base_price_cents, discount_cents, charged_price_cents, provider, provider_payment_url, status, starts_at, ends_at, pause_reason, remaining_seconds, admin_note, created_at, businesses(name, slug), cities(name, state_code), categories(name)",
+      "id, business_id, package_code, placement, duration_days, base_price_cents, discount_cents, charged_price_cents, provider, provider_payment_url, status, starts_at, ends_at, pause_reason, remaining_seconds, admin_note, creative_image_path, creative_title, creative_description, creative_status, creative_rejection_reason, created_at, businesses(name, slug), cities(name, state_code), categories(name)",
     )
     .order("created_at", { ascending: false })
     .limit(100);

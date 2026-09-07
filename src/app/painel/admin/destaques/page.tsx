@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   createComplimentaryHighlightAction,
   manageHighlightCampaignAction,
+  reviewBannerCampaignAction,
   updateHighlightCapacityAction,
   updateHighlightPackageAction,
 } from "@/app/painel/admin/destaques/actions";
@@ -13,8 +15,9 @@ import {
 } from "@/components/icons";
 import { requireAdmin } from "@/lib/admin/dal";
 import { getAdminHighlights } from "@/lib/highlights/admin";
+import { publicMediaUrl } from "@/lib/merchant/media";
 
-export const metadata: Metadata = { title: "Administração de destaques" };
+export const metadata: Metadata = { title: "Administração de destaques e banners" };
 
 type AdminHighlightsPageProps = {
   searchParams: Promise<{ status?: string; erro?: string; sucesso?: string }>;
@@ -48,12 +51,15 @@ const placementLabels: Record<string, string> = {
   city: "Cidade",
   category: "Categoria",
   combo: "Cidade + categoria",
+  banner: "Banner regional",
 };
 
 const pauseReasonLabels: Record<string, string> = {
   business_unavailable: "Loja temporariamente inelegível",
   payment_dispute: "Pagamento em contestação",
   admin: "Pausa administrativa",
+  creative_review: "Banner aguardando análise",
+  creative_rejected: "Ajustes solicitados no banner",
 };
 
 const errorMessages: Record<string, string> = {
@@ -67,6 +73,8 @@ const errorMessages: Record<string, string> = {
   cortesia: "Não foi possível criar a cortesia.",
   acao_invalida: "Ação administrativa inválida.",
   acao_campanha: "Não foi possível alterar essa campanha.",
+  revisao_banner_invalida: "Informe uma decisão válida e o motivo ao solicitar ajustes.",
+  revisao_banner: "Não foi possível concluir a análise do banner.",
 };
 
 function money(cents: number) {
@@ -129,10 +137,10 @@ export default async function AdminHighlightsPage({
             Administração
           </p>
           <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-ink sm:text-4xl">
-            Lojas em destaque
+            Destaques e banners
           </h1>
           <p className="mt-2 max-w-3xl text-base leading-7 text-muted">
-            Controle preços, vagas, cortesias, campanhas e resultados dos espaços patrocinados.
+            Controle preços, vagas, moderação, campanhas e resultados dos espaços patrocinados.
           </p>
         </div>
         <Link href="/painel/admin" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink">
@@ -176,7 +184,7 @@ export default async function AdminHighlightsPage({
               <input type="hidden" name="code" value={rule.code} />
               <p className="font-black text-ink">{rule.name}</p>
               <label className="mt-4 block text-sm font-bold text-muted">
-                Máximo por {rule.code === "city" ? "cidade" : "categoria e cidade"}
+                Máximo por {rule.code === "category" ? "categoria e cidade" : "cidade"}
                 <input name="max_active" type="number" min="1" max="100" required defaultValue={rule.max_active} className="mt-2 min-h-11 w-full rounded-xl border border-line bg-white px-3 font-black text-ink" />
               </label>
               <label className="mt-4 flex items-center gap-2 text-sm font-bold text-ink">
@@ -233,7 +241,7 @@ export default async function AdminHighlightsPage({
             Pacote
             <select name="package_code" required className="mt-2 min-h-12 w-full rounded-xl border border-line bg-white px-3 font-bold">
               <option value="">Selecione</option>
-              {data.packages.filter((item) => item.is_active).map((item) => <option key={item.code} value={item.code}>{placementLabels[item.placement]} · {item.duration_days} dias</option>)}
+              {data.packages.filter((item) => item.is_active && item.placement !== "banner").map((item) => <option key={item.code} value={item.code}>{placementLabels[item.placement]} · {item.duration_days} dias</option>)}
             </select>
           </label>
           <label className="text-sm font-black text-ink">
@@ -270,7 +278,8 @@ export default async function AdminHighlightsPage({
             {data.campaigns.map((campaign) => {
               const metrics = data.metricsByCampaign.get(campaign.id);
               const canPause = ["active", "scheduled"].includes(campaign.status);
-              const canResume = campaign.status === "paused";
+              const canResume = campaign.status === "paused" &&
+                (campaign.placement !== "banner" || campaign.creative_status === "approved");
               const canCancel = !["completed", "cancelled", "expired", "refunded"].includes(campaign.status);
               const canBonus = ["active", "scheduled", "paused"].includes(campaign.status);
               return (
@@ -287,6 +296,33 @@ export default async function AdminHighlightsPage({
                       <p className="mt-3 text-sm font-bold text-muted">{date(campaign.starts_at)} a {date(campaign.ends_at)} · {campaign.provider === "manual" ? "sem cobrança" : money(campaign.charged_price_cents)}</p>
                       {campaign.status === "paused" && campaign.pause_reason ? <p className="mt-2 text-sm font-black text-brand-dark">{pauseReasonLabels[campaign.pause_reason]}</p> : null}
                       {campaign.admin_note && <p className="mt-2 text-sm leading-6 text-muted">Nota: {campaign.admin_note}</p>}
+                      {campaign.placement === "banner" && campaign.creative_image_path ? (
+                        <div className="mt-5 overflow-hidden rounded-2xl border border-line bg-ink">
+                          <div className="relative aspect-[16/5] min-h-44">
+                            <Image src={publicMediaUrl(supabase, campaign.creative_image_path) ?? ""} alt={`Banner de ${campaign.businesses?.name ?? "loja"}`} fill sizes="(min-width: 1024px) 640px, 100vw" className="object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-ink/85 via-ink/45 to-transparent" />
+                            <div className="absolute inset-0 flex max-w-lg flex-col justify-center p-5 text-white sm:p-7">
+                              <p className="text-xs font-black uppercase tracking-wide text-accent">Prévia do anúncio</p>
+                              <p className="mt-2 text-xl font-black sm:text-2xl">{campaign.creative_title}</p>
+                              <p className="mt-1 line-clamp-2 text-sm font-semibold text-white/80">{campaign.creative_description}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                      {campaign.placement === "banner" && campaign.creative_status !== "approved" ? (
+                        <form action={reviewBannerCampaignAction} className="mt-4 rounded-2xl border border-accent-dark/20 bg-accent/15 p-4">
+                          <input type="hidden" name="campaign_id" value={campaign.id} />
+                          <p className="text-sm font-black text-ink">Revisão do criativo</p>
+                          <p className="mt-1 text-xs font-semibold leading-5 text-muted">Confira legibilidade, conteúdo, relação com a loja e ausência de material impróprio.</p>
+                          <label className="mt-3 block text-xs font-black text-muted">Motivo para solicitar ajustes
+                            <input name="reason" maxLength={500} placeholder="Obrigatório somente ao rejeitar" className="mt-1 min-h-10 w-full rounded-xl border border-line bg-white px-3 text-sm text-ink" />
+                          </label>
+                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                            <button name="decision" value="approve" className="min-h-10 rounded-xl bg-positive px-3 text-sm font-black text-white">Aprovar banner</button>
+                            <button name="decision" value="reject" className="min-h-10 rounded-xl border border-brand/25 bg-brand/8 px-3 text-sm font-black text-brand-dark">Solicitar ajustes</button>
+                          </div>
+                        </form>
+                      ) : null}
                       <dl className="mt-4 flex flex-wrap gap-2">
                         {[
                           ["Impressões", metrics?.impressions ?? 0],

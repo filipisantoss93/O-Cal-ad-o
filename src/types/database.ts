@@ -565,6 +565,13 @@ export type Database = {
           charged_price_cents: number
           city_id: number
           completed_at: string | null
+          creative_description: string | null
+          creative_image_path: string | null
+          creative_rejection_reason: string | null
+          creative_reviewed_at: string | null
+          creative_reviewed_by: string | null
+          creative_status: string
+          creative_title: string | null
           created_at: string
           discount_cents: number
           duration_days: number
@@ -593,6 +600,13 @@ export type Database = {
           charged_price_cents: number
           city_id: number
           completed_at?: string | null
+          creative_description?: string | null
+          creative_image_path?: string | null
+          creative_rejection_reason?: string | null
+          creative_reviewed_at?: string | null
+          creative_reviewed_by?: string | null
+          creative_status?: string
+          creative_title?: string | null
           created_at?: string
           discount_cents?: number
           duration_days: number
@@ -621,6 +635,13 @@ export type Database = {
           charged_price_cents?: number
           city_id?: number
           completed_at?: string | null
+          creative_description?: string | null
+          creative_image_path?: string | null
+          creative_rejection_reason?: string | null
+          creative_reviewed_at?: string | null
+          creative_reviewed_by?: string | null
+          creative_status?: string
+          creative_title?: string | null
           created_at?: string
           discount_cents?: number
           duration_days?: number
@@ -977,6 +998,10 @@ export type Database = {
         Args: { p_action: string; p_bonus_days?: number; p_campaign_id: number }
         Returns: boolean
       }
+      admin_review_banner_campaign: {
+        Args: { p_campaign_id: number; p_decision: string; p_reason?: string }
+        Returns: boolean
+      }
       process_efi_billing_event: {
         Args: {
           p_charge_id?: string
@@ -995,6 +1020,32 @@ export type Database = {
           p_visitor_hash: string
         }
         Returns: boolean
+      }
+      replace_banner_creative: {
+        Args: {
+          p_campaign_id: number
+          p_description: string
+          p_image_path: string
+          p_title: string
+        }
+        Returns: boolean
+      }
+      reserve_banner_campaign: {
+        Args: {
+          p_business_id: number
+          p_description: string
+          p_image_path: string
+          p_package_code: string
+          p_requested_start: string
+          p_title: string
+          p_user_id: string
+        }
+        Returns: {
+          campaign_id: number
+          charged_price_cents: number
+          duration_days: number
+          package_name: string
+        }[]
       }
       reserve_highlight_campaign: {
         Args: {

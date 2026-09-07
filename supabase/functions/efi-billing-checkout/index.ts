@@ -13,13 +13,17 @@ type CheckoutAction =
   | "pro_pix"
   | "extra_store"
   | "promotion_pack"
-  | "highlight_campaign";
+  | "highlight_campaign"
+  | "banner_campaign";
 type CheckoutBody = {
   action?: CheckoutAction;
   billing_cycle?: string;
   business_id?: number;
   product_code?: string;
   starts_on?: string;
+  creative_image_path?: string;
+  creative_title?: string;
+  creative_description?: string;
 };
 type EfiAuthorizeResponse = { access_token?: string };
 type EfiPlanResponse = { data?: { plan_id?: number } };
@@ -297,6 +301,7 @@ async function logCheckoutError(
         business_id: body.business_id ?? null,
         product_code: body.product_code ?? null,
         starts_on: body.starts_on ?? null,
+        creative_image_path: body.creative_image_path ?? null,
         provider,
       },
     });
@@ -588,6 +593,123 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
       if (attachError || !attachedCampaign) {
         throw attachError ?? new Error("HIGHLIGHT_RESERVATION_ATTACH_FAILED");
+      }
+      return json({ ok: true, payment_url: checkout.paymentUrl });
+    }
+
+    if (body.action === "banner_campaign") {
+      const packageCode = String(body.product_code ?? "");
+      const businessId = Number(body.business_id);
+      const imagePath = String(body.creative_image_path ?? "");
+      const title = String(body.creative_title ?? "").trim();
+      const description = String(body.creative_description ?? "").trim();
+      if (!/^banner_(7|15|30)$/.test(packageCode)) {
+        return json({ ok: false, error: "pacote_destaque_invalido" }, 400);
+      }
+      if (!Number.isSafeInteger(businessId) || businessId <= 0) {
+        return json({ ok: false, error: "loja_invalida" }, 400);
+      }
+      if (
+        !imagePath.startsWith(`${user.id}/banner-`) ||
+        title.length < 3 ||
+        title.length > 90 ||
+        description.length < 3 ||
+        description.length > 180
+      ) {
+        return json({ ok: false, error: "banner_criativo_invalido" }, 400);
+      }
+
+      let requestedStart: string | null = null;
+      if (body.starts_on) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(body.starts_on)) {
+          return json({ ok: false, error: "data_inicio_invalida" }, 400);
+        }
+        const parsedStart = new Date(`${body.starts_on}T03:00:00.000Z`);
+        if (
+          Number.isNaN(parsedStart.getTime()) ||
+          parsedStart.toISOString().slice(0, 10) !== body.starts_on
+        ) {
+          return json({ ok: false, error: "data_inicio_invalida" }, 400);
+        }
+        requestedStart = parsedStart.toISOString();
+      }
+
+      const { data: reservations, error: reservationError } = await admin.rpc(
+        "reserve_banner_campaign",
+        {
+          p_user_id: user.id,
+          p_business_id: businessId,
+          p_package_code: packageCode,
+          p_requested_start: requestedStart,
+          p_image_path: imagePath,
+          p_title: title,
+          p_description: description,
+        },
+      );
+      if (reservationError) {
+        const message = reservationError.message ?? "";
+        const knownError = [
+          "HIGHLIGHT_INVALID_BUSINESS",
+          "HIGHLIGHT_BUSINESS_INELIGIBLE",
+          "HIGHLIGHT_INVALID_PACKAGE",
+          "BANNER_INVALID_CREATIVE",
+          "BANNER_ALREADY_OPEN",
+          "HIGHLIGHT_START_TOO_FAR",
+          "HIGHLIGHT_NO_AVAILABILITY",
+        ].find((code) => message.includes(code));
+        const errorCode: Record<string, string> = {
+          HIGHLIGHT_INVALID_BUSINESS: "loja_invalida",
+          HIGHLIGHT_BUSINESS_INELIGIBLE: "loja_destaque_indisponivel",
+          HIGHLIGHT_INVALID_PACKAGE: "pacote_destaque_invalido",
+          BANNER_INVALID_CREATIVE: "banner_criativo_invalido",
+          BANNER_ALREADY_OPEN: "banner_ja_contratado",
+          HIGHLIGHT_START_TOO_FAR: "data_inicio_distante",
+          HIGHLIGHT_NO_AVAILABILITY: "destaque_sem_vagas",
+        };
+        return json(
+          { ok: false, error: knownError ? errorCode[knownError] : "reserva_destaque" },
+          knownError === "HIGHLIGHT_INVALID_BUSINESS" ? 404 : 409,
+        );
+      }
+
+      const reservation = Array.isArray(reservations) ? reservations[0] : reservations;
+      const campaignId = Number(reservation?.campaign_id);
+      const priceCents = Number(reservation?.charged_price_cents);
+      if (!Number.isSafeInteger(campaignId) || campaignId <= 0 || !Number.isSafeInteger(priceCents) || priceCents <= 0) {
+        return json({ ok: false, error: "reserva_destaque" }, 500);
+      }
+
+      let checkout: Awaited<ReturnType<typeof createOneTimeLink>>;
+      try {
+        checkout = await createOneTimeLink({
+          userId: user.id,
+          productCode: packageCode,
+          itemName: `O Calçadão - ${String(reservation?.package_name ?? "Banner regional")}`,
+          priceCents,
+          customId: safeCustomId(["ocalcadao", "banner", campaignId]),
+        });
+      } catch (error) {
+        await admin.from("highlight_campaigns").update({
+          status: "cancelled",
+          completed_at: new Date().toISOString(),
+          reservation_expires_at: null,
+        }).eq("id", campaignId).eq("user_id", user.id).eq("status", "pending");
+        throw error;
+      }
+
+      const { data: attachedCampaign, error: attachError } = await admin
+        .from("highlight_campaigns")
+        .update({
+          provider_charge_id: checkout.chargeId,
+          provider_payment_url: checkout.paymentUrl,
+        })
+        .eq("id", campaignId)
+        .eq("user_id", user.id)
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
+      if (attachError || !attachedCampaign) {
+        throw attachError ?? new Error("BANNER_RESERVATION_ATTACH_FAILED");
       }
       return json({ ok: true, payment_url: checkout.paymentUrl });
     }

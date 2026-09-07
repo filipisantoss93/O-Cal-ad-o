@@ -24,7 +24,7 @@ const navigation = [
   { href: "/painel", label: "Visão geral", icon: HomeIcon },
   { href: "/painel/loja", label: "Minhas lojas", icon: StoreIcon },
   { href: "/painel/promocoes", label: "Promoções", icon: TagIcon },
-  { href: "/painel/destaques", label: "Destaques", icon: StarIcon },
+  { href: "/painel/destaques", label: "Publicidade", icon: StarIcon },
   { href: "/painel/assinatura", label: "Assinatura", icon: SparklesIcon },
   { href: "/painel/perfil", label: "Minha conta", icon: UserIcon },
 ];
@@ -95,7 +95,7 @@ export function MerchantShell({
                 className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-accent-dark/20 bg-accent/20 px-4 text-sm font-extrabold text-ink transition hover:border-accent-dark/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-dark"
               >
                 <StarIcon className="size-4" />
-                Gerir destaques
+                Gerir publicidade
               </Link>
             </>
           )}

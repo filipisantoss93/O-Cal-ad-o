@@ -27,7 +27,7 @@ export async function uploadMerchantImage(
   supabase: SupabaseClient<Database>,
   userId: string,
   file: File,
-  purpose: "logo" | "cover" | "promotion",
+  purpose: "logo" | "cover" | "promotion" | "banner",
 ) {
   const extension = IMAGE_EXTENSIONS[file.type];
   const path = `${userId}/${purpose}-${crypto.randomUUID()}.${extension}`;

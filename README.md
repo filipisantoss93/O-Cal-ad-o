@@ -29,6 +29,8 @@ A aplicação contém:
 - criação, edição, ativação, pausa e exclusão de promoções;
 - contratação de lojas em destaque por cidade, categoria ou nos dois espaços,
   com pacotes de 7, 15 e 30 dias;
+- banners pagos na página inicial, segmentados pela cidade selecionada, com
+  upload de arte, rodízio regional e pacotes de 7, 15 e 30 dias;
 - painel administrativo para preços, capacidade, cortesias, pausas, bônus e
   cancelamentos das campanhas patrocinadas;
 - rodízio de vitrines patrocinadas e métricas de impressão, visita, WhatsApp e
@@ -61,6 +63,12 @@ forma idempotente e concluídas pela rotina agendada a cada cinco minutos.
 
 As métricas são deduplicadas por visitante, campanha, evento e dia. A indicação
 “Patrocinado” acompanha as vitrines em destaque nas superfícies públicas.
+
+Os banners regionais usam o mesmo checkout e desconto Pro. A arte é enviada
+pelo comerciante no próprio painel e só começa a consumir os dias contratados
+depois da confirmação do pagamento e da aprovação administrativa. O
+administrador pode ajustar preços, limitar o inventário por cidade, aprovar ou
+solicitar correções, pausar, cancelar e acompanhar impressões e cliques.
 
 ## CSS consolidado
 

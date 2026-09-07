@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { startHighlightCheckoutAction } from "@/app/painel/destaques/actions";
+import {
+  replaceBannerCreativeAction,
+  startHighlightCheckoutAction,
+} from "@/app/painel/destaques/actions";
 import {
   ClockIcon,
   MapPinIcon,
@@ -14,10 +17,10 @@ import {
   type HighlightPlacement,
 } from "@/lib/highlights/merchant";
 
-export const metadata: Metadata = { title: "Lojas em destaque" };
+export const metadata: Metadata = { title: "Destaques e banners" };
 
 type HighlightsPageProps = {
-  searchParams: Promise<{ loja?: string; erro?: string }>;
+  searchParams: Promise<{ loja?: string; erro?: string; sucesso?: string }>;
 };
 
 const placementDetails: Record<
@@ -42,6 +45,12 @@ const placementDetails: Record<
     description:
       "A loja participa dos dois espaços durante todo o período contratado.",
   },
+  banner: {
+    eyebrow: "Publicidade premium",
+    title: "Banner regional na página inicial",
+    description:
+      "Sua arte aparece em destaque para visitantes que selecionarem a cidade da sua loja.",
+  },
 };
 
 const statusLabels: Record<string, string> = {
@@ -61,6 +70,8 @@ const pauseReasonLabels: Record<string, string> = {
   payment_dispute:
     "A exibição foi interrompida enquanto a situação do pagamento é analisada.",
   admin: "A exibição foi pausada pela administração da plataforma.",
+  creative_review: "O pagamento foi reconhecido. O banner aguarda aprovação da administração; os dias contratados ainda não começaram a contar.",
+  creative_rejected: "A arte precisa ser corrigida conforme a orientação da administração antes de ser exibida.",
 };
 
 const errorMessages: Record<string, string> = {
@@ -78,6 +89,12 @@ const errorMessages: Record<string, string> = {
     "As vagas desse espaço estão ocupadas nesse período. Escolha outra opção ou uma data posterior.",
   reserva_destaque: "Não foi possível reservar a vaga de destaque agora.",
   efi_nao_configurada: "A cobrança Efí ainda não está disponível.",
+  banner_titulo_invalido: "O título do banner deve ter entre 3 e 90 caracteres.",
+  banner_descricao_invalida: "A descrição do banner deve ter entre 3 e 180 caracteres.",
+  banner_imagem_obrigatoria: "Envie a imagem que será usada no banner.",
+  banner_imagem_invalida: "Envie uma imagem JPG, PNG, WebP ou AVIF de até 5 MB.",
+  banner_criativo_invalido: "Revise a imagem e os textos do banner.",
+  banner_ja_contratado: "Esta loja já possui um banner aberto.",
 };
 
 function money(cents: number) {
@@ -124,13 +141,18 @@ export default async function HighlightsPage({
     ) ??
     businesses[0] ??
     null;
-  const selectedCampaign = selectedBusiness
-    ? highlights.campaigns.find(
-        (campaign) =>
-          campaign.business_id === selectedBusiness.id &&
+  const selectedCampaigns = selectedBusiness
+    ? highlights.campaigns.filter(
+        (campaign) => campaign.business_id === selectedBusiness.id &&
           ["pending", "scheduled", "active", "paused"].includes(campaign.status),
       )
-    : null;
+    : [];
+  const selectedStoreCampaign = selectedCampaigns.find(
+    (campaign) => campaign.placement !== "banner",
+  );
+  const selectedBannerCampaign = selectedCampaigns.find(
+    (campaign) => campaign.placement === "banner",
+  );
   const eligible = Boolean(
     selectedBusiness &&
       selectedBusiness.status === "approved" &&
@@ -166,11 +188,11 @@ export default async function HighlightsPage({
             Mais visibilidade
           </p>
           <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-ink sm:text-4xl">
-            Colocar loja em destaque
+            Destaques e banners pagos
           </h1>
           <p className="mt-2 max-w-3xl text-base leading-7 text-muted">
-            Contrate por 7, 15 ou 30 dias. As lojas patrocinadas entram em
-            rodízio equilibrado e cada espaço possui vagas limitadas.
+            Contrate por 7, 15 ou 30 dias. Escolha entre prioridade para a
+            vitrine ou um banner regional na página inicial.
           </p>
         </div>
       </div>
@@ -181,6 +203,11 @@ export default async function HighlightsPage({
           className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold leading-6 text-brand-dark"
         >
           {errorMessage}
+        </p>
+      )}
+      {params.sucesso === "banner_reenviado" && (
+        <p role="status" className="mt-6 rounded-2xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold text-positive">
+          Nova arte enviada para análise.
         </p>
       )}
 
@@ -252,31 +279,43 @@ export default async function HighlightsPage({
           </div>
         )}
 
-        {selectedCampaign && selectedBusiness && (
-          <div className="mt-6 rounded-2xl border border-accent-dark/20 bg-accent/15 p-5">
+        {selectedBusiness && selectedCampaigns.map((campaign) => (
+          <div key={campaign.id} className="mt-6 rounded-2xl border border-accent-dark/20 bg-accent/15 p-5">
             <p className="font-black text-ink">
-              {selectedBusiness.name}: {statusLabels[selectedCampaign.status]}
+              {placementDetails[campaign.placement].title}: {statusLabels[campaign.status]}
             </p>
             <p className="mt-1 text-sm font-semibold leading-6 text-muted">
-              Período previsto: {date(selectedCampaign.starts_at)} a {date(selectedCampaign.ends_at)}.
+              Período previsto: {date(campaign.starts_at)} a {date(campaign.ends_at)}.
             </p>
-            {selectedCampaign.status === "paused" && selectedCampaign.pause_reason ? (
+            {campaign.status === "paused" && campaign.pause_reason ? (
               <p className="mt-2 text-sm font-bold text-brand-dark">
-                {pauseReasonLabels[selectedCampaign.pause_reason]}
+                {pauseReasonLabels[campaign.pause_reason]}
               </p>
             ) : null}
-            {selectedCampaign.status === "pending" && selectedCampaign.provider_payment_url && (
-              <a
-                href={selectedCampaign.provider_payment_url}
-                className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-ink px-4 text-sm font-black text-white"
-              >
+            {campaign.creative_status === "rejected" && campaign.creative_rejection_reason ? (
+              <p className="mt-2 text-sm font-bold text-brand-dark">
+                Ajuste solicitado: {campaign.creative_rejection_reason}
+              </p>
+            ) : null}
+            {campaign.placement === "banner" && campaign.creative_status === "rejected" ? (
+              <form action={replaceBannerCreativeAction} encType="multipart/form-data" className="mt-5 grid gap-3 rounded-2xl bg-white/70 p-4 sm:grid-cols-2">
+                <input type="hidden" name="campaign_id" value={campaign.id} />
+                <input type="hidden" name="business_id" value={selectedBusiness.id} />
+                <label className="text-xs font-black text-ink sm:col-span-2">Nova imagem<input type="file" name="banner_image" accept="image/jpeg,image/png,image/webp,image/avif" required className="mt-1 block w-full rounded-xl border border-line bg-white p-3 text-xs" /></label>
+                <label className="text-xs font-black text-ink">Novo título<input name="banner_title" minLength={3} maxLength={90} required defaultValue={campaign.creative_title ?? ""} className="mt-1 min-h-11 w-full rounded-xl border border-line bg-white px-3 text-sm" /></label>
+                <label className="text-xs font-black text-ink">Nova descrição<input name="banner_description" minLength={3} maxLength={180} required defaultValue={campaign.creative_description ?? ""} className="mt-1 min-h-11 w-full rounded-xl border border-line bg-white px-3 text-sm" /></label>
+                <button className="min-h-11 rounded-xl bg-ink px-4 text-sm font-black text-white sm:col-span-2">Reenviar para análise</button>
+              </form>
+            ) : null}
+            {campaign.status === "pending" && campaign.provider_payment_url && (
+              <a href={campaign.provider_payment_url} className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-ink px-4 text-sm font-black text-white">
                 Continuar pagamento na Efí
               </a>
             )}
           </div>
-        )}
+        ))}
 
-        {selectedBusiness && !eligible && !selectedCampaign && (
+        {selectedBusiness && !eligible && selectedCampaigns.length === 0 && (
           <div className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-5">
             <p className="font-black text-brand-dark">Esta loja ainda não pode ser destacada.</p>
             <p className="mt-1 text-sm font-semibold leading-6 text-muted">
@@ -287,8 +326,8 @@ export default async function HighlightsPage({
       </section>
 
       {selectedBusiness && (
-        <section className="mt-8 grid gap-5 lg:grid-cols-3">
-          {(["category", "city", "combo"] as HighlightPlacement[]).map(
+        <section className="mt-8 grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
+          {(["category", "city", "combo", "banner"] as HighlightPlacement[]).map(
             (placement) => {
               const details = placementDetails[placement];
               const packages = highlights.packages.filter(
@@ -301,6 +340,9 @@ export default async function HighlightsPage({
                   ? Math.min(cityCapacity, categoryCapacity)
                   : undefined
                 : capacityByPlacement.get(placement);
+              const openCampaign = placement === "banner"
+                ? selectedBannerCampaign
+                : selectedStoreCampaign;
               return (
                 <article key={placement} className="flex flex-col rounded-[2rem] border border-line bg-surface p-6 shadow-sm">
                   <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
@@ -316,14 +358,14 @@ export default async function HighlightsPage({
                     <MapPinIcon className="size-4 text-brand" /> Até {capacity ?? "—"} campanhas simultâneas por espaço
                   </p>
 
-                  <form action={startHighlightCheckoutAction} className="mt-6 space-y-4">
+                  <form action={startHighlightCheckoutAction} encType="multipart/form-data" className="mt-6 space-y-4">
                     <input type="hidden" name="business_id" value={selectedBusiness.id} />
                     <label className="block text-sm font-black text-ink">
                       Período
                       <select
                         name="product_code"
                         required
-                        disabled={!eligible || Boolean(selectedCampaign)}
+                        disabled={!eligible || Boolean(openCampaign)}
                         className="mt-2 min-h-12 w-full rounded-xl border border-line bg-canvas px-3 font-bold outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 disabled:opacity-55"
                       >
                         {packages.map((item) => {
@@ -347,19 +389,43 @@ export default async function HighlightsPage({
                         defaultValue={inputDate()}
                         min={inputDate()}
                         max={inputDate(90)}
-                        disabled={!eligible || Boolean(selectedCampaign)}
+                        disabled={!eligible || Boolean(openCampaign)}
                         className="mt-2 min-h-12 w-full rounded-xl border border-line bg-canvas px-3 font-bold outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 disabled:opacity-55"
                       />
                     </label>
+                    {placement === "banner" && (
+                      <>
+                        <label className="block text-sm font-black text-ink">
+                          Imagem do banner
+                          <input
+                            type="file"
+                            name="banner_image"
+                            accept="image/jpeg,image/png,image/webp,image/avif"
+                            required
+                            disabled={!eligible || Boolean(openCampaign)}
+                            className="mt-2 block w-full rounded-xl border border-dashed border-line bg-canvas p-3 text-xs font-bold text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-ink file:px-3 file:py-2 file:font-black file:text-white disabled:opacity-55"
+                          />
+                          <span className="mt-1 block text-xs font-semibold leading-5 text-muted">Formato horizontal recomendado: 1600 × 500 px. Máximo de 5 MB.</span>
+                        </label>
+                        <label className="block text-sm font-black text-ink">
+                          Título do anúncio
+                          <input name="banner_title" minLength={3} maxLength={90} required disabled={!eligible || Boolean(openCampaign)} placeholder="Ex.: Revisão completa com condições especiais" className="mt-2 min-h-12 w-full rounded-xl border border-line bg-canvas px-3 font-bold outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 disabled:opacity-55" />
+                        </label>
+                        <label className="block text-sm font-black text-ink">
+                          Descrição
+                          <textarea name="banner_description" minLength={3} maxLength={180} required disabled={!eligible || Boolean(openCampaign)} rows={3} placeholder="Explique a oferta ou o principal diferencial da sua loja." className="mt-2 w-full rounded-xl border border-line bg-canvas p-3 font-semibold outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 disabled:opacity-55" />
+                        </label>
+                      </>
+                    )}
                     <button
                       type="submit"
-                      disabled={!eligible || Boolean(selectedCampaign) || packages.length === 0}
+                      disabled={!eligible || Boolean(openCampaign) || packages.length === 0}
                       className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-black text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-45"
                     >
-                      <SparklesIcon className="size-4" /> Contratar destaque
+                      <SparklesIcon className="size-4" /> {placement === "banner" ? "Contratar banner" : "Contratar destaque"}
                     </button>
                     <p className="text-center text-xs font-semibold text-muted">
-                      Pagamento seguro por Pix ou cartão na Efí.
+                      {placement === "banner" ? "Após o pagamento, a arte será revisada antes da exibição." : "Pagamento seguro por Pix ou cartão na Efí."}
                     </p>
                   </form>
                 </article>
@@ -419,6 +485,11 @@ export default async function HighlightsPage({
                   <p className="mt-4 text-sm font-black text-brand-dark">
                     {campaign.provider === "manual" ? "Cortesia da plataforma" : `Investimento: ${money(campaign.charged_price_cents)}`}
                   </p>
+                  {campaign.placement === "banner" ? (
+                    <p className="mt-2 text-xs font-bold leading-5 text-muted">
+                      Criativo: {campaign.creative_status === "approved" ? "aprovado" : campaign.creative_status === "rejected" ? "ajustes solicitados" : "aguardando análise"}.
+                    </p>
+                  ) : null}
                   {campaign.status === "paused" && campaign.pause_reason ? (
                     <p className="mt-2 text-xs font-bold leading-5 text-muted">
                       {pauseReasonLabels[campaign.pause_reason]}

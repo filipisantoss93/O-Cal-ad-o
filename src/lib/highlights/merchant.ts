@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
-export type HighlightPlacement = "city" | "category" | "combo";
+export type HighlightPlacement = "city" | "category" | "combo" | "banner";
 
 export type HighlightPackage = {
   code: string;
@@ -15,7 +15,7 @@ export type HighlightPackage = {
 };
 
 export type HighlightPlacementRule = {
-  code: "city" | "category";
+  code: "city" | "category" | "banner";
   name: string;
   max_active: number;
 };
@@ -42,7 +42,18 @@ export type HighlightCampaign = {
     | "refunded";
   starts_at: string;
   ends_at: string;
-  pause_reason: "business_unavailable" | "admin" | "payment_dispute" | null;
+  pause_reason:
+    | "business_unavailable"
+    | "admin"
+    | "payment_dispute"
+    | "creative_review"
+    | "creative_rejected"
+    | null;
+  creative_image_path: string | null;
+  creative_title: string | null;
+  creative_description: string | null;
+  creative_status: "pending" | "approved" | "rejected";
+  creative_rejection_reason: string | null;
   remaining_seconds: number;
   created_at: string;
 };
@@ -72,7 +83,7 @@ export async function getMerchantHighlights(
     supabase
       .from("highlight_campaigns")
       .select(
-        "id, business_id, package_code, placement, duration_days, base_price_cents, discount_cents, charged_price_cents, provider, provider_payment_url, status, starts_at, ends_at, pause_reason, remaining_seconds, created_at",
+        "id, business_id, package_code, placement, duration_days, base_price_cents, discount_cents, charged_price_cents, provider, provider_payment_url, status, starts_at, ends_at, pause_reason, remaining_seconds, creative_image_path, creative_title, creative_description, creative_status, creative_rejection_reason, created_at",
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
