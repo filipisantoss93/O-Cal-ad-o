@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { publicMediaUrl } from "@/lib/merchant/media";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import type { CatalogPriceMode, FeaturedCatalogItem } from "@/types/catalog";
 
 type FeaturedItemsRequest = {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Cidade inválida." }, { status: 400 });
   }
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("catalog_items")
     .select(
