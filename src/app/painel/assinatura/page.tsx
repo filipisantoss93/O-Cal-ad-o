@@ -7,6 +7,7 @@ import {
   TagIcon,
 } from "@/components/icons";
 import {
+  cancelAddonAction,
   startExtraStoreCheckoutAction,
   startProCardCheckoutAction,
   startProPixCheckoutAction,
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 type BillingPageProps = {
-  searchParams: Promise<{ loja?: string; erro?: string }>;
+  searchParams: Promise<{ loja?: string; erro?: string; sucesso?: string }>;
 };
 
 const cycleLabels: Record<string, string> = {
@@ -48,6 +49,17 @@ const errorMessages: Record<string, string> = {
   produto_indisponivel: "Este adicional está temporariamente indisponível.",
   produto_invalido: "Adicional inválido.",
   loja_invalida: "Selecione uma loja válida para comprar promoções adicionais.",
+  adicional_invalido: "Não foi possível localizar este adicional.",
+  adicional_indisponivel: "Este adicional está temporariamente indisponível.",
+  adicional_nao_recorrente: "Este adicional é uma compra única e não possui cobrança recorrente para cancelar.",
+  adicional_nao_cancelavel: "Este adicional não possui uma recorrência ativa que possa ser cancelada.",
+  cancelamento_efi: "Não foi possível cancelar a recorrência na Efí agora. Tente novamente em alguns instantes.",
+  cancelamento_local: "A Efí recebeu o cancelamento, mas não foi possível atualizar a tela. Recarregue a página em alguns instantes.",
+};
+
+const successMessages: Record<string, string> = {
+  adicional_cancelado:
+    "Cancelamento do adicional agendado. O Plano Pro continua ativo e a vaga adicional permanece disponível até o fim do período já pago.",
 };
 
 function money(cents: number) {
@@ -88,7 +100,11 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
   const promoPacks = billing.products
     .filter((product) => product.kind === "promotion_pack")
     .sort((a, b) => a.units - b.units);
+  const visibleAddons = billing.addons.filter((addon) =>
+    ["pending", "active", "past_due"].includes(addon.status),
+  );
   const errorMessage = params.erro ? errorMessages[params.erro] : null;
+  const successMessage = params.sucesso ? successMessages[params.sucesso] : null;
 
   return (
     <div>
@@ -117,6 +133,15 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold leading-6 text-brand-dark"
         >
           {errorMessage}
+        </div>
+      )}
+
+      {successMessage && (
+        <div
+          role="status"
+          className="mt-6 rounded-2xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold leading-6 text-positive"
+        >
+          {successMessage}
         </div>
       )}
 
@@ -174,6 +199,127 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             </p>
           )}
         </article>
+      </section>
+
+      <section
+        id="meus-adicionais"
+        className="mt-8 scroll-mt-40 rounded-[2rem] border border-line bg-surface p-5 shadow-sm sm:p-8"
+      >
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
+            Contratações extras
+          </p>
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">
+            Meus adicionais
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+            Gerencie suas lojas adicionais recorrentes e consulte os pacotes de
+            promoções já adquiridos. Cancelar uma loja adicional não cancela o
+            seu Plano Pro.
+          </p>
+        </div>
+
+        {visibleAddons.length === 0 ? (
+          <div className="mt-6 rounded-2xl border border-line bg-canvas p-5">
+            <p className="text-sm font-black text-ink">Nenhum adicional contratado.</p>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              Quando você comprar uma loja adicional ou um pacote de promoções,
+              ele aparecerá aqui.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-3 lg:grid-cols-2">
+            {visibleAddons.map((addon) => {
+              const product = billing.products.find(
+                (item) => item.code === addon.product_code,
+              );
+              const business = addon.business_id
+                ? businesses.find((item) => item.id === addon.business_id)
+                : null;
+              const recurring = product?.billing_mode === "recurring";
+              const canCancel =
+                recurring &&
+                !addon.cancel_at_period_end &&
+                Boolean(addon.provider_subscription_id) &&
+                ["active", "past_due"].includes(addon.status);
+
+              let statusText = "Aguardando confirmação de pagamento";
+              if (addon.cancel_at_period_end) {
+                statusText = addon.active_until
+                  ? `Cancelamento agendado · disponível até ${date(addon.active_until)}`
+                  : "Cancelamento agendado";
+              } else if (addon.status === "active") {
+                statusText = recurring
+                  ? addon.active_until
+                    ? `Ativo · ciclo atual até ${date(addon.active_until)}`
+                    : "Ativo"
+                  : "Compra única ativa";
+              } else if (addon.status === "past_due") {
+                statusText = "Pagamento pendente";
+              }
+
+              return (
+                <article
+                  key={addon.id}
+                  className="rounded-2xl border border-line bg-canvas p-5"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        {product?.kind === "promotion_pack" ? (
+                          <TagIcon className="size-4 shrink-0 text-brand-dark" />
+                        ) : (
+                          <StoreIcon className="size-4 shrink-0 text-brand-dark" />
+                        )}
+                        <p className="truncate font-black text-ink">
+                          {product?.name ?? addon.product_code}
+                        </p>
+                      </div>
+                      <p className="mt-2 text-sm font-semibold text-muted">
+                        {product?.kind === "promotion_pack" && business
+                          ? `${business.name} · +${product.units * addon.quantity} promoções`
+                          : recurring
+                            ? `${money((product?.price_cents ?? 0) * addon.quantity)}/mês`
+                            : "Compra única"}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-black text-muted">
+                      {recurring ? "Mensal" : "Compra única"}
+                    </span>
+                  </div>
+
+                  <p
+                    className={`mt-4 text-sm font-bold leading-6 ${
+                      addon.cancel_at_period_end
+                        ? "text-brand-dark"
+                        : addon.status === "past_due"
+                          ? "text-brand-dark"
+                          : "text-muted"
+                    }`}
+                  >
+                    {statusText}
+                  </p>
+
+                  {canCancel && (
+                    <form action={cancelAddonAction} className="mt-4">
+                      <input type="hidden" name="addon_id" value={addon.id} />
+                      <button
+                        type="submit"
+                        className="inline-flex min-h-10 items-center justify-center rounded-xl border border-brand/25 bg-white px-4 text-sm font-black text-brand-dark transition hover:bg-brand/8"
+                      >
+                        Cancelar adicional
+                      </button>
+                      <p className="mt-2 text-xs font-semibold leading-5 text-muted">
+                        O Pro permanece ativo. A vaga continua disponível até o
+                        fim do período já pago.
+                      </p>
+                    </form>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section
@@ -380,8 +526,8 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                   {selectedBusiness.name}
                 </p>
                 <p className="mt-1 text-xs font-bold text-muted">
-                  {billing.promotionPackUnitsByBusiness[selectedBusiness.id] ?? 0}
-                  {" "}promoções extras compradas · limite total atual{" "}
+                  {billing.promotionPackUnitsByBusiness[selectedBusiness.id] ?? 0}{" "}
+                  promoções extras compradas · limite total atual{" "}
                   {billing.promotionLimitByBusiness[selectedBusiness.id] ?? 0}
                 </p>
               </div>
