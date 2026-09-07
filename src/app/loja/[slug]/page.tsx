@@ -74,6 +74,8 @@ export default async function BusinessPage({
     ? `https://wa.me/${business.whatsapp}?text=${whatsappMessage}`
     : null;
   const directionsHref = business.directionsUrl ?? null;
+  const appleMapsHref = business.appleMapsUrl ?? null;
+  const wazeHref = business.wazeUrl ?? null;
 
   return (
     <>
@@ -280,17 +282,39 @@ export default async function BusinessPage({
                 </span>
               )}
 
-              {directionsHref && (
-                <a
-                  href={directionsHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={`Abrir rota até ${business.name}`}
-                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-brand/25 bg-brand/8 px-3 text-sm font-black text-brand-dark transition hover:border-brand/45 hover:bg-brand/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-                >
-                  <LocateIcon className="size-5 shrink-0" />
-                  Como chegar
-                </a>
+              {directionsHref && appleMapsHref && wazeHref && (
+                <details className="group relative">
+                  <summary className="inline-flex min-h-12 w-full cursor-pointer list-none items-center justify-center gap-2 rounded-xl border border-brand/25 bg-brand/8 px-3 text-sm font-black text-brand-dark transition hover:border-brand/45 hover:bg-brand/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+                    <LocateIcon className="size-5 shrink-0" />
+                    Como chegar
+                  </summary>
+                  <div className="absolute right-0 top-[calc(100%+0.5rem)] z-20 w-56 overflow-hidden rounded-2xl border border-line bg-white p-2 shadow-xl">
+                    <a
+                      href={appleMapsHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex min-h-11 items-center rounded-xl px-3 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                    >
+                      Mapas da Apple
+                    </a>
+                    <a
+                      href={wazeHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex min-h-11 items-center rounded-xl px-3 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                    >
+                      Waze
+                    </a>
+                    <a
+                      href={directionsHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex min-h-11 items-center rounded-xl px-3 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                    >
+                      Google Maps
+                    </a>
+                  </div>
+                </details>
               )}
             </div>
 

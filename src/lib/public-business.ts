@@ -21,15 +21,24 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join("").toLocaleUpperCase("pt-BR");
 }
 
-function directionsUrl(latitude: number | null, longitude: number | null) {
-  if (latitude === null || longitude === null) return null;
+function directionsUrls(latitude: number | null, longitude: number | null) {
+  const unavailable = {
+    directionsUrl: null,
+    appleMapsUrl: null,
+    wazeUrl: null,
+  };
+  if (latitude === null || longitude === null) return unavailable;
   const destinationLatitude = Number(latitude);
   const destinationLongitude = Number(longitude);
   if (!Number.isFinite(destinationLatitude) || !Number.isFinite(destinationLongitude)) {
-    return null;
+    return unavailable;
   }
   const destination = encodeURIComponent(`${destinationLatitude},${destinationLongitude}`);
-  return `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+  return {
+    directionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`,
+    appleMapsUrl: `https://maps.apple.com/?daddr=${destination}&dirflg=d`,
+    wazeUrl: `https://waze.com/ul?ll=${destination}&navigate=yes`,
+  };
 }
 
 async function loadBusiness(
@@ -98,7 +107,7 @@ async function loadBusiness(
     verified: true,
     tags: [category.name, business.neighborhood, city.name],
     whatsapp: business.whatsapp_e164.replace(/\D/g, ""),
-    directionsUrl: directionsUrl(business.latitude, business.longitude),
+    ...directionsUrls(business.latitude, business.longitude),
     products: (itemsResult.data ?? []).map((item) => ({
       id: String(item.id),
       name: item.name,

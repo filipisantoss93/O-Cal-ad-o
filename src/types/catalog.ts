@@ -38,6 +38,8 @@ export type Business = {
   tags: string[];
   whatsapp: string | null;
   directionsUrl?: string | null;
+  appleMapsUrl?: string | null;
+  wazeUrl?: string | null;
   products: Product[];
 };
 
