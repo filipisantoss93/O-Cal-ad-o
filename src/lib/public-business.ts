@@ -2,7 +2,6 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
-import { getBusinessBySlug } from "@/data/catalog";
 import { requireAdmin } from "@/lib/admin/dal";
 import { getBusinessSchedule } from "@/lib/business-hours";
 import { publicMediaUrl } from "@/lib/merchant/media";
@@ -70,7 +69,7 @@ async function loadBusiness(
     supabase.from("cities").select("name, state_code, timezone").eq("id", business.city_id).maybeSingle(),
     supabase
       .from("catalog_items")
-      .select("id, name, description, price, promotional_price")
+      .select("id, name, description, price, promotional_price, image_path, is_featured")
       .eq("business_id", business.id)
       .eq("is_active", true)
       .not("price", "is", null)
@@ -143,14 +142,13 @@ async function loadBusiness(
       description: item.description || "Consulte disponibilidade diretamente com a loja.",
       price: Number(item.price),
       ...(item.promotional_price !== null ? { promotionalPrice: Number(item.promotional_price) } : {}),
+      imageUrl: publicMediaUrl(supabase, item.image_path),
+      isFeatured: item.is_featured,
     })),
   };
 }
 
 export const getPublicBusiness = cache(async (slug: string): Promise<Business | null> => {
-  const demonstration = getBusinessBySlug(slug);
-  if (demonstration) return demonstration;
-
   const supabase = await createClient();
   return loadBusiness(supabase, slug, true);
 });
