@@ -12,6 +12,20 @@ export type Product = {
   description: string;
   price: number;
   promotionalPrice?: number;
+  imageUrl?: string | null;
+  isFeatured?: boolean;
+};
+
+export type FeaturedCatalogItem = {
+  id: string;
+  businessSlug: string;
+  businessName: string;
+  kind: "product" | "service";
+  name: string;
+  description: string;
+  price: number;
+  promotionalPrice?: number;
+  imageUrl?: string | null;
 };
 
 export type Business = {
@@ -56,4 +70,8 @@ export type Promotion = {
   symbol: string;
   palette: string;
   expiresLabel: string;
+  originalPrice?: number | null;
+  offerPrice?: number;
+  imageUrl?: string | null;
+  isFeatured?: boolean;
 };
