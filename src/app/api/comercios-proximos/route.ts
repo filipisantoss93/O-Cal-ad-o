@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     fn: "get_public_nearby_businesses",
     args: {
       p_city_id: number;
