@@ -10,7 +10,7 @@ import {
 import { recordHighlightEvent } from "@/lib/highlights-client";
 import type { Business } from "@/types/catalog";
 
-export function FeaturedBusinesses({ fallback }: { fallback: Business[] }) {
+export function FeaturedBusinesses() {
   const storedCity = useSyncExternalStore(
     (onChange) => {
       window.addEventListener(cityChangeEventName, onChange);
@@ -37,12 +37,14 @@ export function FeaturedBusinesses({ fallback }: { fallback: Business[] }) {
     businesses: Business[];
   } | null>(null);
   const displayed =
-    city && result?.cityId === city.id && result.businesses.length > 0
-      ? result.businesses
-      : fallback;
+    city && result?.cityId === city.id ? result.businesses : [];
 
   useEffect(() => {
-    if (!city) return;
+    if (!city) {
+      setResult(null);
+      return;
+    }
+    setResult(null);
     const controller = new AbortController();
 
     const load = async () => {
@@ -83,6 +85,25 @@ export function FeaturedBusinesses({ fallback }: { fallback: Business[] }) {
     if (Number.isSafeInteger(campaignId) && campaignId > 0) {
       recordHighlightEvent([campaignId], "store_view");
     }
+  }
+
+  if (!city) {
+    return (
+      <div className="mt-7 rounded-3xl border border-dashed border-line bg-canvas p-7 text-center">
+        <p className="font-black text-ink">Selecione sua cidade para ver os destaques locais.</p>
+      </div>
+    );
+  }
+
+  if (result?.cityId === city.id && displayed.length === 0) {
+    return (
+      <div className="mt-7 rounded-3xl border border-dashed border-line bg-canvas p-7 text-center">
+        <p className="font-black text-ink">Nenhum comércio em destaque nesta cidade ainda.</p>
+        <p className="mt-1 text-sm font-semibold text-muted">
+          Este espaço aparecerá somente quando um comércio real contratar destaque.
+        </p>
+      </div>
+    );
   }
 
   return (
