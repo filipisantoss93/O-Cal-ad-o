@@ -6,7 +6,7 @@ import { CitySelector } from "@/components/city-selector";
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-line/80 bg-canvas/92 backdrop-blur-xl">
-      <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-2.5 px-4 sm:min-h-18 sm:gap-4 sm:px-6 lg:px-8">
         <Logo />
 
         <nav
@@ -30,11 +30,11 @@ export function SiteHeader() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-0.5 sm:gap-2">
           <CitySelector />
           <Link
             href="/entrar"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-ink/10 bg-surface px-4 text-sm font-extrabold text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:px-5"
+            className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-ink/10 bg-surface px-3 text-[13px] font-extrabold text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:min-h-11 sm:gap-2 sm:px-5 sm:text-sm"
           >
             <StoreIcon className="size-4" />
             <span className="hidden sm:inline">Sou comerciante</span>
