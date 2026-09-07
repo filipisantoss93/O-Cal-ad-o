@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { filterBusinesses } from "@/data/catalog";
 import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";
 import { createClient } from "@/lib/supabase/server";
@@ -35,10 +36,11 @@ export async function searchPublicBusinesses(
 ): Promise<Business[]> {
   const demonstrations = filterBusinesses(query, categorySlug);
   const supabase = await createClient();
-  const { data: rows, error } = await supabase
+  const businessClient = supabase as unknown as SupabaseClient<any>;
+  const { data: rows, error } = await businessClient
     .from("businesses")
     .select(
-      "id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone)",
+      "id, slug, name, description, tags, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone)",
     )
     .eq("status", "approved")
     .eq("is_active", true)
@@ -47,7 +49,7 @@ export async function searchPublicBusinesses(
 
   if (error || !rows?.length) return demonstrations;
 
-  const businessIds = rows.map((row) => row.id);
+  const businessIds = rows.map((row: any) => row.id);
   const [catalogItemsResult, hoursResult] = await Promise.all([
     supabase
       .from("catalog_items")
@@ -79,7 +81,7 @@ export async function searchPublicBusinesses(
 
   const normalizedQuery = normalized(query?.trim() ?? "");
   const realBusinesses = rows
-    .filter((row) => {
+    .filter((row: any) => {
       const category = row.categories;
       if (!category || (categorySlug && category.slug !== categorySlug)) return false;
       if (!normalizedQuery) return true;
@@ -90,11 +92,12 @@ export async function searchPublicBusinesses(
           row.description ?? "",
           row.neighborhood,
           category.name,
+          ...(row.tags ?? []),
           ...(itemTerms.get(row.id) ?? []),
         ].join(" "),
       ).includes(normalizedQuery);
     })
-    .map((row): Business => {
+    .map((row: any): Business => {
       const category = row.categories!;
       const city = row.cities!;
       const schedule = getBusinessSchedule(
@@ -117,7 +120,7 @@ export async function searchPublicBusinesses(
         initials: initials(row.name),
         palette: palettes[row.id % palettes.length],
         verified: true,
-        tags: [category.name, row.neighborhood, ...(itemTerms.get(row.id) ?? []).filter(Boolean)],
+        tags: [...(row.tags ?? []), category.name, row.neighborhood].slice(0, 12),
         whatsapp: row.whatsapp_e164.replace(/\D/g, ""),
         products: [],
       };
