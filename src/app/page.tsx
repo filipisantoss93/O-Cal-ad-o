@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BusinessCard } from "@/components/business-card";
+import Image from "next/image";
 import { CategoryGrid } from "@/components/category-grid";
 import {
   ArrowRightIcon,
@@ -14,6 +14,7 @@ import { SearchForm } from "@/components/search-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { CitySelector } from "@/components/city-selector";
+import { FeaturedBusinesses } from "@/components/featured-businesses";
 import { businesses, categories, promotions } from "@/data/catalog";
 
 export default function Home() {
@@ -100,11 +101,12 @@ export default function Home() {
         <section className="bg-canvas px-4 pb-14 sm:px-6 sm:pb-18 lg:px-8">
           <div className="mx-auto grid max-w-7xl overflow-hidden rounded-[2rem] border border-line bg-surface shadow-[0_24px_60px_rgba(31,45,42,0.10)] lg:grid-cols-[1.08fr_0.92fr] lg:items-stretch">
             <div className="relative min-h-[250px] sm:min-h-[360px] lg:min-h-[430px]">
-              <img
-                src="/api/commerce-image?v=20260906-4"
+              <Image
+                src="/api/commerce-image"
                 alt="Calçadão comercial amplo e movimentado, com lojas e serviços locais"
-                loading="eager"
-                decoding="async"
+                fill
+                priority
+                sizes="(min-width: 1024px) 54vw, 100vw"
                 className="absolute inset-0 h-full w-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-ink/20 via-transparent to-transparent" />
@@ -142,11 +144,7 @@ export default function Home() {
               linkHref="/buscar"
               linkLabel="Explorar o Centro Comercial"
             />
-            <div className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-              {businesses.map((business) => (
-                <BusinessCard key={business.id} business={business} />
-              ))}
-            </div>
+            <FeaturedBusinesses fallback={businesses} />
           </div>
         </section>
 

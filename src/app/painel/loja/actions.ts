@@ -175,7 +175,6 @@ export async function saveBusinessAction(
 
   try {
     const supabase = await createClient();
-    const businessClient = supabase as unknown as SupabaseClient<any>;
     cleanupClient = supabase;
     const {
       data: { user },
@@ -200,7 +199,7 @@ export async function saveBusinessAction(
       if (!Number.isSafeInteger(requestedBusinessId) || requestedBusinessId <= 0) {
         return actionError("Loja não encontrada.");
       }
-      const { data, error } = await businessClient
+      const { data, error } = await supabase
         .from("businesses")
         .select("id, owner_id, logo_path, cover_path, status, tags")
         .eq("id", requestedBusinessId)
@@ -310,21 +309,21 @@ export async function saveBusinessAction(
       logo_path: logoPath,
       cover_path: coverPath,
       is_active: formData.get("is_active") === "on",
-    };
+    } satisfies TablesUpdate<"businesses">;
     const insertData = {
       ...editableData,
       owner_id: user.id,
-    };
+    } satisfies TablesInsert<"businesses">;
 
     const result = existing
-      ? await businessClient
+      ? await supabase
           .from("businesses")
           .update(editableData)
           .eq("id", existing.id)
           .eq("owner_id", user.id)
           .select("id, status")
           .single()
-      : await businessClient
+      : await supabase
           .from("businesses")
           .insert(insertData)
           .select("id, status")

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   AlertTriangleIcon,
   ArrowRightIcon,
@@ -83,8 +82,7 @@ export default async function PromotionsPage({
       (item) => Number.isSafeInteger(requestedId) && item.id === requestedId,
     ) ?? businesses[0];
   const billing = await getMerchantBillingSummary(supabase, user.id, businesses);
-  const rawSupabase = supabase as unknown as SupabaseClient<any>;
-  const { data, error } = await rawSupabase
+  const { data, error } = await supabase
     .from("promotions")
     .select(
       "id, title, description, original_price, offer_price, starts_at, ends_at, image_path, is_active, billing_suspended",

@@ -27,6 +27,12 @@ A aplicação contém:
 - painel protegido para o comerciante;
 - cadastro e edição da loja, com logo e capa;
 - criação, edição, ativação, pausa e exclusão de promoções;
+- contratação de lojas em destaque por cidade, categoria ou nos dois espaços,
+  com pacotes de 7, 15 e 30 dias;
+- painel administrativo para preços, capacidade, cortesias, pausas, bônus e
+  cancelamentos das campanhas patrocinadas;
+- rodízio de vitrines patrocinadas e métricas de impressão, visita, WhatsApp e
+  solicitação de rota;
 - edição do perfil, alteração de e-mail e alteração de senha;
 - exclusão definitiva da conta e dos dados vinculados;
 - clientes Supabase para navegador, servidor e renovação segura de sessão;
@@ -37,9 +43,24 @@ A aplicação contém:
 - Edge Function autenticada para excluir a conta;
 - validação automática no GitHub Actions.
 
-O painel do comerciante usa dados reais do Supabase. O catálogo público ainda
-usa os dados demonstrativos de `src/data/catalog.ts` enquanto a camada pública
-de consultas não é conectada.
+O painel do comerciante e as lojas publicadas usam dados reais do Supabase. Os
+dados de `src/data/catalog.ts` permanecem como demonstração e fallback visual
+quando ainda não há vitrines publicadas para um espaço.
+
+## Destaques patrocinados
+
+O comerciante contrata em `/painel/destaques`. A reserva de vaga, o preço e o
+desconto Pro de 10% são calculados no banco antes de abrir o checkout da Efí.
+Uma loja precisa estar aprovada, ativa, sem suspensão de cobrança e com logo e
+capa para participar.
+
+O administrador gerencia a operação em `/painel/admin/destaques`. Cada espaço
+tem capacidade simultânea configurável; o combo consome uma vaga de cidade e
+uma de categoria. Campanhas pagas são ativadas pelo webhook, processadas de
+forma idempotente e concluídas pela rotina agendada a cada cinco minutos.
+
+As métricas são deduplicadas por visitante, campanha, evento e dia. A indicação
+“Patrocinado” acompanha as vitrines em destaque nas superfícies públicas.
 
 ## CSS consolidado
 
@@ -95,9 +116,11 @@ O schema ativa RLS em todas as tabelas públicas. Visitantes veem apenas
 comércios publicados e itens ativos; comerciantes autenticados gerenciam apenas
 os registros dos próprios negócios.
 
-A função `supabase/functions/delete-account` deve permanecer com verificação de
+As funções `supabase/functions/delete-account` e
+`supabase/functions/efi-billing-checkout` devem permanecer com verificação de
 JWT habilitada. A chave `service_role` é fornecida pelo próprio ambiente da Edge
-Function e nunca deve ser exposta ao Next.js ou ao navegador.
+Function e nunca deve ser exposta ao Next.js ou ao navegador. O webhook da Efí
+faz sua própria validação consultando a notificação diretamente no provedor.
 
 Os dados de estados, municípios e malhas são gerados a partir das APIs e dos
 arquivos oficiais do IBGE pelo script `scripts/generate-brazil-locations.mjs`.

@@ -56,11 +56,12 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, slug, name, neighborhood, latitude, longitude, plan, featured_until, category_id, categories(name)",
+      "id, slug, name, neighborhood, latitude, longitude, category_id, categories(name)",
     )
     .eq("city_id", cityId)
     .eq("status", "approved")
     .eq("is_active", true)
+    .eq("billing_suspended", false)
     .limit(100);
 
   if (error) {
@@ -74,7 +75,31 @@ export async function POST(request: Request) {
     );
   }
 
-  const now = Date.now();
+  const businessIds = (data ?? []).map((business) => business.id);
+  const now = new Date().toISOString();
+  const highlightsResult = businessIds.length
+    ? await supabase
+        .from("highlight_campaigns")
+        .select("id, business_id, businesses!inner(status, is_active, billing_suspended, logo_path, cover_path)")
+        .in("business_id", businessIds)
+        .in("placement", ["city", "combo"])
+        .eq("status", "active")
+        .lte("starts_at", now)
+        .gt("ends_at", now)
+        .eq("businesses.status", "approved")
+        .eq("businesses.is_active", true)
+        .eq("businesses.billing_suspended", false)
+        .not("businesses.logo_path", "is", null)
+        .not("businesses.cover_path", "is", null)
+    : { data: [] as Array<{ id: number; business_id: number }> };
+  const highlightedBusinesses = new Map(
+    (highlightsResult.data ?? []).map(
+      (campaign: { id: number; business_id: number }) => [
+        campaign.business_id,
+        campaign.id,
+      ],
+    ),
+  );
   const businesses = (data ?? [])
     .map((business) => {
       const businessLatitude = Number(business.latitude);
@@ -104,19 +129,17 @@ export async function POST(request: Request) {
         neighborhood: business.neighborhood,
         categoryName: category?.name ?? "Comércio local",
         distanceKm,
-        isFeatured:
-          business.plan === "featured" &&
-          Boolean(business.featured_until) &&
-          new Date(business.featured_until as string).getTime() > now,
+        isFeatured: highlightedBusinesses.has(business.id),
+        highlightCampaignId: highlightedBusinesses.get(business.id) ?? null,
       };
     })
     .sort((first, second) => {
+      if (first.isFeatured !== second.isFeatured) return first.isFeatured ? -1 : 1;
       if (first.distanceKm !== null && second.distanceKm !== null) {
         return first.distanceKm - second.distanceKm;
       }
       if (first.distanceKm !== null) return -1;
       if (second.distanceKm !== null) return 1;
-      if (first.isFeatured !== second.isFeatured) return first.isFeatured ? -1 : 1;
       return first.name.localeCompare(second.name, "pt-BR");
     });
 

@@ -9,6 +9,7 @@ import {
   type CurrentCoordinates,
   type SelectedCity,
 } from "@/lib/location";
+import { recordHighlightEvent } from "@/lib/highlights-client";
 import type { Business } from "@/types/catalog";
 
 type NearbyBusiness = {
@@ -25,7 +26,13 @@ function formatDistance(distanceKm: number) {
   return `${distanceKm.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km`;
 }
 
-export function SearchBusinessResults({ businesses }: { businesses: Business[] }) {
+export function SearchBusinessResults({
+  businesses,
+  categorySlug,
+}: {
+  businesses: Business[];
+  categorySlug?: string;
+}) {
   const storedCity = useSyncExternalStore(
     (onChange) => {
       window.addEventListener(cityChangeEventName, onChange);
@@ -46,33 +53,70 @@ export function SearchBusinessResults({ businesses }: { businesses: Business[] }
     () => readStoredValue(selectedCoordinatesStorageKey, window.sessionStorage),
     () => null,
   );
-  const location = useMemo(() => {
-    if (!storedCity || !storedCoordinates) return null;
+  const city = useMemo(() => {
+    if (!storedCity) return null;
     try {
-      const city = JSON.parse(storedCity) as SelectedCity;
-      const coordinates = JSON.parse(storedCoordinates) as CurrentCoordinates;
-      if (
-        !Number.isSafeInteger(city.id) ||
-        !Number.isFinite(coordinates.latitude) ||
-        !Number.isFinite(coordinates.longitude)
-      ) {
-        return null;
-      }
-      return { city, coordinates };
+      const value = JSON.parse(storedCity) as SelectedCity;
+      return Number.isSafeInteger(value.id) ? value : null;
     } catch {
       return null;
     }
-  }, [storedCity, storedCoordinates]);
-  const locationKey = location
-    ? `${location.city.id}:${location.coordinates.latitude}:${location.coordinates.longitude}`
+  }, [storedCity]);
+  const coordinates = useMemo(() => {
+    if (!storedCoordinates) return null;
+    try {
+      const value = JSON.parse(storedCoordinates) as CurrentCoordinates;
+      return Number.isFinite(value.latitude) && Number.isFinite(value.longitude)
+        ? value
+        : null;
+    } catch {
+      return null;
+    }
+  }, [storedCoordinates]);
+  const locationKey = city && coordinates
+    ? `${city.id}:${coordinates.latitude}:${coordinates.longitude}`
     : null;
   const [distanceResult, setDistanceResult] = useState<{
     locationKey: string;
     distances: Map<string, number>;
   } | null>(null);
+  const highlightKey = city
+    ? `${city.id}:${categorySlug ?? "city"}`
+    : null;
+  const [highlightResult, setHighlightResult] = useState<{
+    highlightKey: string;
+    businesses: Business[];
+  } | null>(null);
+
+  const displayedBusinesses = useMemo(() => {
+    if (!highlightKey || highlightResult?.highlightKey !== highlightKey) {
+      return businesses;
+    }
+    const sponsoredBySlug = new Map(
+      highlightResult.businesses.map((business) => [business.slug, business]),
+    );
+    return businesses
+      .map((business) => {
+        const sponsored = sponsoredBySlug.get(business.slug);
+        return sponsored
+          ? {
+              ...business,
+              isSponsored: true,
+              highlightCampaignId: sponsored.highlightCampaignId,
+              sponsoredPlacement: sponsored.sponsoredPlacement,
+            }
+          : business;
+      })
+      .sort((first, second) => {
+        if (Boolean(first.isSponsored) !== Boolean(second.isSponsored)) {
+          return first.isSponsored ? -1 : 1;
+        }
+        return 0;
+      });
+  }, [businesses, highlightKey, highlightResult]);
 
   useEffect(() => {
-    if (!location || !locationKey) return;
+    if (!city || !coordinates || !locationKey) return;
 
     const controller = new AbortController();
     const loadDistances = async () => {
@@ -81,9 +125,9 @@ export function SearchBusinessResults({ businesses }: { businesses: Business[] }
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            cityId: location.city.id,
-            latitude: location.coordinates.latitude,
-            longitude: location.coordinates.longitude,
+            cityId: city.id,
+            latitude: coordinates.latitude,
+            longitude: coordinates.longitude,
           }),
           cache: "no-store",
           signal: controller.signal,
@@ -107,11 +151,63 @@ export function SearchBusinessResults({ businesses }: { businesses: Business[] }
     };
     void loadDistances();
     return () => controller.abort();
-  }, [location, locationKey]);
+  }, [city, coordinates, locationKey]);
+
+  useEffect(() => {
+    if (!city || !highlightKey) return;
+
+    const controller = new AbortController();
+    const loadHighlights = async () => {
+      try {
+        const response = await fetch("/api/destaques", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cityId: city.id,
+            categorySlug,
+          }),
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const payload = (await response.json()) as { businesses?: Business[] };
+        setHighlightResult({
+          highlightKey,
+          businesses: payload.businesses ?? [],
+        });
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("[buscar] highlight lookup failed", error);
+        }
+      }
+    };
+    void loadHighlights();
+    return () => controller.abort();
+  }, [categorySlug, city, highlightKey]);
+
+  useEffect(() => {
+    recordHighlightEvent(
+      displayedBusinesses.map((business) => business.highlightCampaignId),
+      "impression",
+    );
+  }, [displayedBusinesses]);
+
+  function trackStoreView(event: React.MouseEvent<HTMLDivElement>) {
+    const article = (event.target as HTMLElement).closest<HTMLElement>(
+      "[data-highlight-campaign]",
+    );
+    const campaignId = Number(article?.dataset.highlightCampaign);
+    if (Number.isSafeInteger(campaignId) && campaignId > 0) {
+      recordHighlightEvent([campaignId], "store_view");
+    }
+  }
 
   return (
-    <div className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-      {businesses.map((business) => {
+    <div
+      className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-4"
+      onClickCapture={trackStoreView}
+    >
+      {displayedBusinesses.map((business) => {
         const distanceKm =
           distanceResult?.locationKey === locationKey
             ? distanceResult.distances.get(business.slug)

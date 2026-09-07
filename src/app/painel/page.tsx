@@ -38,6 +38,10 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   },
 };
 
+function requestTimestamp() {
+  return Date.now();
+}
+
 export default async function MerchantDashboard({
   searchParams,
 }: DashboardPageProps) {
@@ -61,7 +65,7 @@ export default async function MerchantDashboard({
         "business_id",
         businesses.map((business) => business.id),
       );
-    const now = Date.now();
+    const now = requestTimestamp();
     promotionsCount = data?.length ?? 0;
     activePromotions =
       data?.filter(

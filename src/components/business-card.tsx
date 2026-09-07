@@ -4,6 +4,7 @@ import {
   ClockIcon,
   MapPinIcon,
   ShieldCheckIcon,
+  SparklesIcon,
   StarIcon,
 } from "@/components/icons";
 import type { Business } from "@/types/catalog";
@@ -14,11 +15,24 @@ type BusinessCardProps = {
 
 export function BusinessCard({ business }: BusinessCardProps) {
   return (
-    <article className="group overflow-hidden rounded-3xl border border-line bg-surface shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(29,43,40,0.11)]">
+    <article
+      data-highlight-campaign={business.highlightCampaignId ?? undefined}
+      className={`group overflow-hidden rounded-3xl bg-surface shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(29,43,40,0.11)] ${
+        business.isSponsored
+          ? "border-2 border-accent-dark/55 ring-4 ring-accent/15"
+          : "border border-line"
+      }`}
+    >
       <div
         className={`relative flex h-36 items-end bg-gradient-to-br ${business.palette} p-4 text-white`}
       >
         <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_25%,rgba(255,255,255,0.12)_25%,rgba(255,255,255,0.12)_50%,transparent_50%,transparent_75%,rgba(255,255,255,0.12)_75%)] bg-[length:28px_28px] opacity-30" />
+        {business.isSponsored && (
+          <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-ink shadow-md">
+            <SparklesIcon className="size-3.5" />
+            Patrocinado
+          </span>
+        )}
         <span className="relative grid size-16 place-items-center rounded-2xl border border-white/35 bg-white/20 text-xl font-black shadow-lg backdrop-blur-sm">
           {business.initials}
         </span>

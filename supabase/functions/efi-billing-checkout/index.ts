@@ -8,12 +8,18 @@ const cycles = {
 } as const;
 
 type BillingCycle = keyof typeof cycles;
-type CheckoutAction = "pro_card" | "pro_pix" | "extra_store" | "promotion_pack";
+type CheckoutAction =
+  | "pro_card"
+  | "pro_pix"
+  | "extra_store"
+  | "promotion_pack"
+  | "highlight_campaign";
 type CheckoutBody = {
   action?: CheckoutAction;
   billing_cycle?: string;
   business_id?: number;
   product_code?: string;
+  starts_on?: string;
 };
 type EfiAuthorizeResponse = { access_token?: string };
 type EfiPlanResponse = { data?: { plan_id?: number } };
@@ -196,13 +202,16 @@ async function createOneTimeLink(input: {
   productCode: string;
   itemName: string;
   priceCents: number;
+  customId?: string;
 }) {
-  const customId = safeCustomId([
-    "ocalcadao",
-    input.productCode,
-    input.userId,
-    Date.now(),
-  ]);
+  const customId =
+    input.customId ??
+    safeCustomId([
+      "ocalcadao",
+      input.productCode,
+      input.userId,
+      Date.now(),
+    ]);
   const payment = await efiRequest<EfiPaymentLinkResponse>(
     "/v1/charge/one-step/link",
     {
@@ -287,6 +296,7 @@ async function logCheckoutError(
         billing_cycle: body.billing_cycle ?? null,
         business_id: body.business_id ?? null,
         product_code: body.product_code ?? null,
+        starts_on: body.starts_on ?? null,
         provider,
       },
     });
@@ -474,6 +484,111 @@ Deno.serve(async (req: Request) => {
         status: "pending",
       });
       if (error) throw error;
+      return json({ ok: true, payment_url: checkout.paymentUrl });
+    }
+
+    if (body.action === "highlight_campaign") {
+      const packageCode = String(body.product_code ?? "");
+      const businessId = Number(body.business_id);
+      if (!/^(category|city|combo)_(7|15|30)$/.test(packageCode)) {
+        return json({ ok: false, error: "pacote_destaque_invalido" }, 400);
+      }
+      if (!Number.isSafeInteger(businessId) || businessId <= 0) {
+        return json({ ok: false, error: "loja_invalida" }, 400);
+      }
+
+      let requestedStart: string | null = null;
+      if (body.starts_on) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(body.starts_on)) {
+          return json({ ok: false, error: "data_inicio_invalida" }, 400);
+        }
+        const parsedStart = new Date(`${body.starts_on}T03:00:00.000Z`);
+        if (
+          Number.isNaN(parsedStart.getTime()) ||
+          parsedStart.toISOString().slice(0, 10) !== body.starts_on
+        ) {
+          return json({ ok: false, error: "data_inicio_invalida" }, 400);
+        }
+        requestedStart = parsedStart.toISOString();
+      }
+
+      const { data: reservations, error: reservationError } = await admin.rpc(
+        "reserve_highlight_campaign",
+        {
+          p_user_id: user.id,
+          p_business_id: businessId,
+          p_package_code: packageCode,
+          p_requested_start: requestedStart,
+        },
+      );
+      if (reservationError) {
+        const message = reservationError.message ?? "";
+        const knownError = [
+          "HIGHLIGHT_INVALID_BUSINESS",
+          "HIGHLIGHT_BUSINESS_INELIGIBLE",
+          "HIGHLIGHT_INVALID_PACKAGE",
+          "HIGHLIGHT_ALREADY_OPEN",
+          "HIGHLIGHT_START_TOO_FAR",
+          "HIGHLIGHT_NO_AVAILABILITY",
+        ].find((code) => message.includes(code));
+        const errorCode: Record<string, string> = {
+          HIGHLIGHT_INVALID_BUSINESS: "loja_invalida",
+          HIGHLIGHT_BUSINESS_INELIGIBLE: "loja_destaque_indisponivel",
+          HIGHLIGHT_INVALID_PACKAGE: "pacote_destaque_invalido",
+          HIGHLIGHT_ALREADY_OPEN: "destaque_ja_contratado",
+          HIGHLIGHT_START_TOO_FAR: "data_inicio_distante",
+          HIGHLIGHT_NO_AVAILABILITY: "destaque_sem_vagas",
+        };
+        return json(
+          { ok: false, error: knownError ? errorCode[knownError] : "reserva_destaque" },
+          knownError === "HIGHLIGHT_INVALID_BUSINESS" ? 404 : 409,
+        );
+      }
+
+      const reservation = Array.isArray(reservations) ? reservations[0] : reservations;
+      const campaignId = Number(reservation?.campaign_id);
+      const priceCents = Number(reservation?.charged_price_cents);
+      if (!Number.isSafeInteger(campaignId) || campaignId <= 0 || !Number.isSafeInteger(priceCents) || priceCents <= 0) {
+        return json({ ok: false, error: "reserva_destaque" }, 500);
+      }
+
+      let checkout: Awaited<ReturnType<typeof createOneTimeLink>>;
+      try {
+        checkout = await createOneTimeLink({
+          userId: user.id,
+          productCode: packageCode,
+          itemName: `O Calçadão - ${String(reservation?.package_name ?? "Loja em destaque")}`,
+          priceCents,
+          customId: safeCustomId(["ocalcadao", "highlight", campaignId]),
+        });
+      } catch (error) {
+        await admin
+          .from("highlight_campaigns")
+          .update({
+            status: "cancelled",
+            completed_at: new Date().toISOString(),
+            reservation_expires_at: null,
+          })
+          .eq("id", campaignId)
+          .eq("user_id", user.id)
+          .eq("status", "pending");
+        throw error;
+      }
+
+      const { data: attachedCampaign, error: attachError } = await admin
+        .from("highlight_campaigns")
+        .update({
+          provider_charge_id: checkout.chargeId,
+          provider_payment_url: checkout.paymentUrl,
+        })
+        .eq("id", campaignId)
+        .eq("user_id", user.id)
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
+      if (attachError || !attachedCampaign) {
+        throw attachError ?? new Error("HIGHLIGHT_RESERVATION_ATTACH_FAILED");
+      }
       return json({ ok: true, payment_url: checkout.paymentUrl });
     }
 

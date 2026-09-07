@@ -1,6 +1,5 @@
 import "server-only";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";
 import { createClient } from "@/lib/supabase/server";
 import type { Business } from "@/types/catalog";
@@ -37,8 +36,7 @@ export async function searchPublicBusinesses(
   if (!cityId || !Number.isInteger(cityId) || cityId <= 0) return [];
 
   const supabase = await createClient();
-  const businessClient = supabase as unknown as SupabaseClient<any>;
-  const { data: rows, error } = await businessClient
+  const { data: rows, error } = await supabase
     .from("businesses")
     .select(
       "id, slug, name, description, tags, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone)",
@@ -46,12 +44,13 @@ export async function searchPublicBusinesses(
     .eq("status", "approved")
     .eq("is_active", true)
     .eq("city_id", cityId)
+    .eq("billing_suspended", false)
     .order("name")
     .limit(100);
 
   if (error || !rows?.length) return [];
 
-  const businessIds = rows.map((row: any) => row.id);
+  const businessIds = rows.map((row) => row.id);
   const [catalogItemsResult, hoursResult] = await Promise.all([
     supabase
       .from("catalog_items")
@@ -83,7 +82,7 @@ export async function searchPublicBusinesses(
 
   const normalizedQuery = normalized(query?.trim() ?? "");
   return rows
-    .filter((row: any) => {
+    .filter((row) => {
       const category = row.categories;
       if (!category || (categorySlug && category.slug !== categorySlug)) return false;
       if (!normalizedQuery) return true;
@@ -99,7 +98,7 @@ export async function searchPublicBusinesses(
         ].join(" "),
       ).includes(normalizedQuery);
     })
-    .map((row: any): Business => {
+    .map((row): Business => {
       const category = row.categories!;
       const city = row.cities!;
       const schedule = getBusinessSchedule(

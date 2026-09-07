@@ -13,6 +13,7 @@ import {
 } from "@/components/icons";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { HighlightTracker } from "@/components/highlight-tracker";
 import { businesses } from "@/data/catalog";
 import {
   getAdminBusinessPreview,
@@ -98,6 +99,9 @@ export default async function BusinessPage({
           </div>
         </div>
       )}
+      <HighlightTracker
+        campaignId={isAdminPreview ? null : (business.highlightCampaignId ?? null)}
+      >
       <main className="min-h-[70vh] bg-canvas">
         <section
           className={`relative overflow-hidden bg-gradient-to-br ${business.palette}`}
@@ -263,6 +267,7 @@ export default async function BusinessPage({
               {whatsappHref ? (
                 <a
                   href={whatsappHref}
+                  data-highlight-event="whatsapp"
                   target="_blank"
                   rel="noreferrer"
                   aria-label="Chamar no WhatsApp"
@@ -291,6 +296,7 @@ export default async function BusinessPage({
                   <div className="absolute right-0 top-[calc(100%+0.5rem)] z-20 w-56 overflow-hidden rounded-2xl border border-line bg-white p-2 shadow-xl">
                     <a
                       href={appleMapsHref}
+                      data-highlight-event="directions"
                       target="_blank"
                       rel="noreferrer"
                       className="flex min-h-11 items-center rounded-xl px-3 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
@@ -299,6 +305,7 @@ export default async function BusinessPage({
                     </a>
                     <a
                       href={wazeHref}
+                      data-highlight-event="directions"
                       target="_blank"
                       rel="noreferrer"
                       className="flex min-h-11 items-center rounded-xl px-3 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
@@ -307,6 +314,7 @@ export default async function BusinessPage({
                     </a>
                     <a
                       href={directionsHref}
+                      data-highlight-event="directions"
                       target="_blank"
                       rel="noreferrer"
                       className="flex min-h-11 items-center rounded-xl px-3 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
@@ -347,6 +355,7 @@ export default async function BusinessPage({
           </aside>
         </div>
       </main>
+      </HighlightTracker>
       <SiteFooter />
     </>
   );

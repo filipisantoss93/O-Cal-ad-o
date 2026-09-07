@@ -14,6 +14,212 @@ export type Database = {
   }
   public: {
     Tables: {
+      billing_addons: {
+        Row: {
+          active_from: string | null
+          active_until: string | null
+          business_id: number | null
+          cancel_at_period_end: boolean
+          created_at: string
+          id: number
+          payment_method: string
+          product_code: string
+          provider: string
+          provider_charge_id: string | null
+          provider_plan_id: string | null
+          provider_subscription_id: string | null
+          quantity: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_from?: string | null
+          active_until?: string | null
+          business_id?: number | null
+          cancel_at_period_end?: boolean
+          created_at?: string
+          id?: never
+          payment_method?: string
+          product_code: string
+          provider?: string
+          provider_charge_id?: string | null
+          provider_plan_id?: string | null
+          provider_subscription_id?: string | null
+          quantity?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active_from?: string | null
+          active_until?: string | null
+          business_id?: number | null
+          cancel_at_period_end?: boolean
+          created_at?: string
+          id?: never
+          payment_method?: string
+          product_code?: string
+          provider?: string
+          provider_charge_id?: string | null
+          provider_plan_id?: string | null
+          provider_subscription_id?: string | null
+          quantity?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_addons_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_addons_product_code_fkey"
+            columns: ["product_code"]
+            isOneToOne: false
+            referencedRelation: "billing_products"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      billing_plan_prices: {
+        Row: {
+          billing_cycle: string
+          created_at: string
+          id: number
+          interval_months: number
+          is_active: boolean
+          plan_code: string
+          price_cents: number
+          updated_at: string
+        }
+        Insert: {
+          billing_cycle: string
+          created_at?: string
+          id?: never
+          interval_months: number
+          is_active?: boolean
+          plan_code: string
+          price_cents: number
+          updated_at?: string
+        }
+        Update: {
+          billing_cycle?: string
+          created_at?: string
+          id?: never
+          interval_months?: number
+          is_active?: boolean
+          plan_code?: string
+          price_cents?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_plan_prices_plan_code_fkey"
+            columns: ["plan_code"]
+            isOneToOne: false
+            referencedRelation: "billing_plan_rules"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      billing_plan_rules: {
+        Row: {
+          code: string
+          created_at: string
+          included_businesses: number
+          included_promotions_per_business: number
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          included_businesses: number
+          included_promotions_per_business: number
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          included_businesses?: number
+          included_promotions_per_business?: number
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      billing_products: {
+        Row: {
+          billing_mode: string
+          code: string
+          created_at: string
+          is_active: boolean
+          kind: string
+          name: string
+          price_cents: number
+          units: number
+          updated_at: string
+        }
+        Insert: {
+          billing_mode: string
+          code: string
+          created_at?: string
+          is_active?: boolean
+          kind: string
+          name: string
+          price_cents: number
+          units: number
+          updated_at?: string
+        }
+        Update: {
+          billing_mode?: string
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          price_cents?: number
+          units?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      billing_provider_events: {
+        Row: {
+          event_key: string
+          event_type: string | null
+          payload: Json | null
+          processed_at: string
+          provider: string
+          provider_event_id: string | null
+        }
+        Insert: {
+          event_key: string
+          event_type?: string | null
+          payload?: Json | null
+          processed_at?: string
+          provider: string
+          provider_event_id?: string | null
+        }
+        Update: {
+          event_key?: string
+          event_type?: string | null
+          payload?: Json | null
+          processed_at?: string
+          provider?: string
+          provider_event_id?: string | null
+        }
+        Relationships: []
+      }
       business_hours: {
         Row: {
           business_id: number
@@ -96,6 +302,8 @@ export type Database = {
       businesses: {
         Row: {
           address_number: string
+          billing_suspended: boolean
+          billing_suspension_reason: string | null
           category_id: number
           city_id: number
           complement: string | null
@@ -121,12 +329,15 @@ export type Database = {
           slug: string
           status: string
           street: string
+          tags: string[]
           updated_at: string
           website_url: string | null
           whatsapp_e164: string
         }
         Insert: {
           address_number: string
+          billing_suspended?: boolean
+          billing_suspension_reason?: string | null
           category_id: number
           city_id: number
           complement?: string | null
@@ -152,12 +363,15 @@ export type Database = {
           slug: string
           status?: string
           street: string
+          tags?: string[]
           updated_at?: string
           website_url?: string | null
           whatsapp_e164: string
         }
         Update: {
           address_number?: string
+          billing_suspended?: boolean
+          billing_suspension_reason?: string | null
           category_id?: number
           city_id?: number
           complement?: string | null
@@ -183,6 +397,7 @@ export type Database = {
           slug?: string
           status?: string
           street?: string
+          tags?: string[]
           updated_at?: string
           website_url?: string | null
           whatsapp_e164?: string
@@ -340,6 +555,223 @@ export type Database = {
           },
         ]
       }
+      highlight_campaigns: {
+        Row: {
+          activated_at: string | null
+          admin_note: string | null
+          base_price_cents: number
+          business_id: number
+          category_id: number
+          charged_price_cents: number
+          city_id: number
+          completed_at: string | null
+          created_at: string
+          discount_cents: number
+          duration_days: number
+          ends_at: string
+          id: number
+          package_code: string
+          pause_reason: string | null
+          paused_at: string | null
+          placement: string
+          provider: string
+          provider_charge_id: string | null
+          provider_payment_url: string | null
+          remaining_seconds: number
+          reservation_expires_at: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activated_at?: string | null
+          admin_note?: string | null
+          base_price_cents: number
+          business_id: number
+          category_id: number
+          charged_price_cents: number
+          city_id: number
+          completed_at?: string | null
+          created_at?: string
+          discount_cents?: number
+          duration_days: number
+          ends_at: string
+          id?: never
+          package_code: string
+          pause_reason?: string | null
+          paused_at?: string | null
+          placement: string
+          provider?: string
+          provider_charge_id?: string | null
+          provider_payment_url?: string | null
+          remaining_seconds: number
+          reservation_expires_at?: string | null
+          starts_at: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activated_at?: string | null
+          admin_note?: string | null
+          base_price_cents?: number
+          business_id?: number
+          category_id?: number
+          charged_price_cents?: number
+          city_id?: number
+          completed_at?: string | null
+          created_at?: string
+          discount_cents?: number
+          duration_days?: number
+          ends_at?: string
+          id?: never
+          package_code?: string
+          pause_reason?: string | null
+          paused_at?: string | null
+          placement?: string
+          provider?: string
+          provider_charge_id?: string | null
+          provider_payment_url?: string | null
+          remaining_seconds?: number
+          reservation_expires_at?: string | null
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "highlight_campaigns_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "highlight_campaigns_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "highlight_campaigns_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "highlight_campaigns_package_code_fkey"
+            columns: ["package_code"]
+            isOneToOne: false
+            referencedRelation: "highlight_packages"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      highlight_daily_metrics: {
+        Row: {
+          campaign_id: number
+          directions_clicks: number
+          impressions: number
+          metric_date: string
+          store_views: number
+          updated_at: string
+          whatsapp_clicks: number
+        }
+        Insert: {
+          campaign_id: number
+          directions_clicks?: number
+          impressions?: number
+          metric_date: string
+          store_views?: number
+          updated_at?: string
+          whatsapp_clicks?: number
+        }
+        Update: {
+          campaign_id?: number
+          directions_clicks?: number
+          impressions?: number
+          metric_date?: string
+          store_views?: number
+          updated_at?: string
+          whatsapp_clicks?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "highlight_daily_metrics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "highlight_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      highlight_packages: {
+        Row: {
+          code: string
+          created_at: string
+          display_order: number
+          duration_days: number
+          is_active: boolean
+          name: string
+          placement: string
+          price_cents: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          display_order?: number
+          duration_days: number
+          is_active?: boolean
+          name: string
+          placement: string
+          price_cents: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          display_order?: number
+          duration_days?: number
+          is_active?: boolean
+          name?: string
+          placement?: string
+          price_cents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      highlight_placement_rules: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          max_active: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          max_active: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          max_active?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -369,6 +801,8 @@ export type Database = {
       }
       promotions: {
         Row: {
+          billing_suspended: boolean
+          billing_suspension_reason: string | null
           business_id: number
           created_at: string
           description: string | null
@@ -383,6 +817,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_suspended?: boolean
+          billing_suspension_reason?: string | null
           business_id: number
           created_at?: string
           description?: string | null
@@ -397,6 +833,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_suspended?: boolean
+          billing_suspension_reason?: string | null
           business_id?: number
           created_at?: string
           description?: string | null
@@ -456,11 +894,122 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          billing_cycle: string
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: number
+          payment_method: string
+          plan_code: string
+          provider: string
+          provider_charge_id: string | null
+          provider_plan_id: string | null
+          provider_recurrence_id: string | null
+          provider_subscription_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billing_cycle: string
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: never
+          payment_method: string
+          plan_code?: string
+          provider?: string
+          provider_charge_id?: string | null
+          provider_plan_id?: string | null
+          provider_recurrence_id?: string | null
+          provider_subscription_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billing_cycle?: string
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: never
+          payment_method?: string
+          plan_code?: string
+          provider?: string
+          provider_charge_id?: string | null
+          provider_plan_id?: string | null
+          provider_recurrence_id?: string | null
+          provider_subscription_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_plan_code_fkey"
+            columns: ["plan_code"]
+            isOneToOne: false
+            referencedRelation: "billing_plan_rules"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      admin_create_highlight_campaign: {
+        Args: {
+          p_admin_note?: string
+          p_business_id: number
+          p_package_code: string
+          p_requested_start?: string
+        }
+        Returns: number
+      }
+      admin_manage_highlight_campaign: {
+        Args: { p_action: string; p_bonus_days?: number; p_campaign_id: number }
+        Returns: boolean
+      }
+      process_efi_billing_event: {
+        Args: {
+          p_charge_id?: string
+          p_event_key: string
+          p_event_type: string
+          p_payload?: Json
+          p_status: string
+          p_subscription_id?: string
+        }
+        Returns: boolean
+      }
+      record_highlight_event: {
+        Args: {
+          p_campaign_id: number
+          p_event_type: string
+          p_visitor_hash: string
+        }
+        Returns: boolean
+      }
+      reserve_highlight_campaign: {
+        Args: {
+          p_business_id: number
+          p_package_code: string
+          p_requested_start?: string
+          p_user_id: string
+        }
+        Returns: {
+          campaign_id: number
+          charged_price_cents: number
+          duration_days: number
+          package_name: string
+        }[]
+      }
       resolve_city_by_coordinates: {
         Args: { input_latitude: number; input_longitude: number }
         Returns: {

@@ -123,7 +123,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 </p>
               </div>
             ) : results.length > 0 ? (
-              <SearchBusinessResults businesses={results} />
+              <SearchBusinessResults
+                businesses={results}
+                categorySlug={selectedCategory?.slug}
+              />
             ) : (
               <div className="mt-7 flex min-h-72 flex-col items-center justify-center rounded-3xl border border-dashed border-line bg-surface px-6 text-center">
                 <span className="grid size-14 place-items-center rounded-2xl bg-canvas text-muted">

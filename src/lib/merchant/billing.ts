@@ -82,32 +82,31 @@ export async function getMerchantBillingSummary(
   userId: string,
   businesses: MerchantBusiness[],
 ): Promise<MerchantBillingSummary> {
-  const billingClient = supabase as unknown as SupabaseClient<any>;
   const [rulesResult, pricesResult, productsResult, subscriptionsResult, addonsResult] =
     await Promise.all([
-      billingClient
+      supabase
         .from("billing_plan_rules")
         .select("code, name, included_businesses, included_promotions_per_business")
         .eq("is_active", true),
-      billingClient
+      supabase
         .from("billing_plan_prices")
         .select("billing_cycle, interval_months, price_cents")
         .eq("plan_code", "pro")
         .eq("is_active", true)
         .order("interval_months"),
-      billingClient
+      supabase
         .from("billing_products")
         .select("code, name, kind, units, price_cents, billing_mode")
         .eq("is_active", true)
         .order("units"),
-      billingClient
+      supabase
         .from("subscriptions")
         .select(
           "id, billing_cycle, payment_method, status, current_period_start, current_period_end, cancel_at_period_end",
         )
         .eq("user_id", userId)
         .order("created_at", { ascending: false }),
-      billingClient
+      supabase
         .from("billing_addons")
         .select(
           "id, business_id, product_code, quantity, payment_method, status, active_from, active_until, provider_subscription_id, cancel_at_period_end, created_at",

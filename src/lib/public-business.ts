@@ -54,14 +54,18 @@ async function loadBusiness(
     .eq("slug", slug);
 
   if (publishedOnly) {
-    query = query.eq("status", "approved").eq("is_active", true);
+    query = query
+      .eq("status", "approved")
+      .eq("is_active", true)
+      .eq("billing_suspended", false);
   }
 
   const { data: business, error } = await query.limit(1).maybeSingle();
 
   if (error || !business) return null;
 
-  const [categoryResult, cityResult, itemsResult, hoursResult] = await Promise.all([
+  const now = new Date().toISOString();
+  const [categoryResult, cityResult, itemsResult, hoursResult, highlightResult] = await Promise.all([
     supabase.from("categories").select("slug, name").eq("id", business.category_id).maybeSingle(),
     supabase.from("cities").select("name, state_code, timezone").eq("id", business.city_id).maybeSingle(),
     supabase
@@ -79,9 +83,25 @@ async function loadBusiness(
       .eq("business_id", business.id)
       .order("weekday")
       .order("display_order"),
+    supabase
+      .from("highlight_campaigns")
+      .select("id, placement")
+      .eq("business_id", business.id)
+      .eq("status", "active")
+      .lte("starts_at", now)
+      .gt("ends_at", now)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
-  if (categoryResult.error || cityResult.error || itemsResult.error || hoursResult.error) return null;
+  if (
+    categoryResult.error ||
+    cityResult.error ||
+    itemsResult.error ||
+    hoursResult.error ||
+    highlightResult.error
+  ) return null;
   const category = categoryResult.data;
   const city = cityResult.data;
   if (!category || !city) return null;
@@ -105,6 +125,15 @@ async function loadBusiness(
     logoUrl: publicMediaUrl(supabase, business.logo_path),
     coverUrl: publicMediaUrl(supabase, business.cover_path),
     verified: true,
+    isSponsored: Boolean(highlightResult.data),
+    highlightCampaignId: highlightResult.data?.id
+      ? Number(highlightResult.data.id)
+      : null,
+    sponsoredPlacement: highlightResult.data?.placement as
+      | "category"
+      | "city"
+      | "combo"
+      | undefined,
     tags: [category.name, business.neighborhood, city.name],
     whatsapp: business.whatsapp_e164.replace(/\D/g, ""),
     ...directionsUrls(business.latitude, business.longitude),

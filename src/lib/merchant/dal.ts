@@ -1,5 +1,4 @@
 import "server-only";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -49,14 +48,13 @@ export async function requireMerchantUser(returnTo = "/painel") {
 
 export async function getMerchantWorkspace(returnTo = "/painel") {
   const { supabase, user } = await requireMerchantUser(returnTo);
-  const billingClient = supabase as unknown as SupabaseClient<any>;
   const [profileResult, businessesResult] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, full_name, phone_e164, role, created_at, updated_at")
       .eq("id", user.id)
       .maybeSingle(),
-    billingClient
+    supabase
       .from("businesses")
       .select(
         "id, owner_id, city_id, category_id, slug, name, description, whatsapp_e164, public_email, website_url, street, address_number, complement, neighborhood, postal_code, latitude, longitude, logo_path, cover_path, status, moderation_note, plan, is_active, billing_suspended, billing_suspension_reason, created_at, updated_at",

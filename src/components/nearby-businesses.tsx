@@ -10,6 +10,7 @@ import {
   type CurrentCoordinates,
   type SelectedCity,
 } from "@/lib/location";
+import { recordHighlightEvent } from "@/lib/highlights-client";
 
 type NearbyBusiness = {
   id: number;
@@ -19,6 +20,7 @@ type NearbyBusiness = {
   categoryName: string;
   distanceKm: number | null;
   isFeatured: boolean;
+  highlightCampaignId: number | null;
 };
 
 function formatDistance(distanceKm: number | null) {
@@ -119,6 +121,15 @@ export function NearbyBusinesses() {
     return () => controller.abort();
   }, [city, coordinates]);
 
+  useEffect(() => {
+    recordHighlightEvent(
+      businesses
+        .slice(0, 3)
+        .map((business) => business.highlightCampaignId),
+      "impression",
+    );
+  }, [businesses]);
+
   if (!city) {
     return (
       <div className="mt-5 rounded-2xl border border-dashed border-line bg-canvas p-5 text-center">
@@ -172,7 +183,14 @@ export function NearbyBusinesses() {
               {initials(business.name)}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-extrabold text-ink">{business.name}</span>
+              <span className="flex items-center gap-2 truncate font-extrabold text-ink">
+                <span className="truncate">{business.name}</span>
+                {business.isFeatured && (
+                  <span className="shrink-0 rounded-full bg-accent/35 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-ink">
+                    Patrocinado
+                  </span>
+                )}
+              </span>
               <span className="mt-0.5 block truncate text-xs font-semibold text-muted">
                 {business.categoryName} · {business.neighborhood}
               </span>

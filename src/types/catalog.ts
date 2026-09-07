@@ -35,6 +35,9 @@ export type Business = {
   logoUrl?: string | null;
   coverUrl?: string | null;
   verified: boolean;
+  isSponsored?: boolean;
+  highlightCampaignId?: number | null;
+  sponsoredPlacement?: "city" | "category" | "combo" | null;
   tags: string[];
   whatsapp: string | null;
   directionsUrl?: string | null;
