@@ -14,7 +14,6 @@ import {
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { HighlightTracker } from "@/components/highlight-tracker";
-import { businesses } from "@/data/catalog";
 import {
   getAdminBusinessPreview,
   getPublicBusiness,
@@ -24,10 +23,6 @@ type BusinessPageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ preview?: string }>;
 };
-
-export function generateStaticParams() {
-  return businesses.map((business) => ({ slug: business.slug }));
-}
 
 export async function generateMetadata({
   params,
@@ -219,31 +214,51 @@ export default async function BusinessPage({
                   {business.products.map((product) => (
                   <article
                     key={product.id}
-                    className="flex min-h-48 flex-col rounded-2xl border border-line bg-canvas p-5"
+                    className={`flex min-h-48 flex-col overflow-hidden rounded-2xl border bg-canvas ${product.isFeatured ? "border-accent-dark/35 ring-1 ring-accent-dark/10" : "border-line"}`}
                   >
-                    <span className="text-xs font-black uppercase tracking-wider text-muted">
-                      {business.categoryName}
-                    </span>
-                    <h3 className="mt-3 text-lg font-black text-ink">
-                      {product.name}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-muted">
-                      {product.description}
-                    </p>
-                    <div className="mt-auto flex items-end justify-between gap-3 pt-5">
-                      <div>
-                        {product.promotionalPrice && (
-                          <span className="block text-xs text-muted line-through">
-                            {formatCurrency(product.price)}
+                    {product.imageUrl ? (
+                      <div className="relative aspect-[16/8] w-full overflow-hidden bg-surface">
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.name}
+                          fill
+                          sizes="(max-width: 768px) 90vw, 40vw"
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : null}
+                    <div className="flex flex-1 flex-col p-5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs font-black uppercase tracking-wider text-muted">
+                          {business.categoryName}
+                        </span>
+                        {product.isFeatured ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-accent/30 px-2.5 py-1 text-[0.65rem] font-black text-ink">
+                            <StarIcon className="size-3" /> Destaque da loja
                           </span>
-                        )}
-                        <span className="text-xl font-black text-ink">
-                          {formatCurrency(product.promotionalPrice ?? product.price)}
+                        ) : null}
+                      </div>
+                      <h3 className="mt-3 text-lg font-black text-ink">
+                        {product.name}
+                      </h3>
+                      <p className="mt-2 text-sm leading-6 text-muted">
+                        {product.description}
+                      </p>
+                      <div className="mt-auto flex items-end justify-between gap-3 pt-5">
+                        <div>
+                          {product.promotionalPrice !== undefined && (
+                            <span className="block text-xs text-muted line-through">
+                              {formatCurrency(product.price)}
+                            </span>
+                          )}
+                          <span className="text-xl font-black text-ink">
+                            {formatCurrency(product.promotionalPrice ?? product.price)}
+                          </span>
+                        </div>
+                        <span className="grid size-10 place-items-center rounded-xl bg-surface text-brand shadow-sm">
+                          <ArrowRightIcon className="size-4" />
                         </span>
                       </div>
-                      <span className="grid size-10 place-items-center rounded-xl bg-surface text-brand shadow-sm">
-                        <ArrowRightIcon className="size-4" />
-                      </span>
                     </div>
                   </article>
                   ))}
