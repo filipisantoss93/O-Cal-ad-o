@@ -18,6 +18,7 @@ export type BusinessFormValue = {
   name: string;
   slug: string;
   description: string;
+  tags?: string[];
   whatsapp: string;
   publicEmail: string;
   websiteUrl: string;
@@ -290,7 +291,7 @@ export function BusinessForm({
           {fieldError(state, "city_id")}
         </div>
 
-        <div>
+        <div className="sm:col-span-2">
           <label className={labelClass} htmlFor="business-category">
             Categoria principal
           </label>
@@ -302,7 +303,7 @@ export function BusinessForm({
             required
           >
             <option value="" disabled>
-              Selecione
+              Selecione a categoria da loja
             </option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
@@ -310,7 +311,30 @@ export function BusinessForm({
               </option>
             ))}
           </select>
+          <p className="mt-1.5 text-xs font-semibold leading-5 text-muted">
+            Escolha apenas a categoria ampla que melhor representa o negócio. Os detalhes entram nas tags abaixo.
+          </p>
           {fieldError(state, "category_id")}
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className={labelClass} htmlFor="business-tags">
+            Tags para busca {!business && <span className="text-brand-dark">*</span>}
+          </label>
+          <input
+            className={inputClass}
+            id="business-tags"
+            name="tags"
+            type="text"
+            defaultValue={business?.tags?.join(", ") ?? ""}
+            required={!business}
+            maxLength={500}
+            placeholder="Ex.: mecânica diesel, troca de óleo, scanner, suspensão"
+          />
+          <p className="mt-1.5 text-xs font-semibold leading-5 text-muted">
+            Informe de 3 a 12 termos específicos, separados por vírgula. Use produtos, serviços, especialidades ou características que seus clientes pesquisariam. Não crie subcategorias.
+          </p>
+          {fieldError(state, "tags")}
         </div>
 
         <div className="sm:col-span-2">
@@ -378,7 +402,7 @@ export function BusinessForm({
             defaultValue={business?.websiteUrl}
             placeholder="instagram.com/sualoja"
           />
-          {fieldError(state, "website_url")}
+          {fieldError(state, "public_email")}
         </div>
       </fieldset>
 
