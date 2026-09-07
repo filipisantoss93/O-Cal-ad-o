@@ -23,6 +23,7 @@ type MerchantShellProps = {
 const navigation = [
   { href: "/painel", label: "Visão geral", icon: HomeIcon },
   { href: "/painel/loja", label: "Minhas lojas", icon: StoreIcon },
+  { href: "/painel/catalogo", label: "Produtos e serviços", icon: TagIcon },
   { href: "/painel/promocoes", label: "Promoções", icon: TagIcon },
   { href: "/painel/destaques", label: "Publicidade", icon: StarIcon },
   { href: "/painel/assinatura", label: "Assinatura", icon: SparklesIcon },
