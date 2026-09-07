@@ -8,15 +8,16 @@ import {
   StoreIcon,
   WhatsAppIcon,
 } from "@/components/icons";
-import { PromotionCard } from "@/components/promotion-card";
+import { CityPromotions } from "@/components/city-promotions";
 import { NearbyBusinesses } from "@/components/nearby-businesses";
 import { SearchForm } from "@/components/search-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { CitySelector } from "@/components/city-selector";
 import { FeaturedBusinesses } from "@/components/featured-businesses";
+import { FeaturedCatalogItems } from "@/components/featured-catalog-items";
 import { RegionalPaidBanners } from "@/components/regional-paid-banners";
-import { businesses, categories, promotions } from "@/data/catalog";
+import { categories } from "@/data/catalog";
 
 export default function Home() {
   return (
@@ -143,29 +144,36 @@ export default function Home() {
             <SectionHeading
               eyebrow="Boas escolhas por perto"
               title="Comércios em destaque"
-              description="Vitrines locais para conhecer antes de sair de casa."
+              description="Vitrines reais que contrataram mais visibilidade na sua cidade."
               linkHref="/buscar"
               linkLabel="Explorar o Centro Comercial"
             />
-            <FeaturedBusinesses fallback={businesses} />
+            <FeaturedBusinesses />
+          </div>
+        </section>
+
+        <section className="bg-canvas px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <SectionHeading
+              eyebrow="Escolhidos pelas lojas"
+              title="Produtos e serviços em destaque"
+              description="Cada comércio pode escolher um item da própria vitrine para ganhar mais visibilidade."
+            />
+            <FeaturedCatalogItems />
           </div>
         </section>
 
         <section
           id="ofertas"
-          className="scroll-mt-24 bg-canvas px-4 py-14 sm:px-6 sm:py-18 lg:px-8"
+          className="scroll-mt-24 bg-surface px-4 py-14 sm:px-6 sm:py-18 lg:px-8"
         >
           <div className="mx-auto max-w-7xl">
             <SectionHeading
               eyebrow="Vale aproveitar"
               title="Ofertas da cidade"
-              description="Promoções publicadas pelos próprios comércios locais."
+              description="Promoções reais publicadas pelos próprios comércios locais. A oferta escolhida como destaque aparece primeiro."
             />
-            <div className="mt-7 grid gap-5 md:grid-cols-3">
-              {promotions.map((promotion) => (
-                <PromotionCard key={promotion.id} promotion={promotion} />
-              ))}
-            </div>
+            <CityPromotions />
           </div>
         </section>
 
