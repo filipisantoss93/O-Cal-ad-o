@@ -1,5 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getPublicFeaturedBusinesses } from "@/lib/highlights/public";
+import {
+  getPublicFeaturedBusinesses,
+  getPublicFeaturedCampaignCandidates,
+} from "@/lib/highlights/public";
 import { createClient } from "@/lib/supabase/server";
 
 type HighlightsRequest = {
@@ -60,30 +63,42 @@ export async function POST(request: NextRequest) {
     }
     categoryId = category.id;
   }
-  const businesses = await getPublicFeaturedBusinesses(
-    supabase,
-    cityId,
-    categoryId,
-  );
+
   const existingVisitor = request.cookies.get(visitorCookie)?.value;
   const visitorId =
     existingVisitor && /^[a-f0-9-]{36}$/.test(existingVisitor)
       ? existingVisitor
       : crypto.randomUUID();
   const daySeed = new Date().toISOString().slice(0, 10);
-  const rotated = businesses
-    .map((business) => ({
-      business,
-      score: rotationScore(
-        `${visitorId}:${daySeed}:${business.highlightCampaignId}`,
-      ),
+
+  const candidates = await getPublicFeaturedCampaignCandidates(
+    supabase,
+    cityId,
+    categoryId,
+  );
+  const orderedCandidates = candidates
+    .map((candidate) => ({
+      ...candidate,
+      score: rotationScore(`${visitorId}:${daySeed}:${candidate.campaignId}`),
     }))
-    .sort((first, second) => first.score - second.score)
-    .slice(0, 4)
-    .map(({ business }) => business);
+    .sort((first, second) => first.score - second.score);
+
+  const selectedCampaignIds: number[] = [];
+  const selectedBusinesses = new Set<number>();
+  for (const candidate of orderedCandidates) {
+    if (selectedBusinesses.has(candidate.businessId)) continue;
+    selectedBusinesses.add(candidate.businessId);
+    selectedCampaignIds.push(candidate.campaignId);
+    if (selectedCampaignIds.length === 4) break;
+  }
+
+  const businesses = await getPublicFeaturedBusinesses(
+    supabase,
+    selectedCampaignIds,
+  );
 
   const response = NextResponse.json(
-    { businesses: rotated },
+    { businesses },
     { headers: { "Cache-Control": "private, no-store" } },
   );
   if (!existingVisitor) {
