@@ -35,13 +35,18 @@ type SubscriptionRow = {
   cancel_at_period_end: boolean;
 };
 
-type AddonRow = {
+export type BillingAddon = {
+  id: number;
   business_id: number | null;
   product_code: string;
   quantity: number;
+  payment_method: "credit_card" | "pix_auto" | "pix";
   status: "pending" | "active" | "past_due" | "cancelled" | "expired";
   active_from: string | null;
   active_until: string | null;
+  provider_subscription_id: string | null;
+  cancel_at_period_end: boolean;
+  created_at: string;
 };
 
 export type MerchantBillingSummary = {
@@ -56,6 +61,7 @@ export type MerchantBillingSummary = {
   promotionPackUnitsByBusiness: Record<number, number>;
   prices: BillingPrice[];
   products: BillingProduct[];
+  addons: BillingAddon[];
 };
 
 function inActiveWindow(
@@ -104,9 +110,10 @@ export async function getMerchantBillingSummary(
       billingClient
         .from("billing_addons")
         .select(
-          "business_id, product_code, quantity, status, active_from, active_until",
+          "id, business_id, product_code, quantity, payment_method, status, active_from, active_until, provider_subscription_id, cancel_at_period_end, created_at",
         )
-        .eq("user_id", userId),
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false }),
     ]);
 
   if (
@@ -123,7 +130,7 @@ export async function getMerchantBillingSummary(
   const prices = (pricesResult.data ?? []) as BillingPrice[];
   const products = (productsResult.data ?? []) as BillingProduct[];
   const subscriptions = (subscriptionsResult.data ?? []) as SubscriptionRow[];
-  const addons = (addonsResult.data ?? []) as AddonRow[];
+  const addons = (addonsResult.data ?? []) as BillingAddon[];
   const now = Date.now();
 
   const subscription =
@@ -201,5 +208,6 @@ export async function getMerchantBillingSummary(
     promotionPackUnitsByBusiness,
     prices,
     products,
+    addons,
   };
 }
