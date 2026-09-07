@@ -7,6 +7,7 @@ import {
   setFeaturedCatalogItemAction,
   toggleCatalogItemAction,
 } from "@/app/painel/catalogo/actions";
+import { CatalogPricingFields } from "@/components/catalog-pricing-fields";
 import {
   ArrowRightIcon,
   SparklesIcon,
@@ -14,13 +15,29 @@ import {
   StoreIcon,
   TagIcon,
 } from "@/components/icons";
+import { catalogPricePresentation } from "@/lib/catalog-pricing";
 import { getMerchantWorkspace } from "@/lib/merchant/dal";
 import { publicMediaUrl } from "@/lib/merchant/media";
+import type { CatalogPriceMode } from "@/types/catalog";
 
 export const metadata: Metadata = { title: "Produtos e serviços" };
 
 type CatalogPageProps = {
   searchParams: Promise<{ loja?: string; erro?: string; sucesso?: string }>;
+};
+
+type CatalogItemRow = {
+  id: number;
+  kind: string;
+  name: string;
+  description: string | null;
+  price_mode: CatalogPriceMode;
+  price: number | null;
+  promotional_price: number | null;
+  image_path: string | null;
+  is_active: boolean;
+  is_featured: boolean;
+  created_at: string;
 };
 
 function moneyInput(value: number | null) {
@@ -66,15 +83,16 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     businesses.find(
       (item) => Number.isSafeInteger(requestedId) && item.id === requestedId,
     ) ?? businesses[0];
-  const { data: items, error } = await supabase
+  const { data: rawItems, error } = await supabase
     .from("catalog_items")
     .select(
-      "id, kind, name, description, price, promotional_price, image_path, is_active, is_featured, created_at",
+      "id, kind, name, description, price_mode, price, promotional_price, image_path, is_active, is_featured, created_at",
     )
     .eq("business_id", business.id)
     .order("is_featured", { ascending: false })
     .order("created_at", { ascending: false });
   if (error) throw new Error("Não foi possível carregar produtos e serviços.");
+  const items = (rawItems ?? []) as unknown as CatalogItemRow[];
 
   return (
     <div>
@@ -145,35 +163,21 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">Novo item</p>
             <h2 className="mt-1 text-2xl font-black text-ink">Adicionar à vitrine</h2>
             <p className="mt-1 text-sm leading-6 text-muted">
-              Marque “Destacar” para colocar este produto ou serviço no espaço de destaque da cidade. Apenas um item por loja fica destacado por vez.
+              Produtos usam preço fixo. Serviços podem ter preço fixo, valor “a partir de” ou ficar sob consulta.
             </p>
           </div>
         </div>
 
         <form action={saveCatalogItemAction} encType="multipart/form-data" className="mt-6 grid gap-4 sm:grid-cols-2">
           <input type="hidden" name="business_id" value={business.id} />
-          <label className="text-sm font-black text-ink">
-            Tipo
-            <select name="kind" defaultValue="product" className="mt-1 min-h-12 w-full rounded-xl border border-line bg-white px-3 font-semibold">
-              <option value="product">Produto</option>
-              <option value="service">Serviço</option>
-            </select>
-          </label>
-          <label className="text-sm font-black text-ink">
+          <CatalogPricingFields />
+          <label className="text-sm font-black text-ink sm:col-span-2">
             Nome
             <input name="name" minLength={2} maxLength={160} required className="mt-1 min-h-12 w-full rounded-xl border border-line bg-white px-3 font-semibold" placeholder="Ex.: Troca de óleo completa" />
           </label>
           <label className="text-sm font-black text-ink sm:col-span-2">
             Descrição
             <textarea name="description" maxLength={1200} rows={3} className="mt-1 w-full rounded-xl border border-line bg-white p-3 font-semibold" placeholder="Explique o produto ou serviço de forma objetiva." />
-          </label>
-          <label className="text-sm font-black text-ink">
-            Preço
-            <input name="price" inputMode="decimal" required className="mt-1 min-h-12 w-full rounded-xl border border-line bg-white px-3 font-semibold" placeholder="99,90" />
-          </label>
-          <label className="text-sm font-black text-ink">
-            Preço promocional <span className="font-semibold text-muted">(opcional)</span>
-            <input name="promotional_price" inputMode="decimal" className="mt-1 min-h-12 w-full rounded-xl border border-line bg-white px-3 font-semibold" placeholder="79,90" />
           </label>
           <label className="text-sm font-black text-ink sm:col-span-2">
             Imagem <span className="font-semibold text-muted">(opcional, até 5 MB)</span>
@@ -201,19 +205,24 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             <h2 className="mt-1 text-2xl font-black text-ink">Itens cadastrados</h2>
           </div>
           <span className="rounded-full bg-canvas px-3 py-1.5 text-xs font-black text-muted">
-            {(items ?? []).length} item{(items ?? []).length === 1 ? "" : "s"}
+            {items.length} item{items.length === 1 ? "" : "s"}
           </span>
         </div>
 
-        {(items ?? []).length === 0 ? (
+        {items.length === 0 ? (
           <div className="mt-5 rounded-3xl border border-dashed border-line bg-surface p-8 text-center">
             <SparklesIcon className="mx-auto size-6 text-muted" />
             <p className="mt-3 font-black text-ink">Sua vitrine ainda não tem produtos ou serviços.</p>
           </div>
         ) : (
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
-            {(items ?? []).map((item) => {
+            {items.map((item) => {
               const imageUrl = publicMediaUrl(supabase, item.image_path);
+              const price = catalogPricePresentation(
+                item.price_mode,
+                item.price,
+                item.promotional_price,
+              );
               return (
                 <article key={item.id} className={`rounded-3xl border bg-surface p-5 shadow-sm ${item.is_featured ? "border-accent-dark/30" : "border-line"}`}>
                   <div className="flex gap-4">
@@ -235,9 +244,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       </div>
                       <h3 className="mt-1 truncate text-lg font-black text-ink">{item.name}</h3>
                       <p className="mt-1 text-sm font-bold text-muted">
-                        {item.promotional_price !== null ? (
-                          <><span className="mr-2 line-through">R$ {moneyInput(item.price)}</span>R$ {moneyInput(item.promotional_price)}</>
-                        ) : `R$ ${moneyInput(item.price)}`}
+                        {price.original ? <span className="mr-2 line-through">{price.original}</span> : null}
+                        {price.primary}
                       </p>
                       <p className="mt-1 text-xs font-bold text-muted">{item.is_active ? "Publicado" : "Pausado"}</p>
                     </div>
@@ -267,16 +275,15 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                     <form action={saveCatalogItemAction} encType="multipart/form-data" className="mt-4 grid gap-3">
                       <input type="hidden" name="business_id" value={business.id} />
                       <input type="hidden" name="item_id" value={item.id} />
-                      <select name="kind" defaultValue={item.kind} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold">
-                        <option value="product">Produto</option>
-                        <option value="service">Serviço</option>
-                      </select>
+                      <CatalogPricingFields
+                        defaultKind={item.kind === "service" ? "service" : "product"}
+                        defaultPriceMode={item.price_mode}
+                        defaultPrice={moneyInput(item.price)}
+                        defaultPromotionalPrice={moneyInput(item.promotional_price)}
+                        compact
+                      />
                       <input name="name" defaultValue={item.name} minLength={2} maxLength={160} required className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold" />
                       <textarea name="description" defaultValue={item.description ?? ""} maxLength={1200} rows={3} className="rounded-xl border border-line bg-white p-3 text-sm font-semibold" />
-                      <div className="grid grid-cols-2 gap-2">
-                        <input name="price" defaultValue={moneyInput(item.price)} inputMode="decimal" required className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold" />
-                        <input name="promotional_price" defaultValue={moneyInput(item.promotional_price)} inputMode="decimal" className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold" />
-                      </div>
                       <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/avif" className="rounded-xl border border-line bg-white p-3 text-xs" />
                       <div className="grid grid-cols-2 gap-2">
                         <label className="flex items-center gap-2 text-xs font-black text-ink"><input type="checkbox" name="is_active" defaultChecked={item.is_active} /> Publicado</label>
