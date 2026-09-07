@@ -20,18 +20,48 @@ type SearchPageProps = {
   searchParams: Promise<{
     q?: string;
     categoria?: string;
+    pagina?: string;
   }>;
 };
 
+function searchPageHref(
+  page: number,
+  query: string,
+  categorySlug?: string,
+) {
+  const params = new URLSearchParams();
+  if (query.trim()) params.set("q", query.trim());
+  if (categorySlug) params.set("categoria", categorySlug);
+  if (page > 1) params.set("pagina", String(page));
+  const serialized = params.toString();
+  return serialized ? `/buscar?${serialized}` : "/buscar";
+}
+
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-  const { q = "", categoria } = await searchParams;
+  const { q = "", categoria, pagina } = await searchParams;
+  const parsedPage = Number.parseInt(pagina ?? "1", 10);
+  const requestedPage = Number.isSafeInteger(parsedPage) && parsedPage > 0
+    ? parsedPage
+    : 1;
   const cookieStore = await cookies();
   const cityId = Number(cookieStore.get(selectedCityCookieName)?.value ?? "");
   const hasSelectedCity = Number.isInteger(cityId) && cityId > 0;
   const selectedCategory = categories.find((item) => item.slug === categoria);
-  const results = hasSelectedCity
-    ? await searchPublicBusinesses(q, selectedCategory?.slug, cityId)
-    : [];
+  const searchResult = hasSelectedCity
+    ? await searchPublicBusinesses(
+        q,
+        selectedCategory?.slug,
+        cityId,
+        requestedPage,
+      )
+    : {
+        businesses: [],
+        total: 0,
+        page: 1,
+        pageSize: 12,
+        totalPages: 0,
+      };
+  const results = searchResult.businesses;
   const hasFilter = Boolean(q.trim() || selectedCategory);
 
   return (
@@ -105,7 +135,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               </div>
               {hasSelectedCity && (
                 <span className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-black text-muted">
-                  {results.length} {results.length === 1 ? "resultado" : "resultados"}
+                  {searchResult.total} {searchResult.total === 1 ? "resultado" : "resultados"}
                 </span>
               )}
             </div>
@@ -123,10 +153,57 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 </p>
               </div>
             ) : results.length > 0 ? (
-              <SearchBusinessResults
-                businesses={results}
-                categorySlug={selectedCategory?.slug}
-              />
+              <>
+                <SearchBusinessResults
+                  businesses={results}
+                  categorySlug={selectedCategory?.slug}
+                />
+
+                {searchResult.totalPages > 1 && (
+                  <nav
+                    className="mt-9 flex flex-wrap items-center justify-center gap-3"
+                    aria-label="Paginação dos comércios"
+                  >
+                    {searchResult.page > 1 ? (
+                      <Link
+                        href={searchPageHref(
+                          searchResult.page - 1,
+                          q,
+                          selectedCategory?.slug,
+                        )}
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink transition hover:border-ink/20 hover:bg-canvas"
+                      >
+                        Anterior
+                      </Link>
+                    ) : (
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-muted/45">
+                        Anterior
+                      </span>
+                    )}
+
+                    <span className="rounded-full bg-surface px-4 py-2 text-sm font-black text-muted">
+                      Página {searchResult.page} de {searchResult.totalPages}
+                    </span>
+
+                    {searchResult.page < searchResult.totalPages ? (
+                      <Link
+                        href={searchPageHref(
+                          searchResult.page + 1,
+                          q,
+                          selectedCategory?.slug,
+                        )}
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink transition hover:border-ink/20 hover:bg-canvas"
+                      >
+                        Próxima
+                      </Link>
+                    ) : (
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-muted/45">
+                        Próxima
+                      </span>
+                    )}
+                  </nav>
+                )}
+              </>
             ) : (
               <div className="mt-7 flex min-h-72 flex-col items-center justify-center rounded-3xl border border-dashed border-line bg-surface px-6 text-center">
                 <span className="grid size-14 place-items-center rounded-2xl bg-canvas text-muted">
