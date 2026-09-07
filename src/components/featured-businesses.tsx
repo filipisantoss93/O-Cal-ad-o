@@ -36,15 +36,13 @@ export function FeaturedBusinesses() {
     cityId: number;
     businesses: Business[];
   } | null>(null);
-  const displayed =
-    city && result?.cityId === city.id ? result.businesses : [];
+  const displayed = useMemo(
+    () => (city && result?.cityId === city.id ? result.businesses : []),
+    [city, result],
+  );
 
   useEffect(() => {
-    if (!city) {
-      setResult(null);
-      return;
-    }
-    setResult(null);
+    if (!city) return;
     const controller = new AbortController();
 
     const load = async () => {
