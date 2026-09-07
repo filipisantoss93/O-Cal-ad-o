@@ -19,6 +19,8 @@ import { FeaturedCatalogItems } from "@/components/featured-catalog-items";
 import { RegionalPaidBanners } from "@/components/regional-paid-banners";
 import { categories } from "@/data/catalog";
 
+const homeCategories = categories.slice(0, 6);
+
 export default function Home() {
   return (
     <>
@@ -94,10 +96,10 @@ export default function Home() {
               title="O que você procura?"
               description="Comece por uma categoria e descubra negócios da sua cidade."
               linkHref="/buscar"
-              linkLabel="Ver tudo"
+              linkLabel="Ver todas as categorias"
             />
             <div className="mt-7">
-              <CategoryGrid categories={categories} />
+              <CategoryGrid categories={homeCategories} />
             </div>
           </div>
         </section>
