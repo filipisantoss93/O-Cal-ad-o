@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       score: rotationScore(`${visitorId}:${daySeed}:banner:${banner.campaignId}`),
     }))
     .sort((first, second) => first.score - second.score)
+    .slice(0, 5)
     .map(({ banner }) => banner);
 
   const response = NextResponse.json(
