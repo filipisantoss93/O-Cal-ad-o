@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import { LocateIcon, MapPinIcon, XIcon } from "@/components/icons";
 import {
   cityChangeEventName,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/location-client";
 
 export function CitySelector({ variant = "compact" }: { variant?: "compact" | "hero" }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const storedCity = useSyncExternalStore(
     (onChange) => {
@@ -94,6 +96,7 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
     if (!city) return;
     saveSelectedCity(city);
     setOpen(false);
+    router.refresh();
   }
 
   async function useCurrentLocation() {
@@ -106,6 +109,7 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
         longitude: city.longitude,
       });
       setOpen(false);
+      router.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Não foi possível obter sua localização.");
     } finally {
