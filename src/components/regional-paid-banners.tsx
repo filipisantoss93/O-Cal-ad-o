@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { ArrowRightIcon, MapPinIcon } from "@/components/icons";
+import { MapPinIcon } from "@/components/icons";
 import { recordHighlightEvent } from "@/lib/highlights-client";
 import type { RegionalBanner } from "@/lib/highlights/public";
 import {
@@ -92,34 +92,23 @@ export function RegionalPaidBanners() {
             Patrocinado
           </span>
         </div>
+
         <Link
           href={`/loja/${activeBanner.businessSlug}`}
           onClick={() => recordHighlightEvent([activeBanner.campaignId], "store_view")}
-          className="group relative block aspect-[16/6] min-h-56 overflow-hidden rounded-[2rem] bg-ink shadow-[0_22px_55px_rgba(31,45,42,0.16)] outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 sm:aspect-[16/5] sm:min-h-0"
+          aria-label={`Abrir ${activeBanner.businessName}`}
+          title={`${activeBanner.businessName} — ${activeBanner.title}`}
+          className="group relative block aspect-[16/5] overflow-hidden rounded-[2rem] bg-surface shadow-[0_22px_55px_rgba(31,45,42,0.16)] outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4"
         >
           <Image
             src={activeBanner.imageUrl}
             alt={`Publicidade de ${activeBanner.businessName}: ${activeBanner.title}`}
             fill
             sizes="(min-width: 1280px) 1216px, (min-width: 768px) calc(100vw - 48px), calc(100vw - 32px)"
-            className="object-cover transition duration-500 group-hover:scale-[1.015]"
+            className="object-cover transition duration-500 group-hover:scale-[1.01]"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/55 to-transparent" />
-          <div className="absolute inset-0 flex max-w-2xl flex-col justify-end p-6 text-white sm:justify-center sm:p-10 lg:p-12">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-accent">
-              {activeBanner.businessName}
-            </p>
-            <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] sm:text-4xl">
-              {activeBanner.title}
-            </h2>
-            <p className="mt-2 line-clamp-2 max-w-xl text-sm font-semibold leading-6 text-white/80 sm:text-base">
-              {activeBanner.description}
-            </p>
-            <span className="mt-5 inline-flex w-fit items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-black text-ink">
-              Conhecer a loja <ArrowRightIcon className="size-4" />
-            </span>
-          </div>
         </Link>
+
         {banners.length > 1 && (
           <div className="mt-4 flex justify-center gap-2" aria-label="Selecionar banner">
             {banners.map((banner, index) => (
