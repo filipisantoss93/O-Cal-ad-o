@@ -69,7 +69,7 @@ async function loadBusiness(
     supabase.from("cities").select("name, state_code, timezone").eq("id", business.city_id).maybeSingle(),
     supabase
       .from("catalog_items")
-      .select("id, name, description, price, promotional_price, image_path, is_featured")
+      .select("id, kind, name, description, price, promotional_price, image_path, is_featured")
       .eq("business_id", business.id)
       .eq("is_active", true)
       .not("price", "is", null)
@@ -138,6 +138,7 @@ async function loadBusiness(
     ...directionsUrls(business.latitude, business.longitude),
     products: (itemsResult.data ?? []).map((item) => ({
       id: String(item.id),
+      kind: item.kind === "service" ? "service" : "product",
       name: item.name,
       description: item.description || "Consulte disponibilidade diretamente com a loja.",
       price: Number(item.price),
