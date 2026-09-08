@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import type { Business } from "@/types/catalog";
-import type { Database } from "@/types/database";
+import type { Database } from "@/types/database-runtime";
 
 const palettes = [
   "from-[#ef6a43] to-[#f5a640]",
