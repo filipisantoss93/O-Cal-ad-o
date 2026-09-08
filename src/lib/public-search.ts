@@ -97,10 +97,10 @@ export async function searchPublicBusinesses(
   const { data: rows, error } = await supabase
     .from("businesses")
     .select(
-      "id, slug, name, description, tags, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone)",
+      "id, slug, name, description, status, tags, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone)",
     )
     .in("id", businessIds)
-    .eq("status", "approved")
+    .eq("publication_status", "published")
     .eq("is_active", true)
     .eq("city_id", cityId)
     .eq("billing_suspended", false);
@@ -155,7 +155,7 @@ export async function searchPublicBusinesses(
       ...schedule,
       initials: initials(row.name),
       palette: palettes[row.id % palettes.length],
-      verified: true,
+      verified: row.status === "approved",
       tags: [...(row.tags ?? []), category.name, row.neighborhood].slice(0, 12),
       whatsapp: row.whatsapp_e164.replace(/\D/g, ""),
       products: [],
