@@ -49,12 +49,12 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase
     .from("catalog_items")
     .select(
-      "id, business_id, kind, price_mode, name, description, price, promotional_price, image_path, updated_at, businesses!inner(slug, name, whatsapp_e164, city_id, status, is_active, billing_suspended)",
+      "id, business_id, kind, price_mode, name, description, price, promotional_price, image_path, updated_at, businesses!inner(slug, name, whatsapp_e164, city_id, publication_status, is_active, billing_suspended)",
     )
     .eq("is_active", true)
     .eq("is_featured", true)
     .eq("businesses.city_id", cityId)
-    .eq("businesses.status", "approved")
+    .eq("businesses.publication_status", "published")
     .eq("businesses.is_active", true)
     .eq("businesses.billing_suspended", false)
     .order("updated_at", { ascending: false })
