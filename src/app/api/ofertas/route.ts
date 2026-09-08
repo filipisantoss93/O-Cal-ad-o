@@ -62,14 +62,14 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase
     .from("promotions")
     .select(
-      "id, business_id, title, description, original_price, offer_price, image_path, ends_at, is_featured, created_at, businesses!inner(slug, name, city_id, status, is_active, billing_suspended)",
+      "id, business_id, title, description, original_price, offer_price, image_path, ends_at, is_featured, created_at, businesses!inner(slug, name, city_id, publication_status, is_active, billing_suspended)",
     )
     .eq("is_active", true)
     .eq("billing_suspended", false)
     .lte("starts_at", now)
     .gt("ends_at", now)
     .eq("businesses.city_id", cityId)
-    .eq("businesses.status", "approved")
+    .eq("businesses.publication_status", "published")
     .eq("businesses.is_active", true)
     .eq("businesses.billing_suspended", false)
     .order("is_featured", { ascending: false })
