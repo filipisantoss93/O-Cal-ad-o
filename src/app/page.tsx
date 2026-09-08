@@ -57,7 +57,7 @@ export default function Home() {
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-bold text-muted sm:mt-5 sm:gap-x-5 sm:text-sm">
                 <span className="inline-flex items-center gap-1.5">
                   <ShieldCheckIcon className="size-3.5 text-[#25835f] sm:size-4" />
-                  Negócios verificados
+                  Vitrines com moderação contínua
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <WhatsAppIcon className="size-3.5 text-[#25835f] sm:size-4" />
