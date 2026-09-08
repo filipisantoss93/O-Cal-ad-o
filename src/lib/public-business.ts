@@ -65,13 +65,13 @@ async function loadBusiness(
   let query = supabase
     .from("businesses")
     .select(
-      "id, city_id, category_id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path",
+      "id, city_id, category_id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path, status",
     )
     .eq("slug", slug);
 
   if (publishedOnly) {
     query = query
-      .eq("status", "approved")
+      .eq("publication_status", "published")
       .eq("is_active", true)
       .eq("billing_suspended", false);
   }
@@ -140,7 +140,7 @@ async function loadBusiness(
     palette: palettes[business.id % palettes.length],
     logoUrl: publicMediaUrl(supabase, business.logo_path),
     coverUrl: publicMediaUrl(supabase, business.cover_path),
-    verified: true,
+    verified: business.status === "approved",
     isSponsored: Boolean(highlightResult.data),
     highlightCampaignId: highlightResult.data?.id
       ? Number(highlightResult.data.id)
