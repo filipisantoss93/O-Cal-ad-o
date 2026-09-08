@@ -26,17 +26,17 @@ type BusinessPageProps = {
   searchParams: Promise<{ loja?: string; nova?: string }>;
 };
 
-const statusLabels: Record<string, { label: string; className: string }> = {
+const moderationLabels: Record<string, { label: string; className: string }> = {
   pending: {
     label: "Em análise",
     className: "border-accent-dark/20 bg-accent/25 text-accent-dark",
   },
   approved: {
-    label: "Publicada",
+    label: "Revisada",
     className: "border-positive/20 bg-positive-soft text-positive",
   },
   rejected: {
-    label: "Ajustes necessários",
+    label: "Ajustes solicitados",
     className: "border-brand/20 bg-brand/10 text-brand-dark",
   },
   suspended: {
@@ -124,9 +124,10 @@ export default async function BusinessPage({ searchParams }: BusinessPageProps) 
         coverUrl: publicMediaUrl(supabase, business.cover_path),
       }
     : null;
-  const status = business
-    ? statusLabels[business.status] ?? statusLabels.pending
+  const moderation = business
+    ? moderationLabels[business.status] ?? moderationLabels.pending
     : null;
+  const published = business?.publication_status === "published";
   const businessHours: BusinessHourValue[] = (hoursResult.data ?? []).map(
     (hour) => ({
       weekday: hour.weekday,
@@ -193,9 +194,13 @@ export default async function BusinessPage({ searchParams }: BusinessPageProps) 
                   <span className="mt-1 block truncate text-sm font-black text-ink">
                     {item.name}
                   </span>
-                  {item.billing_suspended && (
+                  {item.billing_suspended ? (
                     <span className="mt-1 block text-xs font-black text-brand-dark">
                       Suspensa pelo plano
+                    </span>
+                  ) : (
+                    <span className={`mt-1 block text-xs font-black ${item.publication_status === "published" ? "text-positive" : "text-brand-dark"}`}>
+                      {item.publication_status === "published" ? "Publicada" : "Fora do ar"}
                     </span>
                   )}
                 </Link>
@@ -231,16 +236,30 @@ export default async function BusinessPage({ searchParams }: BusinessPageProps) 
           <div>
             <p className="text-sm font-black">Ajuste solicitado</p>
             <p className="mt-1 text-sm leading-6">{business.moderation_note}</p>
+            <p className="mt-2 text-xs font-bold">
+              {published
+                ? "Sua vitrine continua publicada enquanto você realiza o ajuste."
+                : "Sua vitrine está temporariamente fora do ar. Ao corrigir e salvar, ela volta para análise e pode ser republicada automaticamente quando aplicável."}
+            </p>
           </div>
         </div>
       )}
 
-      {status && !business?.billing_suspended && (
-        <div className="mt-6">
+      {business && moderation && !business.billing_suspended && (
+        <div className="mt-6 flex flex-wrap gap-2">
           <span
-            className={`inline-flex w-fit items-center rounded-full border px-3 py-1.5 text-sm font-black ${status.className}`}
+            className={`inline-flex w-fit items-center rounded-full border px-3 py-1.5 text-sm font-black ${
+              published
+                ? "border-positive/20 bg-positive-soft text-positive"
+                : "border-brand/20 bg-brand/10 text-brand-dark"
+            }`}
           >
-            {status.label}
+            {published ? "Vitrine publicada" : "Vitrine fora do ar"}
+          </span>
+          <span
+            className={`inline-flex w-fit items-center rounded-full border px-3 py-1.5 text-sm font-black ${moderation.className}`}
+          >
+            {moderation.label}
           </span>
         </div>
       )}
@@ -249,8 +268,7 @@ export default async function BusinessPage({ searchParams }: BusinessPageProps) 
         <div className="mt-6 flex gap-3 rounded-2xl border border-accent-dark/15 bg-accent/20 p-4 text-ink">
           <StoreIcon className="mt-0.5 size-5 shrink-0 text-accent-dark" />
           <p className="text-sm font-bold leading-6">
-            Cadastre uma nova unidade. Ela terá endereço, horários, promoções e
-            moderação próprios.
+            Cadastre uma nova unidade. Ao salvar, a vitrine é publicada imediatamente e entra na fila de análise, sem bloquear a visualização pelos clientes.
           </p>
         </div>
       )}
