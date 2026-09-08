@@ -9,7 +9,7 @@ import {
   TagIcon,
 } from "@/components/icons";
 import { getMerchantBillingSummary } from "@/lib/merchant/billing";
-import { getMerchantWorkspace } from "@/lib/merchant/dal";
+import { getMerchantWorkspace, type MerchantBusiness } from "@/lib/merchant/dal";
 
 export const metadata: Metadata = {
   title: "Painel do comerciante",
@@ -19,24 +19,45 @@ type DashboardPageProps = {
   searchParams: Promise<{ "boas-vindas"?: string }>;
 };
 
-const statusLabels: Record<string, { label: string; className: string }> = {
-  pending: {
-    label: "Em análise",
-    className: "border-accent-dark/20 bg-accent/25 text-accent-dark",
-  },
-  approved: {
-    label: "Publicada",
-    className: "border-positive/20 bg-positive-soft text-positive",
-  },
-  rejected: {
-    label: "Ajustes necessários",
-    className: "border-brand/20 bg-brand/10 text-brand-dark",
-  },
-  suspended: {
-    label: "Suspensa",
-    className: "border-brand/20 bg-brand/10 text-brand-dark",
-  },
-};
+function businessStatus(business: MerchantBusiness) {
+  if (business.billing_suspended) {
+    return {
+      label: "Loja principal suspensa pelo plano",
+      className: "border-brand/20 bg-brand/10 text-brand-dark",
+    };
+  }
+  if (business.status === "suspended") {
+    return {
+      label: "Fora do ar · suspensa pela moderação",
+      className: "border-brand/20 bg-brand/10 text-brand-dark",
+    };
+  }
+  const published = business.publication_status === "published";
+  if (business.status === "approved") {
+    return {
+      label: published ? "Publicada · revisada" : "Fora do ar · revisada",
+      className: published
+        ? "border-positive/20 bg-positive-soft text-positive"
+        : "border-brand/20 bg-brand/10 text-brand-dark",
+    };
+  }
+  if (business.status === "rejected") {
+    return {
+      label: published
+        ? "Publicada · ajustes solicitados"
+        : "Fora do ar · ajustes solicitados",
+      className: published
+        ? "border-accent-dark/20 bg-accent/25 text-accent-dark"
+        : "border-brand/20 bg-brand/10 text-brand-dark",
+    };
+  }
+  return {
+    label: published ? "Publicada · em análise" : "Fora do ar · em análise",
+    className: published
+      ? "border-accent-dark/20 bg-accent/25 text-accent-dark"
+      : "border-brand/20 bg-brand/10 text-brand-dark",
+  };
+}
 
 function requestTimestamp() {
   return Date.now();
@@ -79,9 +100,7 @@ export default async function MerchantDashboard({
       ).length ?? 0;
   }
 
-  const status = firstBusiness
-    ? statusLabels[firstBusiness.status] ?? statusLabels.pending
-    : null;
+  const status = firstBusiness ? businessStatus(firstBusiness) : null;
   const promotionHref = firstAvailableBusiness
     ? `/painel/promocoes?loja=${firstAvailableBusiness.id}#nova-promocao`
     : "/painel/loja";
@@ -140,17 +159,11 @@ export default async function MerchantDashboard({
                   ? "Nenhuma cadastrada"
                   : `${businesses.length} cadastrada${businesses.length === 1 ? "" : "s"}`}
               </p>
-              {status && firstBusiness && (
+              {status && (
                 <span
-                  className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-black ${
-                    firstBusiness.billing_suspended
-                      ? "border-brand/20 bg-brand/10 text-brand-dark"
-                      : status.className
-                  }`}
+                  className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-black ${status.className}`}
                 >
-                  {firstBusiness.billing_suspended
-                    ? "Loja principal suspensa pelo plano"
-                    : status.label}
+                  {status.label}
                 </span>
               )}
             </div>
@@ -213,7 +226,7 @@ export default async function MerchantDashboard({
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
               {firstBusiness
                 ? "Revise endereço, WhatsApp, horários, imagens e informações públicas de cada unidade."
-                : "Informe endereço, categoria, WhatsApp e imagens. A equipe fará uma análise antes da publicação."}
+                : "Informe endereço, categoria, WhatsApp e imagens. Ao salvar, a vitrine é publicada imediatamente e segue para análise da equipe."}
             </p>
           </div>
           <span className="hidden size-12 place-items-center rounded-2xl bg-canvas text-brand-dark sm:grid">
