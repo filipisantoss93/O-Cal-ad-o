@@ -169,7 +169,7 @@ export function NearbyBusinesses() {
       <div className="mt-4 rounded-xl border border-dashed border-line bg-canvas p-4 text-center sm:mt-5 sm:rounded-2xl sm:p-5">
         <p className="text-sm font-black text-ink">Nenhum comércio publicado em {city.name}</p>
         <p className="mt-1 text-xs font-semibold leading-5 text-muted">
-          Novas vitrines aparecerão aqui depois de aprovadas.
+          Novas vitrines aparecem assim que são cadastradas e podem continuar em análise pela moderação.
         </p>
       </div>
     );
