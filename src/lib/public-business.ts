@@ -7,7 +7,7 @@ import { getBusinessSchedule } from "@/lib/business-hours";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import { createClient } from "@/lib/supabase/server";
 import type { Business, CatalogPriceMode } from "@/types/catalog";
-import type { Database } from "@/types/database";
+import type { Database } from "@/types/database-runtime";
 
 const palettes = [
   "from-[#ef6a43] to-[#f5a640]",
