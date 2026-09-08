@@ -54,7 +54,7 @@ export async function getPublicFeaturedCampaignCandidates(
     .eq("status", "active")
     .lte("starts_at", now)
     .gt("ends_at", now)
-    .eq("businesses.status", "approved")
+    .eq("businesses.publication_status", "published")
     .eq("businesses.is_active", true)
     .eq("businesses.billing_suspended", false)
     .not("businesses.logo_path", "is", null)
@@ -94,13 +94,13 @@ export async function getPublicFeaturedBusinesses(
   const { data: campaigns, error } = await supabase
     .from("highlight_campaigns")
     .select(
-      "id, placement, businesses!inner(id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone))",
+      "id, placement, businesses!inner(id, slug, name, description, status, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone))",
     )
     .in("id", campaignIds)
     .eq("status", "active")
     .lte("starts_at", now)
     .gt("ends_at", now)
-    .eq("businesses.status", "approved")
+    .eq("businesses.publication_status", "published")
     .eq("businesses.is_active", true)
     .eq("businesses.billing_suspended", false)
     .not("businesses.logo_path", "is", null)
@@ -171,7 +171,7 @@ export async function getPublicFeaturedBusinesses(
       ...schedule,
       initials: initials(row.name),
       palette: palettes[row.id % palettes.length],
-      verified: true,
+      verified: row.status === "approved",
       isSponsored: true,
       highlightCampaignId: Number(campaign.id),
       sponsoredPlacement: campaign.placement as Placement,
@@ -198,7 +198,7 @@ export async function getPublicRegionalBanners(
     .eq("status", "active")
     .lte("starts_at", now)
     .gt("ends_at", now)
-    .eq("businesses.status", "approved")
+    .eq("businesses.publication_status", "published")
     .eq("businesses.is_active", true)
     .eq("businesses.billing_suspended", false)
     .limit(20);
