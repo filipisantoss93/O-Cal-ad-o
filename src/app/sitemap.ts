@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseEnv } from "@/lib/supabase/env";
-import type { Database } from "@/types/database";
+import type { Database } from "@/types/database-runtime";
 
 const SITE_URL = "https://ocalcadao.com.br";
 
