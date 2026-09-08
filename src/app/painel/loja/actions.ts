@@ -188,6 +188,7 @@ export async function saveBusinessAction(
       | {
           id: number;
           owner_id: string;
+          slug: string;
           logo_path: string | null;
           cover_path: string | null;
           status: string;
@@ -201,7 +202,7 @@ export async function saveBusinessAction(
       }
       const { data, error } = await supabase
         .from("businesses")
-        .select("id, owner_id, logo_path, cover_path, status, tags")
+        .select("id, owner_id, slug, logo_path, cover_path, status, tags")
         .eq("id", requestedBusinessId)
         .eq("owner_id", user.id)
         .maybeSingle();
@@ -321,12 +322,12 @@ export async function saveBusinessAction(
           .update(editableData)
           .eq("id", existing.id)
           .eq("owner_id", user.id)
-          .select("id, status")
+          .select("id, status, publication_status")
           .single()
       : await supabase
           .from("businesses")
           .insert(insertData)
-          .select("id, status")
+          .select("id, status, publication_status")
           .single();
 
     if (result.error) {
@@ -350,15 +351,27 @@ export async function saveBusinessAction(
       coverFile ? existing?.cover_path : null,
     ]);
 
+    revalidatePath("/");
+    revalidatePath("/buscar");
     revalidatePath("/painel");
     revalidatePath("/painel/loja");
     revalidatePath("/painel/promocoes");
     revalidatePath("/painel/assinatura");
+    revalidatePath(`/loja/${slug}`);
+    if (existing?.slug && existing.slug !== slug) {
+      revalidatePath(`/loja/${existing.slug}`);
+    }
+
+    const published = result.data.publication_status === "published";
     return {
       status: "success",
-      message: existing
-        ? "Dados salvos. Se algo público mudou, a loja voltou para análise."
-        : "Loja cadastrada e enviada para análise.",
+      message: !existing
+        ? "Loja cadastrada e publicada. Ela já está visível e segue em análise."
+        : !published
+          ? "Dados salvos. A vitrine permanece fora do ar até a liberação da moderação."
+          : result.data.status === "pending"
+            ? "Dados salvos. A vitrine continua publicada e está em análise."
+            : "Dados salvos. A vitrine continua publicada.",
     };
   } catch (error) {
     if (cleanupClient && cleanupUserId && uploadedPaths.length > 0) {
