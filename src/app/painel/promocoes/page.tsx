@@ -189,10 +189,9 @@ export default async function PromotionsPage({
         </div>
       )}
 
-      {business.status !== "approved" && !business.billing_suspended && (
-        <div className="mt-6 rounded-2xl border border-accent-dark/15 bg-accent/20 p-4 text-sm font-bold leading-6 text-ink">
-          Você já pode preparar suas promoções. Elas aparecerão para o público
-          depois que a loja for aprovada.
+      {business.publication_status !== "published" && !business.billing_suspended && (
+        <div className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold leading-6 text-brand-dark">
+          As promoções continuam salvas, mas não aparecem ao público enquanto a vitrine estiver fora do ar.
         </div>
       )}
 
