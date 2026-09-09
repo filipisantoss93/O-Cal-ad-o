@@ -22,7 +22,7 @@ type MerchantShellProps = {
   children: ReactNode;
 };
 
-const navigation = [
+const desktopNavigation = [
   { href: "/painel", label: "Visão geral", icon: HomeIcon },
   { href: "/painel/loja", label: "Minhas lojas", icon: StoreIcon },
   { href: "/painel/catalogo", label: "Produtos e serviços", icon: TagIcon },
@@ -30,6 +30,13 @@ const navigation = [
   { href: "/painel/destaques", label: "Publicidade", icon: StarIcon },
   { href: "/painel/planos-e-recursos", label: "Planos e recursos", icon: SparklesIcon },
   { href: "/painel/perfil", label: "Minha conta", icon: UserIcon },
+];
+
+const mobilePrimaryNavigation = [
+  { href: "/painel", label: "Início", icon: HomeIcon },
+  { href: "/painel/loja", label: "Lojas", icon: StoreIcon },
+  { href: "/painel/promocoes", label: "Promoções", icon: TagIcon },
+  { href: "/painel/destaques", label: "Publicidade", icon: StarIcon },
 ];
 
 function money(cents: number | null) {
@@ -56,9 +63,11 @@ export function MerchantShell({
       <a className="skip-link" href="#conteudo-painel">
         Ir para o conteúdo
       </a>
+
       <header className="sticky top-0 z-50 border-b border-line bg-surface/95 backdrop-blur-xl">
-        <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:min-h-18 lg:px-8">
           <Logo />
+
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">
               <p className="text-sm font-black text-ink">Olá, {firstName}</p>
@@ -66,14 +75,23 @@ export function MerchantShell({
                 {email}
               </p>
             </div>
-            <form action={logoutAction}>
+
+            <Link
+              href="/painel/perfil"
+              className="grid size-10 place-items-center rounded-xl border border-line bg-canvas text-ink transition hover:border-brand/30 hover:bg-brand/5 lg:hidden"
+              aria-label={`Abrir conta de ${firstName}`}
+            >
+              <UserIcon className="size-4" />
+            </Link>
+
+            <form action={logoutAction} className="hidden lg:block">
               <button
                 type="submit"
                 className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line bg-canvas px-3 text-sm font-extrabold text-ink transition hover:border-ink/20 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 title="Sair da conta"
               >
                 <LogOutIcon className="size-4" />
-                <span className="hidden sm:inline">Sair</span>
+                <span>Sair</span>
               </button>
             </form>
           </div>
@@ -81,11 +99,11 @@ export function MerchantShell({
       </header>
 
       <nav
-        className="border-b border-line bg-surface"
+        className="hidden border-b border-line bg-surface lg:block"
         aria-label="Área do comerciante"
       >
-        <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 sm:px-6 lg:px-8">
-          {navigation.map(({ href, label, icon: Icon }) => (
+        <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-8 py-3">
+          {desktopNavigation.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
@@ -131,6 +149,7 @@ export function MerchantShell({
               </Link>
             </>
           )}
+
           <Link
             href="/"
             className="ml-auto inline-flex min-h-11 shrink-0 items-center rounded-xl px-3 text-sm font-extrabold text-brand-dark hover:underline"
@@ -142,31 +161,31 @@ export function MerchantShell({
 
       {!proActive && (
         <section className="border-b border-brand/20 bg-brand/8">
-          <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8 lg:py-4">
             <div className="flex items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand text-white shadow-sm">
-                <SparklesIcon className="size-5" />
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand text-white shadow-sm lg:size-10">
+                <SparklesIcon className="size-4 lg:size-5" />
               </span>
               <div>
                 <p className="text-sm font-black text-ink">
-                  Dê mais espaço para o seu negócio crescer no O Calçadão
+                  Cresça com o Calçadão Pro
                 </p>
-                <p className="mt-1 text-sm font-semibold leading-6 text-muted">
-                  Passe de 1 para 3 lojas e de 2 para 10 promoções por loja
-                  {monthlyPrice ? ` por ${monthlyPrice}/mês` : " com o Calçadão Pro"}.
+                <p className="mt-0.5 text-xs font-semibold leading-5 text-muted sm:text-sm sm:leading-6">
+                  3 lojas + 10 promoções por loja
+                  {monthlyPrice ? ` por ${monthlyPrice}/mês` : " com o plano Pro"}.
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 gap-2">
+            <div className="flex shrink-0 gap-2 pl-12 sm:pl-0">
               <Link
                 href="/painel/planos-e-recursos"
-                className="inline-flex min-h-10 items-center justify-center rounded-xl border border-brand/20 bg-white px-4 text-sm font-black text-brand-dark transition hover:bg-brand/5"
+                className="inline-flex min-h-9 items-center justify-center rounded-xl border border-brand/20 bg-white px-3 text-xs font-black text-brand-dark transition hover:bg-brand/5 sm:min-h-10 sm:px-4 sm:text-sm"
               >
-                Comparar planos
+                Comparar
               </Link>
               <Link
                 href="/painel/assinatura#calcadao-pro"
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-black text-white shadow-sm transition hover:bg-brand-dark"
+                className="inline-flex min-h-9 items-center justify-center gap-2 rounded-xl bg-brand px-3 text-xs font-black text-white shadow-sm transition hover:bg-brand-dark sm:min-h-10 sm:px-4 sm:text-sm"
               >
                 <SparklesIcon className="size-4" />
                 Assinar Pro
@@ -176,9 +195,119 @@ export function MerchantShell({
         </section>
       )}
 
-      <main id="conteudo-painel" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      <main
+        id="conteudo-painel"
+        className="mx-auto max-w-7xl px-4 py-6 pb-28 sm:px-6 sm:py-8 sm:pb-28 lg:px-8 lg:py-10 lg:pb-10"
+      >
         {children}
       </main>
+
+      <nav
+        className="fixed inset-x-0 bottom-0 z-[60] border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:hidden"
+        aria-label="Navegação principal do comerciante"
+      >
+        <div className="mx-auto grid max-w-xl grid-cols-5 px-1 pt-1.5">
+          {mobilePrimaryNavigation.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-black text-muted transition active:bg-brand/8 active:text-brand-dark sm:text-[11px]"
+            >
+              <Icon className="size-5" />
+              <span className="max-w-full truncate">{label}</span>
+            </Link>
+          ))}
+
+          <details className="group static">
+            <summary className="flex min-h-[58px] cursor-pointer list-none flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-black text-muted marker:content-none transition active:bg-brand/8 active:text-brand-dark sm:text-[11px]">
+              <span className="grid h-5 place-items-center text-lg font-black leading-none" aria-hidden="true">
+                •••
+              </span>
+              <span>Mais</span>
+            </summary>
+
+            <div className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-[70] mx-auto max-w-lg overflow-hidden rounded-[1.5rem] border border-line bg-surface shadow-[0_24px_60px_rgba(15,23,42,0.2)]">
+              <div className="border-b border-line px-4 py-3">
+                <p className="text-sm font-black text-ink">Olá, {firstName}</p>
+                <p className="mt-0.5 truncate text-xs font-semibold text-muted">{email}</p>
+              </div>
+
+              <div className="grid gap-1 p-2">
+                <Link
+                  href="/painel/catalogo"
+                  className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink transition hover:bg-canvas"
+                >
+                  <TagIcon className="size-4 text-brand-dark" />
+                  Produtos e serviços
+                </Link>
+                <Link
+                  href="/painel/planos-e-recursos"
+                  className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink transition hover:bg-canvas"
+                >
+                  <SparklesIcon className="size-4 text-brand-dark" />
+                  Planos e recursos
+                </Link>
+                <Link
+                  href="/painel/assinatura#calcadao-pro"
+                  className={`flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-black transition ${
+                    proActive
+                      ? "bg-positive-soft text-positive"
+                      : "bg-brand text-white shadow-sm"
+                  }`}
+                >
+                  <SparklesIcon className="size-4" />
+                  {proActive ? "Plano Pro ativo" : "Assinar Calçadão Pro"}
+                </Link>
+                <Link
+                  href="/painel/perfil"
+                  className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink transition hover:bg-canvas"
+                >
+                  <UserIcon className="size-4 text-brand-dark" />
+                  Minha conta
+                </Link>
+                <Link
+                  href="/"
+                  className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink transition hover:bg-canvas"
+                >
+                  <HomeIcon className="size-4 text-brand-dark" />
+                  Ver Centro Comercial
+                </Link>
+
+                {isAdmin && (
+                  <>
+                    <div className="my-1 border-t border-line" />
+                    <Link
+                      href="/painel/admin"
+                      className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-positive transition hover:bg-positive-soft"
+                    >
+                      <ShieldCheckIcon className="size-4" />
+                      Moderação
+                    </Link>
+                    <Link
+                      href="/painel/admin/destaques"
+                      className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-accent-dark transition hover:bg-accent/15"
+                    >
+                      <StarIcon className="size-4" />
+                      Gerir publicidade
+                    </Link>
+                  </>
+                )}
+
+                <div className="my-1 border-t border-line" />
+                <form action={logoutAction}>
+                  <button
+                    type="submit"
+                    className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-extrabold text-muted transition hover:bg-canvas hover:text-ink"
+                  >
+                    <LogOutIcon className="size-4" />
+                    Sair
+                  </button>
+                </form>
+              </div>
+            </div>
+          </details>
+        </div>
+      </nav>
     </div>
   );
 }
