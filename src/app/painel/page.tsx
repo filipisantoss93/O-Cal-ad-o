@@ -75,6 +75,9 @@ export default async function MerchantDashboard({
   const firstBusiness = businesses[0] ?? null;
   const firstAvailableBusiness =
     businesses.find((business) => !business.billing_suspended) ?? firstBusiness;
+  const monthlyPrice = billing.prices.find(
+    (price) => price.billing_cycle === "monthly",
+  );
 
   let promotionsCount = 0;
   let activePromotions = 0;
@@ -186,31 +189,107 @@ export default async function MerchantDashboard({
           </p>
         </article>
 
-        <article className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:col-span-2 lg:col-span-1">
-          <p className="text-sm font-bold text-muted">Plano atual</p>
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xl font-black text-ink">
-                {billing.proActive ? "Calçadão Pro" : "Grátis"}
-              </p>
-              <p className="mt-2 text-xs font-bold text-muted">
-                {billing.proActive
-                  ? `Até ${billing.storeLimit} lojas · 10 promoções base por loja`
-                  : "1 loja · 2 promoções por loja"}
-              </p>
+        {billing.proActive ? (
+          <article className="rounded-2xl border border-positive/20 bg-positive-soft p-5 shadow-sm sm:col-span-2 lg:col-span-1">
+            <p className="text-sm font-bold text-positive">Seu plano</p>
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xl font-black text-ink">Calçadão Pro</p>
+                <p className="mt-2 text-xs font-bold text-muted">
+                  Até {billing.storeLimit} lojas · 10 promoções base por loja
+                </p>
+              </div>
+              <span className="grid size-11 place-items-center rounded-xl bg-white text-positive">
+                <SparklesIcon className="size-5" />
+              </span>
             </div>
-            <span className="grid size-11 place-items-center rounded-xl bg-brand/10 text-brand-dark">
-              <SparklesIcon className="size-5" />
-            </span>
-          </div>
-          <Link
-            href="/painel/assinatura"
-            className="mt-4 inline-flex text-sm font-black text-brand-dark underline underline-offset-4"
-          >
-            Gerenciar assinatura
-          </Link>
-        </article>
+            <Link
+              href="/painel/assinatura"
+              className="mt-4 inline-flex text-sm font-black text-positive underline underline-offset-4"
+            >
+              Gerenciar plano
+            </Link>
+          </article>
+        ) : (
+          <article className="relative overflow-hidden rounded-2xl border-2 border-brand/35 bg-brand/8 p-5 shadow-[0_12px_30px_rgba(185,61,37,0.14)] sm:col-span-2 lg:col-span-1">
+            <div className="absolute right-3 top-3 rounded-full bg-brand px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white">
+              Upgrade
+            </div>
+            <p className="text-sm font-black text-brand-dark">Seu plano: Free</p>
+            <div className="mt-3 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xl font-black text-ink">Cresça com o Calçadão Pro</p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-muted">
+                  3 lojas e 10 promoções por loja para divulgar mais unidades e ofertas.
+                </p>
+              </div>
+              <span className="mt-7 grid size-11 shrink-0 place-items-center rounded-xl bg-brand text-white shadow-sm">
+                <SparklesIcon className="size-5" />
+              </span>
+            </div>
+            {monthlyPrice && (
+              <p className="mt-4 text-lg font-black text-ink">
+                {new Intl.NumberFormat("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                }).format(monthlyPrice.price_cents / 100)}
+                <span className="text-xs font-bold text-muted">/mês</span>
+              </p>
+            )}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                href="/painel/assinatura#calcadao-pro"
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-black text-white shadow-sm transition hover:bg-brand-dark"
+              >
+                <SparklesIcon className="size-4" />
+                Assinar Pro
+              </Link>
+              <Link
+                href="/painel/planos-e-recursos"
+                className="inline-flex min-h-11 items-center rounded-xl border border-brand/20 bg-white px-4 text-sm font-black text-brand-dark transition hover:bg-brand/5"
+              >
+                Ver benefícios
+              </Link>
+            </div>
+          </article>
+        )}
       </section>
+
+      {!billing.proActive && (
+        <section className="mt-8 rounded-[2rem] border border-brand/25 bg-surface p-6 shadow-sm sm:p-8">
+          <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
+                Por que assinar o Pro?
+              </p>
+              <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">
+                Mais lojas e mais promoções sem perder a simplicidade do Free
+              </h2>
+              <div className="mt-4 grid gap-3 text-sm font-bold text-muted sm:grid-cols-3">
+                <p className="rounded-xl bg-canvas p-3">
+                  <strong className="block text-lg text-ink">3 lojas</strong>
+                  no mesmo plano
+                </p>
+                <p className="rounded-xl bg-canvas p-3">
+                  <strong className="block text-lg text-ink">10 promoções</strong>
+                  por loja
+                </p>
+                <p className="rounded-xl bg-canvas p-3">
+                  <strong className="block text-lg text-ink">Mais capacidade</strong>
+                  para crescer dentro da plataforma
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/painel/assinatura#calcadao-pro"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand px-6 text-sm font-black text-white shadow-[0_10px_24px_rgba(185,61,37,0.2)] transition hover:bg-brand-dark"
+            >
+              <SparklesIcon className="size-4" />
+              Quero o Calçadão Pro
+            </Link>
+          </div>
+        </section>
+      )}
 
       <section className="mt-8 rounded-[2rem] border border-line bg-surface p-6 shadow-sm sm:p-8">
         <div className="flex items-start justify-between gap-4">
