@@ -17,6 +17,8 @@ type MerchantShellProps = {
   name: string;
   email: string;
   isAdmin: boolean;
+  proActive: boolean;
+  monthlyPriceCents: number | null;
   children: ReactNode;
 };
 
@@ -27,17 +29,27 @@ const navigation = [
   { href: "/painel/promocoes", label: "Promoções", icon: TagIcon },
   { href: "/painel/destaques", label: "Publicidade", icon: StarIcon },
   { href: "/painel/planos-e-recursos", label: "Planos e recursos", icon: SparklesIcon },
-  { href: "/painel/assinatura", label: "Seu plano", icon: SparklesIcon },
   { href: "/painel/perfil", label: "Minha conta", icon: UserIcon },
 ];
+
+function money(cents: number | null) {
+  if (cents === null) return null;
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(cents / 100);
+}
 
 export function MerchantShell({
   name,
   email,
   isAdmin,
+  proActive,
+  monthlyPriceCents,
   children,
 }: MerchantShellProps) {
   const firstName = name.trim().split(/\s+/)[0] || "Comerciante";
+  const monthlyPrice = money(monthlyPriceCents);
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -83,6 +95,24 @@ export function MerchantShell({
               {label}
             </Link>
           ))}
+
+          <Link
+            href="/painel/assinatura#calcadao-pro"
+            className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+              proActive
+                ? "border border-positive/25 bg-positive-soft text-positive hover:border-positive/40 focus-visible:ring-positive"
+                : "border border-brand bg-brand text-white shadow-[0_8px_18px_rgba(185,61,37,0.22)] hover:bg-brand-dark focus-visible:ring-brand"
+            }`}
+          >
+            <SparklesIcon className="size-4" />
+            {proActive ? "Plano Pro ativo" : "Assinar Pro"}
+            {!proActive && (
+              <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide">
+                Pro
+              </span>
+            )}
+          </Link>
+
           {isAdmin && (
             <>
               <Link
@@ -109,6 +139,42 @@ export function MerchantShell({
           </Link>
         </div>
       </nav>
+
+      {!proActive && (
+        <section className="border-b border-brand/20 bg-brand/8">
+          <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+            <div className="flex items-start gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand text-white shadow-sm">
+                <SparklesIcon className="size-5" />
+              </span>
+              <div>
+                <p className="text-sm font-black text-ink">
+                  Dê mais espaço para o seu negócio crescer no O Calçadão
+                </p>
+                <p className="mt-1 text-sm font-semibold leading-6 text-muted">
+                  Passe de 1 para 3 lojas e de 2 para 10 promoções por loja
+                  {monthlyPrice ? ` por ${monthlyPrice}/mês` : " com o Calçadão Pro"}.
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Link
+                href="/painel/planos-e-recursos"
+                className="inline-flex min-h-10 items-center justify-center rounded-xl border border-brand/20 bg-white px-4 text-sm font-black text-brand-dark transition hover:bg-brand/5"
+              >
+                Comparar planos
+              </Link>
+              <Link
+                href="/painel/assinatura#calcadao-pro"
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-black text-white shadow-sm transition hover:bg-brand-dark"
+              >
+                <SparklesIcon className="size-4" />
+                Assinar Pro
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       <main id="conteudo-painel" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         {children}
