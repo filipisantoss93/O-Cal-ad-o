@@ -26,7 +26,8 @@ const navigation = [
   { href: "/painel/catalogo", label: "Produtos e serviços", icon: TagIcon },
   { href: "/painel/promocoes", label: "Promoções", icon: TagIcon },
   { href: "/painel/destaques", label: "Publicidade", icon: StarIcon },
-  { href: "/painel/assinatura", label: "Assinatura", icon: SparklesIcon },
+  { href: "/painel/planos-e-recursos", label: "Planos e recursos", icon: SparklesIcon },
+  { href: "/painel/assinatura", label: "Seu plano", icon: SparklesIcon },
   { href: "/painel/perfil", label: "Minha conta", icon: UserIcon },
 ];
 
