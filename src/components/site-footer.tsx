@@ -30,7 +30,11 @@ export function SiteFooter() {
                 Ofertas locais
               </Link>
             </li>
-            <li><Link className="hover:text-ink" href="/contato">Contato e suporte</Link></li>
+            <li>
+              <Link className="hover:text-ink" href="/contato">
+                Contato e suporte
+              </Link>
+            </li>
           </ul>
         </div>
 
@@ -43,7 +47,14 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
-              <span>Planos para o comércio local</span>
+              <Link className="hover:text-ink" href="/planos">
+                Planos para o comércio local
+              </Link>
+            </li>
+            <li>
+              <Link className="hover:text-ink" href="/entrar">
+                Entrar no painel
+              </Link>
             </li>
           </ul>
         </div>
