@@ -19,69 +19,66 @@ export function FeaturedItemCard({ item }: { item: FeaturedCatalogItem }) {
   const storeHref = `/loja/${item.businessSlug}?item=${encodeURIComponent(item.id)}#item-${encodeURIComponent(item.id)}`;
 
   return (
-    <article className="flex min-h-64 flex-col overflow-hidden rounded-3xl border border-line bg-surface shadow-sm">
+    <article className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm sm:rounded-3xl">
       {item.imageUrl ? (
-        <div className="relative aspect-[16/9] overflow-hidden bg-canvas">
+        <div className="relative aspect-[4/3] overflow-hidden bg-canvas sm:aspect-[16/10]">
           <Image
             src={item.imageUrl}
             alt={item.name}
             fill
-            sizes="(max-width: 768px) 90vw, 30vw"
+            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 20vw"
             className="object-cover"
           />
         </div>
       ) : null}
-      <div className="flex flex-1 flex-col p-5">
-        <div className="flex items-start justify-between gap-3">
-          <span className="text-xs font-black uppercase tracking-[0.12em] text-brand-dark">
-            {item.kind === "service" ? "Serviço em destaque" : "Produto em destaque"}
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="text-[10px] font-black uppercase tracking-wide text-brand-dark">
+            {item.kind === "service" ? "Serviço" : "Produto"}
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-accent/30 px-2.5 py-1 text-[0.68rem] font-black text-ink">
-            <StarIcon className="size-3.5" />
-            DESTAQUE
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-accent/30 px-1.5 py-1 text-[9px] font-black text-ink sm:px-2">
+            <StarIcon className="size-3" />
+            Destaque
           </span>
         </div>
-        <p className="mt-4 text-xs font-extrabold uppercase tracking-[0.1em] text-muted">
+        <p className="mt-3 truncate text-[10px] font-extrabold uppercase tracking-wide text-muted">
           {item.businessName}
         </p>
-        <h3 className="mt-2 text-xl font-black tracking-tight text-ink">{item.name}</h3>
-        <p className="mt-2 text-sm leading-6 text-muted">{item.description}</p>
+        <h3 className="mt-1 line-clamp-2 text-sm font-black leading-tight text-ink sm:text-base">
+          {item.name}
+        </h3>
+        <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-muted sm:text-xs sm:leading-5">
+          {item.description}
+        </p>
 
-        <div className="mt-auto pt-5">
-          <div>
-            {price.original ? (
-              <span className="block text-xs font-bold text-muted line-through">
-                {price.original}
-              </span>
-            ) : null}
-            <span className="text-lg font-black text-ink">{price.primary}</span>
-          </div>
+        <div className="mt-auto pt-3">
+          {price.original ? (
+            <span className="block text-[10px] font-bold text-muted line-through">
+              {price.original}
+            </span>
+          ) : null}
+          <span className="text-sm font-black text-ink sm:text-base">{price.primary}</span>
 
-          <div className="mt-4 grid gap-2">
+          <div className="mt-3 grid gap-2">
             {whatsappHref ? (
               <a
                 href={whatsappHref}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1f9d61] px-4 text-sm font-black text-white transition hover:bg-[#17834f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f9d61] focus-visible:ring-offset-2"
+                className="inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-xl bg-[#1f9d61] px-1.5 py-2 text-center text-[10px] font-black leading-tight text-white transition hover:bg-[#17834f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f9d61] focus-visible:ring-offset-2 sm:px-3 sm:text-xs"
               >
-                <WhatsAppIcon className="size-4.5 shrink-0" />
+                <WhatsAppIcon className="hidden size-4 shrink-0 sm:block" />
                 {conversionLabel}
               </a>
             ) : null}
             <Link
               href={storeHref}
-              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas px-4 text-sm font-black text-brand-dark outline-none transition hover:border-brand/30 hover:bg-brand/5 focus-visible:ring-2 focus-visible:ring-brand"
+              className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border border-line bg-canvas px-1.5 text-center text-[10px] font-black text-brand-dark outline-none transition hover:border-brand/30 hover:bg-brand/5 focus-visible:ring-2 focus-visible:ring-brand sm:text-xs"
             >
-              Ver detalhes na loja
-              <ArrowRightIcon className="size-4" />
+              Ver na loja
+              <ArrowRightIcon className="size-3.5 shrink-0" />
             </Link>
           </div>
-          {whatsappHref ? (
-            <p className="mt-2 text-center text-[0.7rem] font-bold text-muted">
-              Você fala direto com o comércio, sem intermediários.
-            </p>
-          ) : null}
         </div>
       </div>
     </article>

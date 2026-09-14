@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";
+import { publicMediaUrl } from "@/lib/merchant/media";
 import { createPublicClient } from "@/lib/supabase/server";
 import type { Business } from "@/types/catalog";
 
@@ -97,7 +98,7 @@ export async function searchPublicBusinesses(
   const { data: rows, error } = await supabase
     .from("businesses")
     .select(
-      "id, slug, name, description, status, tags, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone)",
+      "id, slug, name, description, status, tags, logo_path, cover_path, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone)",
     )
     .in("id", businessIds)
     .eq("publication_status", "published")
@@ -155,6 +156,8 @@ export async function searchPublicBusinesses(
       ...schedule,
       initials: initials(row.name),
       palette: palettes[row.id % palettes.length],
+      logoUrl: publicMediaUrl(supabase, row.logo_path),
+      coverUrl: publicMediaUrl(supabase, row.cover_path),
       verified: row.status === "approved",
       tags: [...(row.tags ?? []), category.name, row.neighborhood].slice(0, 12),
       whatsapp: row.whatsapp_e164.replace(/\D/g, ""),
