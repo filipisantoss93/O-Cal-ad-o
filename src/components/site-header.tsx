@@ -28,6 +28,9 @@ export function SiteHeader() {
           >
             Ofertas
           </Link>
+          <Link className="transition-colors hover:text-ink" href="/planos">
+            Planos
+          </Link>
         </nav>
 
         <div className="flex items-center gap-0.5 sm:gap-2">
