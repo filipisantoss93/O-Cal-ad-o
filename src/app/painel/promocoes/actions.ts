@@ -2,6 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/action-state";
 import { actionError } from "@/lib/action-state";
 import {
@@ -22,6 +23,7 @@ import type { Database } from "@/types/database";
 
 type PromotionFeatureUpdateQuery = {
   eq: (column: string, value: unknown) => PromotionFeatureUpdateQuery;
+  then: PromiseLike<{ error: { message: string } | null }>["then"];
 };
 
 type PromotionFeatureTable = {
@@ -236,6 +238,22 @@ export async function setFeaturedPromotionAction(formData: FormData) {
     .maybeSingle();
   if (!promotion) return;
 
+  if (nextFeatured) {
+    const now = new Date().toISOString();
+    const { data: activePro, error } = await supabase
+      .from("subscriptions")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("plan_code", "pro")
+      .eq("status", "active")
+      .lte("current_period_start", now)
+      .gt("current_period_end", now)
+      .limit(1);
+    if (error || !activePro?.length) {
+      redirect(`/painel/promocoes?loja=${businessId}&erro=pro_necessario`);
+    }
+  }
+
   const featuredTable = promotionFeatureTable(supabase);
   if (nextFeatured) {
     await featuredTable
@@ -243,10 +261,15 @@ export async function setFeaturedPromotionAction(formData: FormData) {
       .eq("business_id", businessId);
   }
 
-  await featuredTable
+  const { error: featureError } = await featuredTable
     .update({ is_featured: nextFeatured })
     .eq("business_id", businessId)
     .eq("id", promotionId);
+
+  if (featureError?.message.includes("BILLING_PRO_REQUIRED")) {
+    redirect(`/painel/promocoes?loja=${businessId}&erro=pro_necessario`);
+  }
+  if (featureError) throw featureError;
 
   revalidatePromotionViews();
 }

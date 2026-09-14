@@ -8,6 +8,7 @@ type BillingRule = {
   name: string;
   included_businesses: number;
   included_promotions_per_business: number;
+  included_catalog_items: number;
 };
 
 export type BillingPrice = {
@@ -27,6 +28,7 @@ export type BillingProduct = {
 
 type SubscriptionRow = {
   id: number;
+  plan_code: string;
   billing_cycle: BillingPrice["billing_cycle"];
   payment_method: "credit_card" | "pix_auto" | "pix";
   status: "pending" | "active" | "past_due" | "cancelled" | "expired";
@@ -57,6 +59,7 @@ export type MerchantBillingSummary = {
   storeCount: number;
   activeStoreCount: number;
   extraStoreSlots: number;
+  catalogLimit: number;
   promotionLimitByBusiness: Record<number, number>;
   promotionPackUnitsByBusiness: Record<number, number>;
   prices: BillingPrice[];
@@ -86,7 +89,7 @@ export async function getMerchantBillingSummary(
     await Promise.all([
       supabase
         .from("billing_plan_rules")
-        .select("code, name, included_businesses, included_promotions_per_business")
+        .select("code, name, included_businesses, included_promotions_per_business, included_catalog_items")
         .eq("is_active", true),
       supabase
         .from("billing_plan_prices")
@@ -102,7 +105,7 @@ export async function getMerchantBillingSummary(
       supabase
         .from("subscriptions")
         .select(
-          "id, billing_cycle, payment_method, status, current_period_start, current_period_end, cancel_at_period_end",
+          "id, plan_code, billing_cycle, payment_method, status, current_period_start, current_period_end, cancel_at_period_end",
         )
         .eq("user_id", userId)
         .order("created_at", { ascending: false }),
@@ -145,7 +148,7 @@ export async function getMerchantBillingSummary(
     null;
 
   const proActive = Boolean(
-    subscription &&
+    subscription && subscription.plan_code === "pro" &&
       inActiveWindow(
         subscription.status,
         subscription.current_period_start,
@@ -158,12 +161,14 @@ export async function getMerchantBillingSummary(
     name: "Grátis",
     included_businesses: 1,
     included_promotions_per_business: 2,
+    included_catalog_items: 8,
   };
   const proRule = rules.find((rule) => rule.code === "pro") ?? {
     code: "pro" as const,
     name: "Calçadão Pro",
     included_businesses: 3,
     included_promotions_per_business: 10,
+    included_catalog_items: 20,
   };
   const productByCode = new Map(products.map((product) => [product.code, product]));
   const activeAddons = addons.filter((addon) =>
@@ -203,6 +208,7 @@ export async function getMerchantBillingSummary(
     storeCount: businesses.length,
     activeStoreCount: businesses.filter((business) => !business.billing_suspended).length,
     extraStoreSlots,
+    catalogLimit: baseRule.included_catalog_items,
     promotionLimitByBusiness,
     promotionPackUnitsByBusiness,
     prices,

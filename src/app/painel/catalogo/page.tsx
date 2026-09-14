@@ -17,6 +17,7 @@ import {
 } from "@/components/icons";
 import { catalogPricePresentation } from "@/lib/catalog-pricing";
 import { getMerchantWorkspace } from "@/lib/merchant/dal";
+import { getMerchantBillingSummary } from "@/lib/merchant/billing";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import type { CatalogPriceMode } from "@/types/catalog";
 
@@ -49,11 +50,12 @@ const errorMessages: Record<string, string> = {
   loja_invalida: "Selecione uma loja válida.",
   item_invalido: "O item selecionado não foi encontrado.",
   salvar_item: "Não foi possível salvar o item. Revise os dados e tente novamente.",
+  limite_catalogo: "Você atingiu o limite de produtos e serviços da sua conta.",
 };
 
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const params = await searchParams;
-  const { supabase, businesses } = await getMerchantWorkspace("/painel/catalogo");
+  const { supabase, user, businesses } = await getMerchantWorkspace("/painel/catalogo");
 
   if (businesses.length === 0) {
     return (
@@ -83,16 +85,25 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     businesses.find(
       (item) => Number.isSafeInteger(requestedId) && item.id === requestedId,
     ) ?? businesses[0];
-  const { data: rawItems, error } = await supabase
-    .from("catalog_items")
-    .select(
-      "id, kind, name, description, price_mode, price, promotional_price, image_path, is_active, is_featured, created_at",
-    )
-    .eq("business_id", business.id)
-    .order("is_featured", { ascending: false })
-    .order("created_at", { ascending: false });
+  const [itemsResult, billing, countResult] = await Promise.all([
+    supabase
+      .from("catalog_items")
+      .select("id, kind, name, description, price_mode, price, promotional_price, image_path, is_active, is_featured, created_at")
+      .eq("business_id", business.id)
+      .order("is_featured", { ascending: false })
+      .order("created_at", { ascending: false }),
+    getMerchantBillingSummary(supabase, user.id, businesses),
+    supabase
+      .from("catalog_items")
+      .select("id", { count: "exact", head: true })
+      .in("business_id", businesses.map((item) => item.id)),
+  ]);
+  const { data: rawItems, error } = itemsResult;
   if (error) throw new Error("Não foi possível carregar produtos e serviços.");
   const items = (rawItems ?? []) as unknown as CatalogItemRow[];
+  const { error: countError, count: totalItems } = countResult;
+  if (countError) throw new Error("Não foi possível consultar o limite do catálogo.");
+  const canCreate = (totalItems ?? 0) < billing.catalogLimit;
 
   return (
     <div>
@@ -108,7 +119,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             Produtos e serviços
           </h1>
           <p className="mt-2 max-w-3xl text-base leading-7 text-muted">
-            Cadastre o que sua loja vende e escolha um item para ganhar destaque na página inicial da cidade.
+            Cadastre o que sua loja vende e escolha um item para ganhar destaque na página inicial da cidade. Sua conta permite {billing.catalogLimit} produtos e serviços somados entre todas as lojas.
           </p>
         </div>
       </div>
@@ -139,6 +150,9 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           {errorMessages[params.erro]}
         </p>
       ) : null}
+      {params.erro === "limite_catalogo" && !billing.proActive && (
+        <Link href="/painel/assinatura" className="mt-2 inline-flex text-sm font-black text-brand-dark underline underline-offset-4">Conhecer o Pro e ampliar para 20 itens</Link>
+      )}
       {params.sucesso === "item_salvo" ? (
         <p role="status" className="mt-6 rounded-2xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold text-positive">
           Item salvo na vitrine.
@@ -155,6 +169,12 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       ) : null}
 
       <section className="mt-8 rounded-[2rem] border border-line bg-surface p-5 shadow-sm sm:p-8">
+        <p className="mb-4 text-sm font-bold text-muted">{totalItems ?? 0} de {billing.catalogLimit} produtos e serviços cadastrados nesta conta.</p>
+        {!canCreate && (
+          <p role="status" className="mb-5 rounded-xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold text-brand-dark">
+            Limite do catálogo atingido. {billing.proActive ? "Exclua um item para cadastrar outro." : <>Assine o Pro para cadastrar até 20 itens. <Link href="/painel/assinatura" className="underline underline-offset-4">Conhecer o Pro</Link></>}
+          </p>
+        )}
         <div className="flex items-start gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand/10 text-brand-dark">
             <StoreIcon className="size-5" />
@@ -192,7 +212,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             <StarIcon className="size-4" />
             Destacar este item
           </label>
-          <button className="min-h-12 rounded-xl bg-ink px-5 text-sm font-black text-white sm:col-span-2">
+          <button disabled={!canCreate} className="min-h-12 rounded-xl bg-ink px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2">
             Salvar produto ou serviço
           </button>
         </form>

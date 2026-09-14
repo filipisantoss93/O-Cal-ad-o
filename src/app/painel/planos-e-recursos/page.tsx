@@ -22,11 +22,11 @@ function money(cents: number) {
 
 const featureRows = [
   ["Vitrine comercial", "Sim", "Sim"],
-  ["Produtos e serviços", "Sim", "Sim"],
+  ["Destacar uma promoção", "—", "Sim"],
   ["Endereço, localização e distância", "Sim", "Sim"],
   ["Contato direto pelo WhatsApp", "Sim", "Sim"],
   ["Aparecer nas buscas locais", "Sim", "Sim"],
-  ["Comprar destaques e banners", "Sim", "Sim"],
+  ["Contratar banner regional", "Sim", "Sim"],
 ] as const;
 
 export default async function PlansAndFeaturesPage() {
@@ -38,7 +38,7 @@ export default async function PlansAndFeaturesPage() {
     getMerchantBillingSummary(supabase, user.id, businesses),
     supabase
       .from("billing_plan_rules")
-      .select("code, name, included_businesses, included_promotions_per_business")
+      .select("code, name, included_businesses, included_promotions_per_business, included_catalog_items")
       .eq("is_active", true),
   ]);
 
@@ -52,12 +52,14 @@ export default async function PlansAndFeaturesPage() {
     name: "Grátis",
     included_businesses: 1,
     included_promotions_per_business: 2,
+    included_catalog_items: 8,
   };
   const proRule = rules.find((rule) => rule.code === "pro") ?? {
     code: "pro",
     name: "Calçadão Pro",
     included_businesses: 3,
     included_promotions_per_business: 10,
+    included_catalog_items: 20,
   };
 
   const extraStore = billing.products.find(
@@ -127,7 +129,7 @@ export default async function PlansAndFeaturesPage() {
             },
             {
               title: "Promoções",
-              text: "São ofertas com validade e destaque próprio. Elas têm limite por loja conforme o plano contratado.",
+              text: "São ofertas com validade e limite por loja conforme o plano. Apenas assinantes Pro podem destacar uma promoção.",
             },
             {
               title: "Localização",
@@ -139,7 +141,7 @@ export default async function PlansAndFeaturesPage() {
             },
             {
               title: "Publicidade",
-              text: "Destaques e banners aumentam a exposição da loja. São opcionais, cobrados separadamente e não são necessários para manter a vitrine publicada.",
+              text: "Banners regionais e campanhas de destaque de loja são opcionais e podem ser contratados também no plano Grátis. O destaque de promoção é exclusivo do Pro.",
             },
           ].map((item) => (
             <article
@@ -190,6 +192,11 @@ export default async function PlansAndFeaturesPage() {
                 </td>
               </tr>
               <tr className="border-t border-line">
+                <td className="px-4 py-4 font-bold text-ink">Produtos e serviços por conta</td>
+                <td className="px-4 py-4 font-semibold text-muted">{freeRule.included_catalog_items}</td>
+                <td className="px-4 py-4 font-black text-ink">{proRule.included_catalog_items}</td>
+              </tr>
+              <tr className="border-t border-line">
                 <td className="px-4 py-4 font-bold text-ink">Promoções por loja</td>
                 <td className="px-4 py-4 font-semibold text-muted">
                   {freeRule.included_promotions_per_business}
@@ -201,8 +208,8 @@ export default async function PlansAndFeaturesPage() {
               {featureRows.map(([feature, free, pro]) => (
                 <tr key={feature} className="border-t border-line">
                   <td className="px-4 py-4 font-bold text-ink">{feature}</td>
-                  <td className="px-4 py-4 font-semibold text-muted">✓ {free}</td>
-                  <td className="px-4 py-4 font-semibold text-ink">✓ {pro}</td>
+                  <td className="px-4 py-4 font-semibold text-muted">{free === "Sim" ? "✓ " : ""}{free}</td>
+                  <td className="px-4 py-4 font-semibold text-ink">{pro === "Sim" ? "✓ " : ""}{pro}</td>
                 </tr>
               ))}
               <tr className="border-t border-line">

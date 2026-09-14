@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 };
 
 type PromotionsPageProps = {
-  searchParams: Promise<{ loja?: string }>;
+  searchParams: Promise<{ loja?: string; erro?: string }>;
 };
 
 function dateInSaoPaulo(value: Date | string) {
@@ -189,6 +189,12 @@ export default async function PromotionsPage({
         </div>
       )}
 
+      {params.erro === "pro_necessario" && (
+        <p role="alert" className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold text-brand-dark">
+          Somente usuários do Calçadão Pro podem destacar promoções. <Link href="/painel/assinatura" className="underline underline-offset-4">Conhecer o Pro</Link>
+        </p>
+      )}
+
       {business.publication_status !== "published" && !business.billing_suspended && (
         <div className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold leading-6 text-brand-dark">
           As promoções continuam salvas, mas não aparecem ao público enquanto a vitrine estiver fora do ar.
@@ -209,7 +215,7 @@ export default async function PromotionsPage({
                 Escolha a promoção que aparece primeiro
               </h2>
               <p className="mt-1 text-sm leading-6 text-muted">
-                Cada loja pode ter uma oferta destacada por vez. Trocar o destaque não apaga as outras promoções.
+                Assinantes Pro podem destacar uma oferta por loja. Trocar o destaque não apaga as outras promoções.
               </p>
             </div>
           </div>
@@ -218,7 +224,7 @@ export default async function PromotionsPage({
               <article
                 key={promotion.id}
                 className={`rounded-2xl border p-4 ${
-                  promotion.is_featured
+                  promotion.is_featured && billing.proActive
                     ? "border-accent-dark/30 bg-accent/20"
                     : "border-line bg-canvas"
                 }`}
@@ -230,27 +236,34 @@ export default async function PromotionsPage({
                       {promotion.is_active ? "Ativa" : "Pausada"}
                     </p>
                   </div>
-                  {promotion.is_featured && (
+                  {promotion.is_featured && billing.proActive && (
                     <span className="rounded-full bg-ink px-2.5 py-1 text-[0.65rem] font-black text-white">
                       DESTAQUE
                     </span>
                   )}
                 </div>
-                <form action={setFeaturedPromotionAction} className="mt-4">
-                  <input type="hidden" name="business_id" value={business.id} />
-                  <input type="hidden" name="promotion_id" value={promotion.id} />
-                  <input
-                    type="hidden"
-                    name="next_featured"
-                    value={promotion.is_featured ? "false" : "true"}
-                  />
-                  <button
-                    type="submit"
-                    className="min-h-10 w-full rounded-xl border border-ink/15 bg-white px-3 text-sm font-black text-ink transition hover:border-brand/35"
-                  >
-                    {promotion.is_featured ? "Remover destaque" : "Destacar esta oferta"}
-                  </button>
-                </form>
+                {!billing.proActive && !promotion.is_featured ? (
+                  <details className="mt-4 rounded-xl border border-ink/15 bg-white p-3 text-sm text-ink">
+                    <summary className="cursor-pointer font-black">Destacar esta oferta</summary>
+                    <p className="mt-3 leading-6">Somente usuários do Calçadão Pro podem destacar promoções. <Link href="/painel/assinatura" className="font-black text-brand-dark underline underline-offset-4">Conhecer o Pro</Link></p>
+                  </details>
+                ) : (
+                  <form action={setFeaturedPromotionAction} className="mt-4">
+                    <input type="hidden" name="business_id" value={business.id} />
+                    <input type="hidden" name="promotion_id" value={promotion.id} />
+                    <input
+                      type="hidden"
+                      name="next_featured"
+                      value={promotion.is_featured ? "false" : "true"}
+                    />
+                    <button
+                      type="submit"
+                      className="min-h-10 w-full rounded-xl border border-ink/15 bg-white px-3 text-sm font-black text-ink transition hover:border-brand/35"
+                    >
+                      {promotion.is_featured ? "Remover destaque" : "Destacar esta oferta"}
+                    </button>
+                  </form>
+                )}
               </article>
             ))}
           </div>

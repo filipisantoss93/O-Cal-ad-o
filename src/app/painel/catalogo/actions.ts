@@ -70,6 +70,27 @@ export async function saveCatalogItemAction(formData: FormData) {
     existing = data;
   }
 
+  if (!existing) {
+    const now = new Date().toISOString();
+    const { data: ownedBusinesses, error: businessesError } = await supabase
+      .from("businesses").select("id").eq("owner_id", user.id);
+    if (businessesError) redirect(catalogUrl(businessId, { erro: "salvar_item" }));
+    const [{ count, error: countError }, { data: activePro, error: planError }, { data: planRules, error: rulesError }] = await Promise.all([
+      supabase.from("catalog_items").select("id", { count: "exact", head: true })
+        .in("business_id", ownedBusinesses?.map((item) => item.id) ?? [businessId]),
+      supabase.from("subscriptions").select("id").eq("user_id", user.id)
+        .eq("plan_code", "pro").eq("status", "active")
+        .lte("current_period_start", now).gt("current_period_end", now).limit(1),
+      supabase.from("billing_plan_rules").select("code, included_catalog_items").eq("is_active", true),
+    ]);
+    if (countError || planError || rulesError) redirect(catalogUrl(businessId, { erro: "salvar_item" }));
+    const plan = activePro?.length ? "pro" : "free";
+    const limit = planRules?.find((rule) => rule.code === plan)?.included_catalog_items ?? (plan === "pro" ? 20 : 8);
+    if ((count ?? 0) >= limit) {
+      redirect(catalogUrl(businessId, { erro: "limite_catalogo" }));
+    }
+  }
+
   let newImagePath: string | null = null;
   try {
     const kind = formString(formData, "kind");
@@ -161,6 +182,9 @@ export async function saveCatalogItemAction(formData: FormData) {
       await removeMerchantImages(supabase, user.id, [newImagePath]);
     }
     console.error("Falha ao salvar item do catálogo", error);
+    if (String(error).includes("BILLING_CATALOG_LIMIT")) {
+      redirect(catalogUrl(businessId, { erro: "limite_catalogo" }));
+    }
     redirect(catalogUrl(businessId, { erro: "salvar_item" }));
   }
 

@@ -133,6 +133,7 @@ export type Database = {
           created_at: string
           included_businesses: number
           included_promotions_per_business: number
+          included_catalog_items: number
           is_active: boolean
           name: string
           updated_at: string
@@ -142,6 +143,7 @@ export type Database = {
           created_at?: string
           included_businesses: number
           included_promotions_per_business: number
+          included_catalog_items?: number
           is_active?: boolean
           name: string
           updated_at?: string
@@ -151,6 +153,7 @@ export type Database = {
           created_at?: string
           included_businesses?: number
           included_promotions_per_business?: number
+          included_catalog_items?: number
           is_active?: boolean
           name?: string
           updated_at?: string
