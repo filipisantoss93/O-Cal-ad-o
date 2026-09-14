@@ -85,7 +85,7 @@ export async function saveCatalogItemAction(formData: FormData) {
     ]);
     if (countError || planError || rulesError) redirect(catalogUrl(businessId, { erro: "salvar_item" }));
     const plan = activePro?.length ? "pro" : "free";
-    const limit = planRules?.find((rule) => rule.code === plan)?.included_catalog_items ?? (plan === "pro" ? 20 : 8);
+    const limit = planRules?.find((rule) => rule.code === plan)?.included_catalog_items ?? (plan === "pro" ? 20 : 4);
     if ((count ?? 0) >= limit) {
       redirect(catalogUrl(businessId, { erro: "limite_catalogo" }));
     }

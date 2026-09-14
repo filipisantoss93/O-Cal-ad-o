@@ -52,7 +52,7 @@ export default async function PlansAndFeaturesPage() {
     name: "Grátis",
     included_businesses: 1,
     included_promotions_per_business: 2,
-    included_catalog_items: 8,
+    included_catalog_items: 4,
   };
   const proRule = rules.find((rule) => rule.code === "pro") ?? {
     code: "pro",
