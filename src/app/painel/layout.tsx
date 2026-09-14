@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { MerchantShell } from "@/components/merchant-shell";
+import { MerchantImageOptimizer } from "@/components/merchant/merchant-image-optimizer";
 import { getMerchantBillingSummary } from "@/lib/merchant/billing";
 import { getMerchantWorkspace } from "@/lib/merchant/dal";
 
@@ -30,6 +31,7 @@ export default async function MerchantLayout({
       proActive={billing.proActive}
       monthlyPriceCents={monthlyPrice}
     >
+      <MerchantImageOptimizer />
       {children}
     </MerchantShell>
   );
