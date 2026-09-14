@@ -137,6 +137,7 @@ export function MerchantShell({
 
           {isAdmin && (
             <>
+              <Link href="/painel/admin/dashboard" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-line bg-canvas px-4 text-sm font-extrabold text-ink hover:border-brand/30 hover:bg-brand/5"><HomeIcon className="size-4" /> Dashboard</Link>
               <Link href="/painel/admin/notificacoes" className="inline-flex min-h-11 shrink-0 items-center rounded-xl border border-line bg-canvas px-4 text-sm font-extrabold text-ink">Notificações</Link>
               <Link
                 href="/painel/admin"
@@ -281,6 +282,7 @@ export function MerchantShell({
                 {isAdmin && (
                   <>
                     <div className="my-1 border-t border-line" />
+                    <Link href="/painel/admin/dashboard" className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink hover:bg-canvas"><HomeIcon className="size-4" /> Dashboard admin</Link>
                     <Link href="/painel/admin/notificacoes" className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink hover:bg-canvas">🔔 Notificações</Link>
                     <Link
                       href="/painel/admin"

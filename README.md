@@ -130,6 +130,17 @@ JWT habilitada. A chave `service_role` é fornecida pelo próprio ambiente da Ed
 Function e nunca deve ser exposta ao Next.js ou ao navegador. O webhook da Efí
 faz sua própria validação consultando a notificação diretamente no provedor.
 
+### Dashboard administrativo
+
+O dashboard em `/painel/admin/dashboard` reúne totais de contas, lojas,
+promoções e campanhas, evolução de cadastros e links para as filas de moderação.
+Os filtros de 7, 30 e 90 dias alteram apenas os indicadores de novos cadastros
+e de campanhas criadas no período. “Valor confirmado” soma o preço das
+campanhas Efí agendadas, ativas, pausadas ou concluídas; pedidos pendentes,
+cortesias e reembolsos não entram. A base não registra cada parcela recebida
+de assinaturas ou adicionais, portanto o dashboard apresenta apenas a
+quantidade de assinaturas Pro ativas, sem inventar receita recorrente.
+
 ### Alertas administrativos no PWA
 
 O painel `/painel/admin/notificacoes` é restrito a administradores. Os alertas
