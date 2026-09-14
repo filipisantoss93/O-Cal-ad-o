@@ -105,7 +105,7 @@ export async function detectCurrentCity(): Promise<DetectedCity> {
     const error = firstError as GeolocationPositionError;
     if (error.code === error.PERMISSION_DENIED) {
       throw new Error(
-        "O navegador bloqueou a localização deste site. No iPhone, abra as configurações deste site, permita Localização e recarregue a página.",
+        "A localização está bloqueada. Nas permissões do navegador ou aplicativo, permita Localização e tente novamente.",
       );
     }
 
@@ -121,7 +121,7 @@ export async function detectCurrentCity(): Promise<DetectedCity> {
       const retryError = secondError as GeolocationPositionError;
       if (retryError.code === retryError.PERMISSION_DENIED) {
         throw new Error(
-          "O navegador bloqueou a localização deste site. No iPhone, abra as configurações deste site, permita Localização e recarregue a página.",
+          "A localização está bloqueada. Nas permissões do navegador ou aplicativo, permita Localização e tente novamente.",
         );
       }
       if (retryError.code === retryError.TIMEOUT) {
