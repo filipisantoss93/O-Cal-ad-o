@@ -12,11 +12,13 @@ import {
   StarIcon,
 } from "@/components/icons";
 import { Logo } from "@/components/logo";
+import { AdminNotificationBadge } from "@/components/admin-notification-badge";
 
 type MerchantShellProps = {
   name: string;
   email: string;
   isAdmin: boolean;
+  adminUserId: string;
   proActive: boolean;
   monthlyPriceCents: number | null;
   children: ReactNode;
@@ -51,6 +53,7 @@ export function MerchantShell({
   name,
   email,
   isAdmin,
+  adminUserId,
   proActive,
   monthlyPriceCents,
   children,
@@ -69,6 +72,7 @@ export function MerchantShell({
           <Logo />
 
           <div className="flex items-center gap-3">
+            {isAdmin && <AdminNotificationBadge userId={adminUserId} />}
             <div className="hidden text-right sm:block">
               <p className="text-sm font-black text-ink">Olá, {firstName}</p>
               <p className="max-w-52 truncate text-xs font-semibold text-muted">
@@ -133,6 +137,7 @@ export function MerchantShell({
 
           {isAdmin && (
             <>
+              <Link href="/painel/admin/notificacoes" className="inline-flex min-h-11 shrink-0 items-center rounded-xl border border-line bg-canvas px-4 text-sm font-extrabold text-ink">Notificações</Link>
               <Link
                 href="/painel/admin"
                 className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-positive/20 bg-positive-soft px-4 text-sm font-extrabold text-positive transition hover:border-positive/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-positive"
@@ -276,6 +281,7 @@ export function MerchantShell({
                 {isAdmin && (
                   <>
                     <div className="my-1 border-t border-line" />
+                    <Link href="/painel/admin/notificacoes" className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink hover:bg-canvas">🔔 Notificações</Link>
                     <Link
                       href="/painel/admin"
                       className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-positive transition hover:bg-positive-soft"

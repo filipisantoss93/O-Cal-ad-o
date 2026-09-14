@@ -424,6 +424,11 @@ export default async function BusinessPage({
                   </div>
                 </div>
               </dl>
+              {!isAdminPreview && (
+                <Link href={`/loja/${business.slug}/denunciar`} className="mt-5 inline-block text-xs font-bold text-muted underline underline-offset-4 hover:text-brand-dark">
+                  Denunciar informações desta loja
+                </Link>
+              )}
             </aside>
           </div>
         </main>

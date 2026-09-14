@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   description:
     "Descubra lojas, serviços, produtos e promoções da sua cidade e fale direto com o comércio local.",
   applicationName: "O Calçadão",
+  appleWebApp: { capable: true, title: "O Calçadão", statusBarStyle: "default" },
+  icons: { apple: "/pwa-180.png" },
   keywords: [
     "comércio local",
     "lojas da cidade",

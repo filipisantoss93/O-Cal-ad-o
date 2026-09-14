@@ -130,6 +130,23 @@ JWT habilitada. A chave `service_role` é fornecida pelo próprio ambiente da Ed
 Function e nunca deve ser exposta ao Next.js ou ao navegador. O webhook da Efí
 faz sua própria validação consultando a notificação diretamente no provedor.
 
+### Alertas administrativos no PWA
+
+O painel `/painel/admin/notificacoes` é restrito a administradores. Os alertas
+de novos cadastros, suporte e denúncias são destinados à conta
+`Filipi.01@live.com` desde que seu perfil tenha papel `admin`. A caixa usa RLS;
+o Web Push usa uma Edge Function com token de despacho, e não depende da página
+aberta. No iPhone, instale o site na Tela de Início antes de ativar a permissão.
+
+Em um novo projeto Supabase, depois das migrations, gere **uma única** dupla
+VAPID e um token aleatório de 32 bytes. Salve em Supabase Vault com os nomes
+`ocalcadao_vapid_public`, `ocalcadao_vapid_private`,
+`ocalcadao_push_dispatch_token` e `ocalcadao_push_project_url` (URL base do
+projeto Supabase). Não coloque o segredo VAPID nem o token no repositório ou
+nas variáveis públicas do Next.js. Implante
+`supabase/functions/admin-push-dispatch` com `verify_jwt=false`: a função
+valida o token do Vault antes de consultar ou enviar qualquer alerta.
+
 Os dados de estados, municípios e malhas são gerados a partir das APIs e dos
 arquivos oficiais do IBGE pelo script `scripts/generate-brazil-locations.mjs`.
 A localização exata recebida pelo endpoint `/api/localizacao` é usada somente
