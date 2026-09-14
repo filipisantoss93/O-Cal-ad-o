@@ -14,11 +14,12 @@ export function Logo({ compact = false }: LogoProps) {
     >
       <span className="relative size-9 shrink-0 overflow-hidden rounded-[13px] shadow-[0_7px_18px_rgba(23,35,33,0.2)] transition-transform duration-300 group-hover:scale-[1.03] sm:size-10 sm:rounded-[14px] sm:shadow-[0_8px_20px_rgba(23,35,33,0.22)]">
         <Image
-          src="/brand/ocalcadao-icon-128.png"
+          src="/pwa-192.png"
           alt=""
-          width={128}
-          height={128}
+          width={192}
+          height={192}
           sizes="40px"
+          unoptimized
           className="h-full w-full object-cover"
           priority
         />

@@ -42,7 +42,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <h1 className="mt-5 max-w-3xl text-balance text-[2rem] font-black leading-[1.02] tracking-[-0.052em] text-ink sm:mt-6 sm:text-5xl lg:text-6xl">
+              <h1 className="mt-4 max-w-3xl text-balance text-[1.625rem] font-black leading-[1.08] tracking-[-0.048em] text-ink sm:mt-6 sm:text-[2.5rem] lg:text-[3.25rem]">
                 Tudo o que sua cidade oferece, mais perto de você.
               </h1>
               <p className="mt-4 max-w-2xl text-pretty text-[0.95rem] leading-6 text-muted sm:mt-5 sm:text-lg sm:leading-8">

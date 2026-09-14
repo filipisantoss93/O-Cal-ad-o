@@ -18,7 +18,7 @@ export const metadata: Metadata = {
       { url: "/pwa-192.png", sizes: "192x192", type: "image/png" },
     ],
     shortcut: "/icon.svg",
-    apple: [{ url: "/pwa-180.png", sizes: "180x180", type: "image/png" }],
+    apple: [{ url: "/pwa-192.png", sizes: "192x192", type: "image/png" }],
   },
   keywords: [
     "comércio local",
