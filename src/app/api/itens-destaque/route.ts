@@ -5,6 +5,7 @@ import type { CatalogPriceMode, FeaturedCatalogItem } from "@/types/catalog";
 
 type FeaturedItemsRequest = {
   cityId?: unknown;
+  limit?: unknown;
 };
 
 type BusinessSummary = {
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Cidade inválida." }, { status: 400 });
   }
 
+  const limit = body.limit === 20 ? 20 : 10;
   const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("catalog_items")
@@ -58,7 +60,7 @@ export async function POST(request: NextRequest) {
     .eq("businesses.is_active", true)
     .eq("businesses.billing_suspended", false)
     .order("updated_at", { ascending: false })
-    .limit(6);
+    .limit(limit);
 
   if (error) {
     console.error("[api/itens-destaque] query failed", error.message);

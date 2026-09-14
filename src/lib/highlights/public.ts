@@ -94,7 +94,7 @@ export async function getPublicFeaturedBusinesses(
   const { data: campaigns, error } = await supabase
     .from("highlight_campaigns")
     .select(
-      "id, placement, businesses!inner(id, slug, name, description, status, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone))",
+      "id, placement, businesses!inner(id, slug, name, description, status, logo_path, cover_path, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone))",
     )
     .in("id", campaignIds)
     .eq("status", "active")
@@ -171,6 +171,8 @@ export async function getPublicFeaturedBusinesses(
       ...schedule,
       initials: initials(row.name),
       palette: palettes[row.id % palettes.length],
+      logoUrl: publicMediaUrl(supabase, row.logo_path),
+      coverUrl: publicMediaUrl(supabase, row.cover_path),
       verified: row.status === "approved",
       isSponsored: true,
       highlightCampaignId: Number(campaign.id),

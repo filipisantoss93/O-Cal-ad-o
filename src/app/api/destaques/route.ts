@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 type HighlightsRequest = {
   cityId?: unknown;
   categorySlug?: unknown;
+  limit?: unknown;
 };
 
 const visitorCookie = "ocalcadao_visitor";
@@ -43,6 +44,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Categoria inválida." }, { status: 400 });
   }
 
+  // Busca sem limite explícito (como em /buscar) preserva os 4 destaques anteriores.
+  const maxResults = body.limit === 10 || body.limit === 20 ? body.limit : 4;
   const supabase = await createClient();
   let categoryId: number | undefined;
   if (categorySlug) {
@@ -89,7 +92,7 @@ export async function POST(request: NextRequest) {
     if (selectedBusinesses.has(candidate.businessId)) continue;
     selectedBusinesses.add(candidate.businessId);
     selectedCampaignIds.push(candidate.campaignId);
-    if (selectedCampaignIds.length === 4) break;
+    if (selectedCampaignIds.length === maxResults) break;
   }
 
   const businesses = await getPublicFeaturedBusinesses(

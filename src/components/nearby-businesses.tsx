@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ArrowRightIcon, LocateIcon } from "@/components/icons";
 import {
@@ -18,6 +19,7 @@ type NearbyBusiness = {
   name: string;
   neighborhood: string;
   categoryName: string;
+  logoUrl: string | null;
   distanceKm: number | null;
   isFeatured: boolean;
   highlightCampaignId: number | null;
@@ -187,8 +189,10 @@ export function NearbyBusinesses() {
             href={`/loja/${business.slug}`}
             className={`group items-center gap-2.5 rounded-xl border border-line/80 p-2.5 transition hover:border-ink/15 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:gap-3 sm:rounded-2xl sm:p-3 ${index === 2 ? "hidden sm:flex" : "flex"}`}
           >
-            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand to-accent-dark text-xs font-black text-white sm:size-12 sm:text-sm">
-              {initials(business.name)}
+            <span className="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand to-accent-dark text-xs font-black text-white sm:size-12 sm:text-sm">
+              {business.logoUrl ? (
+                <Image src={business.logoUrl} alt={`Logo da ${business.name}`} fill sizes="48px" className="object-cover" />
+              ) : initials(business.name)}
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-2 truncate text-sm font-extrabold text-ink sm:text-base">

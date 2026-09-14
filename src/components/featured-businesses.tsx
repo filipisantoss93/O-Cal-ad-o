@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { BusinessCard } from "@/components/business-card";
+import { useFeaturedLimit } from "@/components/use-featured-limit";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
@@ -11,6 +12,7 @@ import { recordHighlightEvent } from "@/lib/highlights-client";
 import type { Business } from "@/types/catalog";
 
 export function FeaturedBusinesses() {
+  const limit = useFeaturedLimit();
   const storedCity = useSyncExternalStore(
     (onChange) => {
       window.addEventListener(cityChangeEventName, onChange);
@@ -34,11 +36,12 @@ export function FeaturedBusinesses() {
   }, [storedCity]);
   const [result, setResult] = useState<{
     cityId: number;
+    limit: number;
     businesses: Business[];
   } | null>(null);
   const displayed = useMemo(
-    () => (city && result?.cityId === city.id ? result.businesses : []),
-    [city, result],
+    () => (city && result?.cityId === city.id ? result.businesses.slice(0, limit) : []),
+    [city, limit, result],
   );
 
   useEffect(() => {
@@ -50,13 +53,13 @@ export function FeaturedBusinesses() {
         const response = await fetch("/api/destaques", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cityId: city.id }),
+          body: JSON.stringify({ cityId: city.id, limit }),
           cache: "no-store",
           signal: controller.signal,
         });
         if (!response.ok) return;
         const payload = (await response.json()) as { businesses?: Business[] };
-        setResult({ cityId: city.id, businesses: payload.businesses ?? [] });
+        setResult({ cityId: city.id, limit, businesses: payload.businesses ?? [] });
       } catch (error) {
         if (!controller.signal.aborted) {
           console.error("[destaques] highlight lookup failed", error);
@@ -66,7 +69,7 @@ export function FeaturedBusinesses() {
 
     void load();
     return () => controller.abort();
-  }, [city]);
+  }, [city, limit]);
 
   useEffect(() => {
     recordHighlightEvent(
@@ -93,7 +96,7 @@ export function FeaturedBusinesses() {
     );
   }
 
-  if (result?.cityId === city.id && displayed.length === 0) {
+  if (result?.cityId === city.id && result.limit === limit && displayed.length === 0) {
     return (
       <div className="mt-7 rounded-3xl border border-dashed border-line bg-canvas p-7 text-center">
         <p className="font-black text-ink">Nenhum comércio em destaque nesta cidade ainda.</p>
@@ -106,11 +109,11 @@ export function FeaturedBusinesses() {
 
   return (
     <div
-      className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-4"
+      className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
       onClickCapture={trackStoreView}
     >
       {displayed.map((business) => (
-        <BusinessCard key={business.id} business={business} />
+        <BusinessCard key={business.id} business={business} compact />
       ))}
     </div>
   );
