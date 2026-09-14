@@ -1,1 +1,0 @@
-Client optimizer applies only on /painel/catalogo and /painel/promocoes. Output WebP target <= 900 KB, hard client ceiling 1.3 MB, server ceiling 1.5 MB for image field.
