@@ -58,8 +58,39 @@ export async function removeMerchantImages(
   const ownedPaths = paths.filter(
     (path): path is string => Boolean(path?.startsWith(`${userId}/`)),
   );
-  if (ownedPaths.length === 0) return;
-  await supabase.storage.from(MEDIA_BUCKET).remove(ownedPaths);
+  if (ownedPaths.length === 0) {
+    return { ok: true as const, removed: 0 };
+  }
+
+  try {
+    const { error } = await supabase.storage.from(MEDIA_BUCKET).remove(ownedPaths);
+    if (error) {
+      console.error("Falha ao excluir imagem antiga do Storage", {
+        bucket: MEDIA_BUCKET,
+        paths: ownedPaths,
+        error: error.message,
+      });
+      return {
+        ok: false as const,
+        removed: 0,
+        error: error.message,
+      };
+    }
+
+    return { ok: true as const, removed: ownedPaths.length };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Erro inesperado ao excluir imagem antiga do Storage", {
+      bucket: MEDIA_BUCKET,
+      paths: ownedPaths,
+      error: message,
+    });
+    return {
+      ok: false as const,
+      removed: 0,
+      error: message,
+    };
+  }
 }
 
 export function publicMediaUrl(
