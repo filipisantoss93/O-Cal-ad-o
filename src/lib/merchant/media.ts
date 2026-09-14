@@ -4,6 +4,7 @@ import type { Database } from "@/types/database";
 
 const MEDIA_BUCKET = "business-media";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_ITEM_IMAGE_SIZE = 1536 * 1024;
 const IMAGE_EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -17,8 +18,13 @@ export function imageFromForm(formData: FormData, field: string) {
   if (!IMAGE_EXTENSIONS[value.type]) {
     throw new Error("Envie uma imagem JPG, PNG, WebP ou AVIF.");
   }
-  if (value.size > MAX_IMAGE_SIZE) {
-    throw new Error("A imagem pode ter no máximo 5 MB.");
+  const maxSize = field === "image" ? MAX_ITEM_IMAGE_SIZE : MAX_IMAGE_SIZE;
+  if (value.size > maxSize) {
+    throw new Error(
+      field === "image"
+        ? "A imagem otimizada pode ter no máximo 1,5 MB."
+        : "A imagem pode ter no máximo 5 MB.",
+    );
   }
   return value;
 }
