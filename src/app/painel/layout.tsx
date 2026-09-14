@@ -26,6 +26,7 @@ export default async function MerchantLayout({
       name={displayName}
       email={user.email ?? ""}
       isAdmin={profile?.role === "admin"}
+      adminUserId={user.id}
       proActive={billing.proActive}
       monthlyPriceCents={monthlyPrice}
     >

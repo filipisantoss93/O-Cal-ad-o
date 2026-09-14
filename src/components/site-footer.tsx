@@ -30,6 +30,7 @@ export function SiteFooter() {
                 Ofertas locais
               </Link>
             </li>
+            <li><Link className="hover:text-ink" href="/contato">Contato e suporte</Link></li>
           </ul>
         </div>
 

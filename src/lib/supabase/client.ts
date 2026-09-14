@@ -1,6 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { getSupabaseEnv } from "@/lib/supabase/env";
-import type { Database } from "@/types/database";
+import type { Database } from "@/types/database-runtime";
 
 export function createClient() {
   const { url, publishableKey } = getSupabaseEnv();
