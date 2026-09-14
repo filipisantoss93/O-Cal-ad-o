@@ -12,7 +12,14 @@ export const metadata: Metadata = {
     "Descubra lojas, serviços, produtos e promoções da sua cidade e fale direto com o comércio local.",
   applicationName: "O Calçadão",
   appleWebApp: { capable: true, title: "O Calçadão", statusBarStyle: "default" },
-  icons: { apple: "/pwa-180.png" },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/pwa-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    shortcut: "/icon.svg",
+    apple: [{ url: "/pwa-180.png", sizes: "180x180", type: "image/png" }],
+  },
   keywords: [
     "comércio local",
     "lojas da cidade",
@@ -34,7 +41,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f7f5ef",
+  themeColor: "#172321",
   colorScheme: "light",
 };
 
