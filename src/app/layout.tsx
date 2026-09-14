@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { LocationAutoRefresh } from "@/components/location-auto-refresh";
+import { PullToRefresh } from "@/components/pull-to-refresh";
+import { PwaExperience } from "@/components/pwa-experience";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -54,6 +56,8 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body>
         <LocationAutoRefresh />
+        <PullToRefresh />
+        <PwaExperience />
         {children}
       </body>
     </html>

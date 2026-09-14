@@ -20,8 +20,13 @@ export function LocationAutoRefresh() {
     const refreshLocation = async (allowInitialRequest = false) => {
       const selectionMode = readLocationSelectionMode();
       const previousCity = readSelectedCity();
+      // No app instalado, a primeira permissão é pedida pelo botão visível
+      // de localização para que a solicitação tenha uma ação do usuário.
+      const installed =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        ("standalone" in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
       const shouldRequestInitialLocation =
-        allowInitialRequest && selectionMode === null && !previousCity;
+        allowInitialRequest && !installed && selectionMode === null && !previousCity;
       const shouldRefreshAutomaticLocation = selectionMode === "auto";
 
       if (
