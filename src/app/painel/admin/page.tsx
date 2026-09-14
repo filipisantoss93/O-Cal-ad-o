@@ -49,6 +49,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <ShieldCheckIcon className="size-4" /> Acesso administrativo
         </span>
       </div>
+      <Link href="/painel/admin/dashboard" className="mt-4 inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink hover:border-brand/40">Ver dashboard administrativo</Link>
 
       {params.sucesso && (
         <p role="status" className="mt-6 rounded-2xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold text-positive">

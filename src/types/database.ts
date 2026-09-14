@@ -985,6 +985,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_dashboard_metrics: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
       admin_create_highlight_campaign: {
         Args: {
           p_admin_note?: string
