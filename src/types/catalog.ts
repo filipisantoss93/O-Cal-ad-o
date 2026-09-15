@@ -60,6 +60,10 @@ export type Business = {
   sponsoredPlacement?: "city" | "category" | "combo" | null;
   tags: string[];
   whatsapp: string | null;
+  phone?: string | null;
+  websiteUrl?: string | null;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
   directionsUrl?: string | null;
   appleMapsUrl?: string | null;
   wazeUrl?: string | null;

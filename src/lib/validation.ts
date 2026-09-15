@@ -234,6 +234,79 @@ export function normalizeWebsite(rawValue: string) {
   }
 }
 
+type SocialNetwork = "instagram" | "facebook";
+
+const socialNetworkSettings: Record<
+  SocialNetwork,
+  { field: string; hostname: string; allowedHosts: Set<string>; label: string }
+> = {
+  instagram: {
+    field: "instagram_url",
+    hostname: "www.instagram.com",
+    allowedHosts: new Set([
+      "instagram.com",
+      "www.instagram.com",
+      "m.instagram.com",
+    ]),
+    label: "Instagram",
+  },
+  facebook: {
+    field: "facebook_url",
+    hostname: "www.facebook.com",
+    allowedHosts: new Set([
+      "facebook.com",
+      "www.facebook.com",
+      "m.facebook.com",
+      "web.facebook.com",
+    ]),
+    label: "Facebook",
+  },
+};
+
+export function normalizeSocialProfile(
+  rawValue: string,
+  network: SocialNetwork,
+) {
+  const value = rawValue.trim();
+  if (!value) return null;
+
+  const settings = socialNetworkSettings[network];
+  const handle = value.replace(/^@/, "");
+  const isBareHandle = !value.includes("/") && !value.includes(":");
+  const candidate =
+    isBareHandle
+      ? `https://${settings.hostname}/${handle}`
+      : /^https?:\/\//i.test(value)
+        ? value
+        : `https://${value}`;
+
+  try {
+    if (isBareHandle && !/^[A-Za-z0-9._-]{1,100}$/.test(handle)) {
+      throw new Error("invalid social handle");
+    }
+    const url = new URL(candidate);
+    const hostname = url.hostname.toLowerCase();
+    if (!settings.allowedHosts.has(hostname) || url.pathname === "/") {
+      throw new Error("invalid social profile");
+    }
+    url.protocol = "https:";
+    url.hostname = settings.hostname;
+    url.port = "";
+    url.username = "";
+    url.password = "";
+    url.hash = "";
+    if (url.toString().length > 500) {
+      throw new Error("social profile too long");
+    }
+    return url.toString();
+  } catch {
+    throw new ValidationError(
+      settings.field,
+      `Informe um perfil válido do ${settings.label}.`,
+    );
+  }
+}
+
 export function safeNextPath(
   value: string | null | undefined,
   fallback = "/painel",

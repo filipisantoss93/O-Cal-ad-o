@@ -4,8 +4,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ClockIcon,
+  FacebookIcon,
+  GlobeIcon,
+  InstagramIcon,
   LocateIcon,
   MapPinIcon,
+  PhoneIcon,
   ShieldCheckIcon,
   StarIcon,
   WhatsAppIcon,
@@ -27,6 +31,17 @@ type BusinessPageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ preview?: string; item?: string }>;
 };
+
+function formatPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("55") && digits.length === 12) {
+    return `(${digits.slice(2, 4)}) ${digits.slice(4, 8)}-${digits.slice(8)}`;
+  }
+  if (digits.startsWith("55") && digits.length === 13) {
+    return `(${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+  }
+  return phone;
+}
 
 export async function generateMetadata({
   params,
@@ -77,6 +92,44 @@ export default async function BusinessPage({
   const directionsHref = business.directionsUrl ?? null;
   const appleMapsHref = business.appleMapsUrl ?? null;
   const wazeHref = business.wazeUrl ?? null;
+  const optionalContacts = [
+    business.websiteUrl
+      ? {
+          href: business.websiteUrl,
+          label: "Site",
+          ariaLabel: undefined,
+          icon: GlobeIcon,
+          external: true,
+        }
+      : null,
+    business.instagramUrl
+      ? {
+          href: business.instagramUrl,
+          label: "Instagram",
+          ariaLabel: undefined,
+          icon: InstagramIcon,
+          external: true,
+        }
+      : null,
+    business.facebookUrl
+      ? {
+          href: business.facebookUrl,
+          label: "Facebook",
+          ariaLabel: undefined,
+          icon: FacebookIcon,
+          external: true,
+        }
+      : null,
+    business.phone
+      ? {
+          href: `tel:${business.phone}`,
+          label: "Telefone",
+          ariaLabel: `Ligar para ${formatPhone(business.phone)}`,
+          icon: PhoneIcon,
+          external: false,
+        }
+      : null,
+  ].filter((contact) => contact !== null);
 
   return (
     <>
@@ -397,6 +450,28 @@ export default async function BusinessPage({
                   </details>
                 )}
               </div>
+
+              {optionalContacts.length > 0 && (
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {optionalContacts.map((contact) => {
+                    const ContactIcon = contact.icon;
+                    return (
+                      <a
+                        key={contact.label}
+                        href={contact.href}
+                        aria-label={contact.ariaLabel}
+                        {...(contact.external
+                          ? { target: "_blank", rel: "noreferrer" }
+                          : {})}
+                        className="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-line bg-white px-3 text-sm font-black text-ink transition hover:border-brand/35 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                      >
+                        <ContactIcon className="size-4 shrink-0 text-brand" />
+                        <span className="truncate">{contact.label}</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
 
               <dl className="mt-6 space-y-4 border-t border-line pt-6 text-sm">
                 <div className="flex gap-3">

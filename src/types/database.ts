@@ -314,8 +314,10 @@ export type Database = {
           created_at: string
           description: string | null
           featured_until: string | null
+          facebook_url: string | null
           id: number
           is_active: boolean
+          instagram_url: string | null
           latitude: number | null
           logo_path: string | null
           longitude: number | null
@@ -327,6 +329,7 @@ export type Database = {
           owner_id: string
           plan: string
           postal_code: string | null
+          phone_e164: string | null
           public_email: string | null
           search_document: unknown
           slug: string
@@ -348,8 +351,10 @@ export type Database = {
           created_at?: string
           description?: string | null
           featured_until?: string | null
+          facebook_url?: string | null
           id?: never
           is_active?: boolean
+          instagram_url?: string | null
           latitude?: number | null
           logo_path?: string | null
           longitude?: number | null
@@ -361,6 +366,7 @@ export type Database = {
           owner_id: string
           plan?: string
           postal_code?: string | null
+          phone_e164?: string | null
           public_email?: string | null
           search_document?: unknown
           slug: string
@@ -382,8 +388,10 @@ export type Database = {
           created_at?: string
           description?: string | null
           featured_until?: string | null
+          facebook_url?: string | null
           id?: never
           is_active?: boolean
+          instagram_url?: string | null
           latitude?: number | null
           logo_path?: string | null
           longitude?: number | null
@@ -395,6 +403,7 @@ export type Database = {
           owner_id?: string
           plan?: string
           postal_code?: string | null
+          phone_e164?: string | null
           public_email?: string | null
           search_document?: unknown
           slug?: string

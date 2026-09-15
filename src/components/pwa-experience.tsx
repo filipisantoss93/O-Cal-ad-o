@@ -51,7 +51,12 @@ export function PwaExperience() {
     }
 
     const media = window.matchMedia("(display-mode: standalone)");
-    const updateDisplayMode = () => setInstalled(installedMode());
+    const updateDisplayMode = () => {
+      const nextInstalled = installedMode();
+      setInstalled(nextInstalled);
+      if (nextInstalled) setShowInstall(false);
+      else setShowLocation(false);
+    };
     const onBeforeInstall = (event: Event) => {
       event.preventDefault();
       setInstallEvent(event as InstallEvent);
@@ -61,12 +66,15 @@ export function PwaExperience() {
       setShowInstall(false);
       setInstallEvent(null);
     };
-    setPlatform(devicePlatform());
-    updateDisplayMode();
+    const initializationTimer = window.setTimeout(() => {
+      setPlatform(devicePlatform());
+      updateDisplayMode();
+    }, 0);
     media.addEventListener("change", updateDisplayMode);
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", onInstalled);
     return () => {
+      window.clearTimeout(initializationTimer);
       media.removeEventListener("change", updateDisplayMode);
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("appinstalled", onInstalled);
@@ -74,10 +82,7 @@ export function PwaExperience() {
   }, []);
 
   useEffect(() => {
-    if (installed) {
-      setShowInstall(false);
-      return;
-    }
+    if (installed) return;
     let dismissedUntil = 0;
     try {
       dismissedUntil = Number(window.localStorage.getItem(installDismissedKey)) || 0;
@@ -88,10 +93,7 @@ export function PwaExperience() {
   }, [installed]);
 
   useEffect(() => {
-    if (!installed) {
-      setShowLocation(false);
-      return;
-    }
+    if (!installed) return;
     try {
       if (window.sessionStorage.getItem(locationDismissedKey)) return;
     } catch {}
@@ -113,7 +115,11 @@ export function PwaExperience() {
           if (!cancelled) setShowLocation(readLocationSelectionMode() !== "auto");
         });
     } else {
-      setShowLocation(readLocationSelectionMode() !== "auto");
+      const timer = window.setTimeout(
+        () => setShowLocation(readLocationSelectionMode() !== "auto"),
+        0,
+      );
+      return () => window.clearTimeout(timer);
     }
     return () => {
       cancelled = true;

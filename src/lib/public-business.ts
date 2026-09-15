@@ -37,6 +37,22 @@ function publicPriceMode(value: string): CatalogPriceMode {
   return "fixed";
 }
 
+function safePublicUrl(value: string | null, allowedHostname?: string) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (
+      (url.protocol !== "https:" && url.protocol !== "http:") ||
+      (allowedHostname && url.hostname.toLowerCase() !== allowedHostname)
+    ) {
+      return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 function directionsUrls(latitude: number | null, longitude: number | null) {
   const unavailable = {
     directionsUrl: null,
@@ -65,7 +81,7 @@ async function loadBusiness(
   let query = supabase
     .from("businesses")
     .select(
-      "id, city_id, category_id, slug, name, description, whatsapp_e164, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path, status",
+      "id, city_id, category_id, slug, name, description, whatsapp_e164, phone_e164, website_url, instagram_url, facebook_url, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path, status",
     )
     .eq("slug", slug);
 
@@ -152,6 +168,13 @@ async function loadBusiness(
       | undefined,
     tags: [category.name, business.neighborhood, city.name],
     whatsapp: business.whatsapp_e164.replace(/\D/g, ""),
+    phone: business.phone_e164,
+    websiteUrl: safePublicUrl(business.website_url),
+    instagramUrl: safePublicUrl(
+      business.instagram_url,
+      "www.instagram.com",
+    ),
+    facebookUrl: safePublicUrl(business.facebook_url, "www.facebook.com"),
     ...directionsUrls(business.latitude, business.longitude),
     products: catalogItems.map((item) => ({
       id: String(item.id),
