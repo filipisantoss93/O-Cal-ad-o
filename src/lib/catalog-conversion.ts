@@ -1,5 +1,9 @@
+import {
+  contactActionLabel,
+  resolveContactHref,
+} from "@/lib/contact-action";
 import { catalogPricePresentation } from "@/lib/catalog-pricing";
-import type { CatalogPriceMode } from "@/types/catalog";
+import type { CatalogPriceMode, ContactAction } from "@/types/catalog";
 
 type CatalogConversionItem = {
   kind: "product" | "service";
@@ -51,9 +55,40 @@ export function catalogWhatsappHref(
   businessName: string,
   item: CatalogConversionItem,
 ) {
-  const digits = whatsapp?.replace(/\D/g, "") ?? "";
-  if (!digits) return null;
-  return `https://wa.me/${digits}?text=${encodeURIComponent(
-    catalogConversionMessage(businessName, item),
-  )}`;
+  return resolveContactHref({
+    action: "whatsapp",
+    whatsapp,
+    whatsappMessage: catalogConversionMessage(businessName, item),
+  });
+}
+
+export function catalogContactHref({
+  action,
+  contactUrl,
+  whatsapp,
+  phone,
+  businessName,
+  item,
+}: {
+  action: ContactAction;
+  contactUrl?: string | null;
+  whatsapp?: string | null;
+  phone?: string | null;
+  businessName: string;
+  item: CatalogConversionItem;
+}) {
+  return resolveContactHref({
+    action,
+    contactUrl,
+    whatsapp,
+    phone,
+    whatsappMessage: catalogConversionMessage(businessName, item),
+  });
+}
+
+export function catalogContactLabel(
+  action: ContactAction,
+  item: Pick<CatalogConversionItem, "kind" | "priceMode">,
+) {
+  return contactActionLabel(action, catalogConversionLabel(item));
 }
