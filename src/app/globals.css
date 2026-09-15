@@ -38,14 +38,22 @@
 }
 
 html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
   scroll-behavior: smooth;
   background: var(--canvas);
+  touch-action: pan-x pan-y;
 }
 
 body {
+  width: 100%;
+  max-width: 100%;
   min-height: 100vh;
   margin: 0;
   overflow-x: hidden;
+  overflow-x: clip;
   background: var(--canvas);
   color: var(--ink);
   font-family: var(--font-body);
@@ -53,11 +61,26 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
 button,
 input,
 textarea,
 select {
   font: inherit;
+}
+
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }
 
 button,

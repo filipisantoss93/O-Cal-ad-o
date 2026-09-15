@@ -32,8 +32,8 @@ export default function Home() {
       <main id="conteudo">
         <section className="relative overflow-hidden border-b border-line bg-canvas">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent" />
-          <div className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:gap-8 sm:px-6 sm:py-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-16 lg:px-8 lg:py-20">
-            <div>
+          <div className="mx-auto grid min-w-0 max-w-7xl gap-6 px-4 py-8 sm:gap-8 sm:px-6 sm:py-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-16 lg:px-8 lg:py-20">
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <CitySelector variant="hero" />
                 <p className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.13em] text-brand-dark sm:gap-2 sm:text-sm sm:tracking-[0.14em]">
@@ -66,7 +66,7 @@ export default function Home() {
               </div>
             </div>
 
-            <aside className="rounded-[1.5rem] border border-line bg-surface p-3.5 shadow-[0_24px_60px_rgba(31,45,42,0.12)] sm:rounded-[2rem] sm:p-6 sm:shadow-[0_28px_70px_rgba(31,45,42,0.13)]">
+            <aside className="min-w-0 max-w-full overflow-hidden rounded-[1.5rem] border border-line bg-surface p-3.5 shadow-[0_24px_60px_rgba(31,45,42,0.12)] sm:rounded-[2rem] sm:p-6 sm:shadow-[0_28px_70px_rgba(31,45,42,0.13)]">
               <div className="flex items-center justify-between gap-3 sm:gap-4">
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[0.13em] text-brand-dark sm:text-xs sm:tracking-[0.14em]">

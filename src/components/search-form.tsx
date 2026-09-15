@@ -14,7 +14,7 @@ export function SearchForm({
   return (
     <form
       action="/buscar"
-      className={`flex w-full items-center rounded-xl border border-ink/10 bg-surface p-1 shadow-[0_14px_36px_rgba(31,45,42,0.10)] transition focus-within:border-brand/60 focus-within:ring-4 focus-within:ring-brand/10 sm:rounded-2xl sm:p-1.5 sm:shadow-[0_18px_50px_rgba(31,45,42,0.12)] ${
+      className={`flex w-full min-w-0 max-w-full items-center overflow-hidden rounded-xl border border-ink/10 bg-surface p-1 shadow-[0_14px_36px_rgba(31,45,42,0.10)] transition focus-within:border-brand/60 focus-within:ring-4 focus-within:ring-brand/10 sm:rounded-2xl sm:p-1.5 sm:shadow-[0_18px_50px_rgba(31,45,42,0.12)] ${
         compact ? "max-w-3xl" : "max-w-2xl"
       }`}
       role="search"

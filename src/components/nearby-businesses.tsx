@@ -190,7 +190,7 @@ export function NearbyBusinesses() {
           <Link
             key={business.id}
             href={`/loja/${business.slug}`}
-            className="group flex items-center gap-2.5 rounded-xl border border-line/80 p-2.5 transition hover:border-ink/15 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:gap-3 sm:rounded-2xl sm:p-3"
+            className="group flex min-w-0 max-w-full items-center gap-2.5 overflow-hidden rounded-xl border border-line/80 p-2.5 transition hover:border-ink/15 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:gap-3 sm:rounded-2xl sm:p-3"
           >
             <span className="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand to-accent-dark text-xs font-black text-white sm:size-12 sm:text-sm">
               {business.logoUrl ? (
@@ -210,7 +210,7 @@ export function NearbyBusinesses() {
                 {business.listingType === "public_place" ? "Local público" : business.categoryName} · {business.neighborhood}
               </span>
             </span>
-            <span className="shrink-0 text-[11px] font-black text-brand-dark sm:text-xs">
+            <span className="max-w-[5.75rem] shrink-0 text-right text-[11px] font-black leading-tight text-brand-dark sm:max-w-none sm:text-xs">
               {formatDistance(business.distanceKm)}
             </span>
           </Link>
