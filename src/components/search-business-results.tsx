@@ -211,7 +211,7 @@ export function SearchBusinessResults({
 
   return (
     <div
-      className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-4"
+      className="mt-7 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4"
       onClickCapture={trackStoreView}
     >
       {displayedBusinesses.map((business) => {
@@ -222,6 +222,7 @@ export function SearchBusinessResults({
         return (
           <BusinessCard
             key={business.id}
+            compact
             business={
               distanceKm === undefined
                 ? business
