@@ -14,8 +14,8 @@ type ContactActionFieldsProps = {
 export function ContactActionFields({
   defaultAction = "whatsapp",
   defaultUrl = null,
-  whatsappAvailable = true,
-  phoneAvailable = false,
+  whatsappAvailable,
+  phoneAvailable,
   compact = false,
 }: ContactActionFieldsProps) {
   const id = useId();
@@ -23,6 +23,8 @@ export function ContactActionFields({
   const inputClass = compact
     ? "mt-1 min-h-11 w-full rounded-xl border border-line bg-white px-3 text-sm font-semibold"
     : "mt-1 min-h-12 w-full rounded-xl border border-line bg-white px-3 font-semibold";
+  const availabilitySuffix = (available: boolean | undefined) =>
+    available === false ? " (não cadastrado)" : "";
 
   return (
     <div className={compact ? "grid gap-3" : "grid gap-4 sm:col-span-2 sm:grid-cols-2"}>
@@ -35,10 +37,10 @@ export function ContactActionFields({
           className={inputClass}
         >
           <option value="whatsapp">
-            WhatsApp da loja{whatsappAvailable ? "" : " (não cadastrado)"}
+            WhatsApp da loja{availabilitySuffix(whatsappAvailable)}
           </option>
           <option value="phone">
-            Telefone fixo da loja{phoneAvailable ? "" : " (não cadastrado)"}
+            Telefone fixo da loja{availabilitySuffix(phoneAvailable)}
           </option>
           <option value="link">Link específico</option>
         </select>
@@ -50,8 +52,10 @@ export function ContactActionFields({
           <input
             id={`${id}-contact-url`}
             name="contact_url"
-            type="url"
+            type="text"
             inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
             defaultValue={defaultUrl ?? ""}
             maxLength={500}
             required
