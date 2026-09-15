@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { normalizePublicContactAction } from "@/lib/contact-action";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import { createClient } from "@/lib/supabase/server";
 import type { Promotion } from "@/types/catalog";
@@ -10,6 +11,8 @@ type OffersRequest = {
 type BusinessSummary = {
   slug: string;
   name: string;
+  whatsapp_e164: string | null;
+  phone_e164: string | null;
 };
 
 type PromotionRow = {
@@ -22,6 +25,8 @@ type PromotionRow = {
   image_path: string | null;
   ends_at: string;
   is_featured: boolean;
+  contact_action: string;
+  contact_url: string | null;
   created_at: string;
   businesses: BusinessSummary | BusinessSummary[] | null;
 };
@@ -62,7 +67,7 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase
     .from("promotions")
     .select(
-      "id, business_id, title, description, original_price, offer_price, image_path, ends_at, is_featured, created_at, businesses!inner(slug, name, city_id, publication_status, is_active, billing_suspended)",
+      "id, business_id, title, description, original_price, offer_price, image_path, ends_at, is_featured, contact_action, contact_url, created_at, businesses!inner(slug, name, whatsapp_e164, phone_e164, city_id, publication_status, is_active, billing_suspended)",
     )
     .eq("is_active", true)
     .eq("billing_suspended", false)
@@ -86,13 +91,10 @@ export async function POST(request: NextRequest) {
 
   const rows = (data ?? []) as unknown as PromotionRow[];
   const promotions: Promotion[] = rows.flatMap((promotion, index) => {
-    const business = Array.isArray(promotion.businesses)
-      ? promotion.businesses[0]
-      : promotion.businesses;
+    const business = Array.isArray(promotion.businesses) ? promotion.businesses[0] : promotion.businesses;
     if (!business) return [];
 
-    const originalPrice =
-      promotion.original_price === null ? null : Number(promotion.original_price);
+    const originalPrice = promotion.original_price === null ? null : Number(promotion.original_price);
     const offerPrice = Number(promotion.offer_price);
 
     return [{
@@ -101,9 +103,7 @@ export async function POST(request: NextRequest) {
       businessName: business.name,
       title: promotion.title,
       description: promotion.description || "Oferta publicada pelo comércio local.",
-      badge: promotion.is_featured
-        ? "DESTAQUE"
-        : discountBadge(originalPrice, offerPrice),
+      badge: promotion.is_featured ? "DESTAQUE" : discountBadge(originalPrice, offerPrice),
       symbol: "🏷️",
       palette: palettes[index % palettes.length],
       expiresLabel: expirationLabel(promotion.ends_at),
@@ -111,6 +111,10 @@ export async function POST(request: NextRequest) {
       offerPrice,
       imageUrl: publicMediaUrl(supabase, promotion.image_path),
       isFeatured: promotion.is_featured,
+      whatsapp: business.whatsapp_e164?.replace(/\D/g, "") || null,
+      phone: business.phone_e164,
+      contactAction: normalizePublicContactAction(promotion.contact_action),
+      contactUrl: promotion.contact_url,
     }];
   });
 
