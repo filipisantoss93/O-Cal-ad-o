@@ -35,6 +35,7 @@ export type Product = {
   isFeatured?: boolean;
   contactAction: ContactAction;
   contactUrl?: string | null;
+  phone?: string | null;
 };
 
 export type FeaturedCatalogItem = {
