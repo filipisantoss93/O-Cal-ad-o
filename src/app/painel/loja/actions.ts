@@ -188,7 +188,6 @@ export async function saveBusinessAction(
     let existing:
       | {
           id: number;
-          owner_id: string;
           slug: string;
           logo_path: string | null;
           cover_path: string | null;
@@ -203,7 +202,7 @@ export async function saveBusinessAction(
       }
       const { data, error } = await supabase
         .from("businesses")
-        .select("id, owner_id, slug, logo_path, cover_path, status, tags")
+        .select("id, slug, logo_path, cover_path, status, tags")
         .eq("id", requestedBusinessId)
         .eq("owner_id", user.id)
         .maybeSingle();
@@ -219,6 +218,20 @@ export async function saveBusinessAction(
       "category_id",
       "uma categoria",
     );
+    const { data: merchantCategory, error: merchantCategoryError } =
+      await supabase
+        .from("categories")
+        .select("id")
+        .eq("id", categoryId)
+        .eq("is_active", true)
+        .neq("slug", "locais-publicos")
+        .maybeSingle();
+    if (merchantCategoryError || !merchantCategory) {
+      throw new ValidationError(
+        "category_id",
+        "Selecione uma categoria comercial válida.",
+      );
+    }
     const tags = businessTags(formData, !existing) ?? existing?.tags ?? [];
     const description = optionalText(
       formData,

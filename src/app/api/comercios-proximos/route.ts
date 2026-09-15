@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
   const businessIds = parseBusinessIds(body.businessIds);
   if (businessIds === undefined) {
-    return Response.json({ error: "Lista de comércios inválida." }, { status: 400 });
+    return Response.json({ error: "Lista de locais inválida." }, { status: 400 });
   }
 
   const supabase = await createClient();
@@ -79,26 +79,29 @@ export async function POST(request: Request) {
   if (error) {
     console.error("[api/comercios-proximos] query failed", error.message);
     return Response.json(
-      { error: "Não foi possível carregar os comércios próximos." },
+      { error: "Não foi possível carregar os locais próximos." },
       { status: 500 },
     );
   }
 
-  // O RPC ordena por distância; buscamos as logos em uma única consulta
+  // O RPC ordena por distância; buscamos os dados visuais em uma única consulta
   // para preservar essa ordem sem alterar a assinatura pública do RPC.
   const ids = (data ?? []).map((business) => business.id);
   const { data: media, error: mediaError } = ids.length
-    ? await supabase.from("businesses").select("id, logo_path").in("id", ids)
+    ? await supabase.from("businesses").select("id, logo_path, listing_type").in("id", ids)
     : { data: [], error: null };
   if (mediaError) console.error("[api/comercios-proximos] logo lookup failed", mediaError.message);
-  const logos = new Map((media ?? []).map((row) => [row.id, publicMediaUrl(supabase, row.logo_path)]));
+  const mediaById = new Map((media ?? []).map((row) => [row.id, row]));
 
   const businesses = (data ?? []).map((business) => ({
     id: business.id,
     slug: business.slug,
     name: business.name,
     neighborhood: business.neighborhood,
-    logoUrl: logos.get(business.id) ?? null,
+    logoUrl: publicMediaUrl(supabase, mediaById.get(business.id)?.logo_path ?? null),
+    listingType: mediaById.get(business.id)?.listing_type === "public_place"
+      ? "public_place"
+      : "business",
     categoryName: business.category_name,
     distanceKm: business.distance_km,
     isFeatured: business.highlight_campaign_id !== null,

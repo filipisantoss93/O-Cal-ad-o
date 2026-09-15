@@ -36,6 +36,7 @@ export async function getAdminHighlights(
     supabase
       .from("businesses")
       .select("id, name, city_id, category_id")
+      .eq("listing_type", "business")
       .eq("status", "approved")
       .eq("is_active", true)
       .eq("billing_suspended", false)

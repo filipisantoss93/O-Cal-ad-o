@@ -6,7 +6,12 @@ import { requireAdmin } from "@/lib/admin/dal";
 import { getBusinessSchedule } from "@/lib/business-hours";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import { createClient } from "@/lib/supabase/server";
-import type { Business, CatalogPriceMode } from "@/types/catalog";
+import type {
+  Business,
+  CatalogPriceMode,
+  ListingType,
+  PublicPlaceKind,
+} from "@/types/catalog";
 import type { Database } from "@/types/database-runtime";
 
 const palettes = [
@@ -35,6 +40,10 @@ function initials(name: string) {
 function publicPriceMode(value: string): CatalogPriceMode {
   if (value === "from" || value === "consult") return value;
   return "fixed";
+}
+
+function listingType(value: string): ListingType {
+  return value === "public_place" ? "public_place" : "business";
 }
 
 function safePublicUrl(value: string | null, allowedHostname?: string) {
@@ -81,7 +90,7 @@ async function loadBusiness(
   let query = supabase
     .from("businesses")
     .select(
-      "id, city_id, category_id, slug, name, description, whatsapp_e164, phone_e164, website_url, instagram_url, facebook_url, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path, status",
+      "id, city_id, category_id, slug, name, description, listing_type, public_place_kind, official_source_url, tags, whatsapp_e164, phone_e164, website_url, instagram_url, facebook_url, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path, status",
     )
     .eq("slug", slug);
 
@@ -138,12 +147,20 @@ async function loadBusiness(
   if (!category || !city) return null;
   const schedule = getBusinessSchedule(hoursResult.data ?? [], city.timezone);
   const catalogItems = (itemsResult.data ?? []) as unknown as PublicCatalogRow[];
+  const isPublicPlace = business.listing_type === "public_place";
 
   return {
     id: String(business.id),
     slug: business.slug,
     name: business.name,
-    description: business.description || `Conheça a ${business.name} no O Calçadão.`,
+    description:
+      business.description ||
+      (isPublicPlace
+        ? `Consulte as informações de ${business.name}.`
+        : `Conheça a ${business.name} no O Calçadão.`),
+    listingType: listingType(business.listing_type),
+    publicPlaceKind: business.public_place_kind as PublicPlaceKind | null,
+    officialSourceUrl: safePublicUrl(business.official_source_url),
     categorySlug: category.slug,
     categoryName: category.name,
     neighborhood: business.neighborhood,
@@ -166,8 +183,10 @@ async function loadBusiness(
       | "city"
       | "combo"
       | undefined,
-    tags: [category.name, business.neighborhood, city.name],
-    whatsapp: business.whatsapp_e164.replace(/\D/g, ""),
+    tags: [...(business.tags ?? []), category.name, business.neighborhood, city.name]
+      .filter((tag, index, values) => values.indexOf(tag) === index)
+      .slice(0, 12),
+    whatsapp: business.whatsapp_e164?.replace(/\D/g, "") ?? null,
     phone: business.phone_e164,
     websiteUrl: safePublicUrl(business.website_url),
     instagramUrl: safePublicUrl(
@@ -176,7 +195,7 @@ async function loadBusiness(
     ),
     facebookUrl: safePublicUrl(business.facebook_url, "www.facebook.com"),
     ...directionsUrls(business.latitude, business.longitude),
-    products: catalogItems.map((item) => ({
+    products: isPublicPlace ? [] : catalogItems.map((item) => ({
       id: String(item.id),
       kind: item.kind === "service" ? "service" : "product",
       priceMode: publicPriceMode(item.price_mode),

@@ -319,6 +319,7 @@ export type Database = {
           is_active: boolean
           instagram_url: string | null
           latitude: number | null
+          listing_type: string
           logo_path: string | null
           longitude: number | null
           moderated_at: string | null
@@ -326,11 +327,13 @@ export type Database = {
           moderation_note: string | null
           name: string
           neighborhood: string
-          owner_id: string
+          official_source_url: string | null
+          owner_id: string | null
           plan: string
           postal_code: string | null
           phone_e164: string | null
           public_email: string | null
+          public_place_kind: string | null
           search_document: unknown
           slug: string
           status: string
@@ -338,7 +341,7 @@ export type Database = {
           tags: string[]
           updated_at: string
           website_url: string | null
-          whatsapp_e164: string
+          whatsapp_e164: string | null
         }
         Insert: {
           address_number: string
@@ -356,6 +359,7 @@ export type Database = {
           is_active?: boolean
           instagram_url?: string | null
           latitude?: number | null
+          listing_type?: string
           logo_path?: string | null
           longitude?: number | null
           moderated_at?: string | null
@@ -363,11 +367,13 @@ export type Database = {
           moderation_note?: string | null
           name: string
           neighborhood: string
-          owner_id: string
+          official_source_url?: string | null
+          owner_id?: string | null
           plan?: string
           postal_code?: string | null
           phone_e164?: string | null
           public_email?: string | null
+          public_place_kind?: string | null
           search_document?: unknown
           slug: string
           status?: string
@@ -375,7 +381,7 @@ export type Database = {
           tags?: string[]
           updated_at?: string
           website_url?: string | null
-          whatsapp_e164: string
+          whatsapp_e164?: string | null
         }
         Update: {
           address_number?: string
@@ -393,6 +399,7 @@ export type Database = {
           is_active?: boolean
           instagram_url?: string | null
           latitude?: number | null
+          listing_type?: string
           logo_path?: string | null
           longitude?: number | null
           moderated_at?: string | null
@@ -400,11 +407,13 @@ export type Database = {
           moderation_note?: string | null
           name?: string
           neighborhood?: string
-          owner_id?: string
+          official_source_url?: string | null
+          owner_id?: string | null
           plan?: string
           postal_code?: string | null
           phone_e164?: string | null
           public_email?: string | null
+          public_place_kind?: string | null
           search_document?: unknown
           slug?: string
           status?: string
@@ -412,7 +421,7 @@ export type Database = {
           tags?: string[]
           updated_at?: string
           website_url?: string | null
-          whatsapp_e164?: string
+          whatsapp_e164?: string | null
         }
         Relationships: [
           {

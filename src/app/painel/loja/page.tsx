@@ -73,6 +73,7 @@ export default async function BusinessPage({ searchParams }: BusinessPageProps) 
         .from("categories")
         .select("id, name")
         .eq("is_active", true)
+        .neq("slug", "locais-publicos")
         .order("display_order")
         .order("name"),
       business

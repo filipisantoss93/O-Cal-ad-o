@@ -55,6 +55,7 @@ export async function getPublicFeaturedCampaignCandidates(
     .lte("starts_at", now)
     .gt("ends_at", now)
     .eq("businesses.publication_status", "published")
+    .eq("businesses.listing_type", "business")
     .eq("businesses.is_active", true)
     .eq("businesses.billing_suspended", false)
     .not("businesses.logo_path", "is", null)
@@ -101,6 +102,7 @@ export async function getPublicFeaturedBusinesses(
     .lte("starts_at", now)
     .gt("ends_at", now)
     .eq("businesses.publication_status", "published")
+    .eq("businesses.listing_type", "business")
     .eq("businesses.is_active", true)
     .eq("businesses.billing_suspended", false)
     .not("businesses.logo_path", "is", null)
@@ -159,6 +161,7 @@ export async function getPublicFeaturedBusinesses(
       name: row.name,
       description:
         row.description || `Conheça a ${row.name} no O Calçadão.`,
+      listingType: "business",
       categorySlug: category.slug,
       categoryName: category.name,
       neighborhood: row.neighborhood,
@@ -178,7 +181,7 @@ export async function getPublicFeaturedBusinesses(
       highlightCampaignId: Number(campaign.id),
       sponsoredPlacement: campaign.placement as Placement,
       tags: [category.name, row.neighborhood, city.name],
-      whatsapp: row.whatsapp_e164.replace(/\D/g, ""),
+      whatsapp: row.whatsapp_e164?.replace(/\D/g, "") ?? null,
       products: [],
     }];
   });
@@ -201,6 +204,7 @@ export async function getPublicRegionalBanners(
     .lte("starts_at", now)
     .gt("ends_at", now)
     .eq("businesses.publication_status", "published")
+    .eq("businesses.listing_type", "business")
     .eq("businesses.is_active", true)
     .eq("businesses.billing_suspended", false)
     .limit(20);

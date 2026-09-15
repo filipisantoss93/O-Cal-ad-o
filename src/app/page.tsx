@@ -46,8 +46,8 @@ export default function Home() {
                 Tudo o que sua cidade oferece, mais perto de você.
               </h1>
               <p className="mt-4 max-w-2xl text-pretty text-[0.95rem] leading-6 text-muted sm:mt-5 sm:text-lg sm:leading-8">
-                Encontre lojas, serviços, produtos e ofertas locais. Escolha o
-                que precisa e fale direto com o comércio pelo WhatsApp.
+                Encontre lojas, serviços, produtos, ofertas e locais públicos.
+                Descubra o que precisa perto de você.
               </p>
 
               <div className="mt-6 sm:mt-8">
@@ -57,7 +57,7 @@ export default function Home() {
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-bold text-muted sm:mt-5 sm:gap-x-5 sm:text-sm">
                 <span className="inline-flex items-center gap-1.5">
                   <ShieldCheckIcon className="size-3.5 text-[#25835f] sm:size-4" />
-                  Vitrines com moderação contínua
+                  Informações com moderação contínua
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <WhatsAppIcon className="size-3.5 text-[#25835f] sm:size-4" />
@@ -73,7 +73,7 @@ export default function Home() {
                     Perto de você
                   </p>
                   <h2 className="mt-0.5 text-lg font-black tracking-tight text-ink sm:mt-1 sm:text-xl">
-                    Comércios próximos
+                    Locais próximos
                   </h2>
                 </div>
                 <span className="rounded-full bg-positive-soft px-2.5 py-1 text-[11px] font-black text-positive sm:px-3 sm:py-1.5 sm:text-xs">
@@ -96,7 +96,7 @@ export default function Home() {
             <SectionHeading
               eyebrow="Explore do seu jeito"
               title="O que você procura?"
-              description="Comece por uma categoria e descubra negócios da sua cidade."
+              description="Comece por uma categoria e descubra negócios e serviços públicos da sua cidade."
               linkHref="/buscar"
               linkLabel="Ver todas as categorias"
             />

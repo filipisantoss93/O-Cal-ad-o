@@ -4,6 +4,7 @@ import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import { createPublicClient } from "@/lib/supabase/server";
 import type { Business } from "@/types/catalog";
+import type { ListingType, PublicPlaceKind } from "@/types/catalog";
 
 const palettes = [
   "from-[#ef6a43] to-[#f5a640]",
@@ -45,6 +46,10 @@ function emptyResult(page: number): PublicBusinessSearchResult {
     pageSize: PUBLIC_SEARCH_PAGE_SIZE,
     totalPages: 0,
   };
+}
+
+function listingType(value: string): ListingType {
+  return value === "public_place" ? "public_place" : "business";
 }
 
 export async function searchPublicBusinesses(
@@ -98,7 +103,7 @@ export async function searchPublicBusinesses(
   const { data: rows, error } = await supabase
     .from("businesses")
     .select(
-      "id, slug, name, description, status, tags, logo_path, cover_path, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone)",
+      "id, slug, name, description, listing_type, public_place_kind, official_source_url, status, tags, logo_path, cover_path, whatsapp_e164, street, address_number, complement, neighborhood, categories(slug, name), cities(name, state_code, timezone)",
     )
     .in("id", businessIds)
     .eq("publication_status", "published")
@@ -145,7 +150,14 @@ export async function searchPublicBusinesses(
       id: String(row.id),
       slug: row.slug,
       name: row.name,
-      description: row.description || `Conheça a ${row.name} no O Calçadão.`,
+      description:
+        row.description ||
+        (row.listing_type === "public_place"
+          ? `Consulte as informações de ${row.name}.`
+          : `Conheça a ${row.name} no O Calçadão.`),
+      listingType: listingType(row.listing_type),
+      publicPlaceKind: row.public_place_kind as PublicPlaceKind | null,
+      officialSourceUrl: row.official_source_url,
       categorySlug: category.slug,
       categoryName: category.name,
       neighborhood: row.neighborhood,
@@ -160,7 +172,7 @@ export async function searchPublicBusinesses(
       coverUrl: publicMediaUrl(supabase, row.cover_path),
       verified: row.status === "approved",
       tags: [...(row.tags ?? []), category.name, row.neighborhood].slice(0, 12),
-      whatsapp: row.whatsapp_e164.replace(/\D/g, ""),
+      whatsapp: row.whatsapp_e164?.replace(/\D/g, "") ?? null,
       products: [],
     }];
   });

@@ -8,6 +8,19 @@ export type Category = {
 
 export type CatalogPriceMode = "fixed" | "from" | "consult";
 
+export type ListingType = "business" | "public_place";
+
+export type PublicPlaceKind =
+  | "government"
+  | "health"
+  | "education"
+  | "transport"
+  | "safety"
+  | "culture"
+  | "leisure"
+  | "social_service"
+  | "other";
+
 export type Product = {
   id: string;
   kind: "product" | "service";
@@ -39,6 +52,9 @@ export type Business = {
   slug: string;
   name: string;
   description: string;
+  listingType: ListingType;
+  publicPlaceKind?: PublicPlaceKind | null;
+  officialSourceUrl?: string | null;
   categorySlug: string;
   categoryName: string;
   neighborhood: string;

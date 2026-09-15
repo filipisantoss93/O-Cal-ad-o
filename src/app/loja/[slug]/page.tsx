@@ -58,7 +58,7 @@ export async function generateMetadata({
   const business = await getPublicBusiness(slug);
 
   if (!business) {
-    return { title: "Comércio não encontrado" };
+    return { title: "Local não encontrado" };
   }
 
   return {
@@ -83,8 +83,10 @@ export default async function BusinessPage({
     notFound();
   }
 
+  const isPublicPlace = business.listingType === "public_place";
+
   const whatsappMessage = encodeURIComponent(
-    `Olá! Encontrei a ${business.name} no O Calçadão e gostaria de mais informações.`,
+    `Olá! Encontrei ${business.name} no O Calçadão e gostaria de mais informações.`,
   );
   const whatsappHref = business.whatsapp
     ? `https://wa.me/${business.whatsapp}?text=${whatsappMessage}`
@@ -93,6 +95,15 @@ export default async function BusinessPage({
   const appleMapsHref = business.appleMapsUrl ?? null;
   const wazeHref = business.wazeUrl ?? null;
   const optionalContacts = [
+    business.officialSourceUrl
+      ? {
+          href: business.officialSourceUrl,
+          label: "Fonte oficial",
+          ariaLabel: `Consultar a fonte oficial de ${business.name}`,
+          icon: ShieldCheckIcon,
+          external: true,
+        }
+      : null,
     business.websiteUrl
       ? {
           href: business.websiteUrl,
@@ -140,7 +151,7 @@ export default async function BusinessPage({
             <div>
               <p className="text-sm font-black">Pré-visualização administrativa</p>
               <p className="text-xs font-semibold text-muted">
-                Esta é a aparência da loja para o público após a aprovação.
+                Esta é a aparência do cadastro para o público.
               </p>
             </div>
             <Link
@@ -204,7 +215,9 @@ export default async function BusinessPage({
                       {business.verified && (
                         <>
                           <ShieldCheckIcon className="size-6 shrink-0" />
-                          <span className="sr-only">Comércio verificado</span>
+                          <span className="sr-only">
+                            {isPublicPlace ? "Informações conferidas em fonte oficial" : "Comércio verificado"}
+                          </span>
                         </>
                       )}
                     </h1>
@@ -215,7 +228,7 @@ export default async function BusinessPage({
                           {business.rating.toLocaleString("pt-BR")} ({business.reviewCount})
                         </span>
                       ) : (
-                        <span>Nova no O Calçadão</span>
+                        <span>{isPublicPlace ? "Local público" : "Nova no O Calçadão"}</span>
                       )}
                       <span>{business.neighborhood}</span>
                     </p>
@@ -238,10 +251,10 @@ export default async function BusinessPage({
             <div className="space-y-6">
               <section className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
-                  Sobre a loja
+                  {isPublicPlace ? "Sobre o local" : "Sobre a loja"}
                 </p>
                 <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">
-                  Bem-vindo à {business.name}
+                  {isPublicPlace ? business.name : `Bem-vindo à ${business.name}`}
                 </h2>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-muted">
                   {business.description}
@@ -258,7 +271,7 @@ export default async function BusinessPage({
                 </div>
               </section>
 
-              <section className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
+              {!isPublicPlace && <section className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
                     Vitrine
@@ -378,17 +391,20 @@ export default async function BusinessPage({
                     A loja ainda não publicou produtos ou serviços. Fale diretamente pelo WhatsApp.
                   </p>
                 )}
-              </section>
+              </section>}
             </div>
 
             <aside className="h-fit rounded-3xl border border-line bg-surface p-6 shadow-sm lg:sticky lg:top-24">
-              <h2 className="text-xl font-black text-ink">Fale com o comércio</h2>
+              <h2 className="text-xl font-black text-ink">
+                {isPublicPlace ? "Contato e localização" : "Fale com o comércio"}
+              </h2>
               <p className="mt-2 text-sm leading-6 text-muted">
-                Tire dúvidas, confirme disponibilidade ou faça seu pedido direto
-                com a loja.
+                {isPublicPlace
+                  ? "Consulte os canais disponíveis e trace uma rota até o local."
+                  : "Tire dúvidas, confirme disponibilidade ou faça seu pedido direto com a loja."}
               </p>
 
-              <div className={`mt-5 grid gap-3 ${directionsHref ? "grid-cols-2" : "grid-cols-1"}`}>
+              <div className={`mt-5 grid gap-3 ${directionsHref && whatsappHref ? "grid-cols-2" : "grid-cols-1"}`}>
                 {whatsappHref ? (
                   <a
                     href={whatsappHref}
@@ -401,7 +417,7 @@ export default async function BusinessPage({
                     <WhatsAppIcon className="size-5 shrink-0" />
                     WhatsApp
                   </a>
-                ) : (
+                ) : !isPublicPlace ? (
                   <span
                     className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-[#dce8e2] px-3 text-center text-xs font-black text-[#4d6b5d]"
                     aria-disabled="true"
@@ -410,7 +426,7 @@ export default async function BusinessPage({
                     <WhatsAppIcon className="size-5 shrink-0" />
                     Contato indisponível
                   </span>
-                )}
+                ) : null}
 
                 {directionsHref && appleMapsHref && wazeHref && (
                   <details className="group relative">
@@ -501,7 +517,7 @@ export default async function BusinessPage({
               </dl>
               {!isAdminPreview && (
                 <Link href={`/loja/${business.slug}/denunciar`} className="mt-5 inline-block text-xs font-bold text-muted underline underline-offset-4 hover:text-brand-dark">
-                  Denunciar informações desta loja
+                  {isPublicPlace ? "Sinalizar informação incorreta" : "Denunciar informações desta loja"}
                 </Link>
               )}
             </aside>

@@ -65,10 +65,11 @@ export default async function AdminDashboard({ searchParams }: {
 
     <section aria-labelledby="alcance">
       <h2 id="alcance" className="text-xl font-black text-ink">Plataforma</h2>
-      <dl className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <dl className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Metric label="Contas cadastradas" value={number(m.accounts.total)} detail={`+${number(m.accounts.recent)} nos últimos ${days} dias`} />
         <Metric label="Lojas cadastradas" value={number(m.stores.total)} detail={`+${number(m.stores.recent)} nos últimos ${days} dias`} href="/painel/admin" />
         <Metric label="Lojas publicadas" value={number(m.stores.published)} detail={`${number(m.stores.approved)} aprovadas · ${number(m.stores.billing_suspended)} com cobrança suspensa`} href="/painel/admin?status=approved" />
+        <Metric label="Locais públicos" value={number(m.public_places.total)} detail={`${number(m.public_places.published)} visíveis na busca`} href="/painel/admin/locais-publicos" />
         <Metric label="Promoções cadastradas" value={number(m.offers.total)} detail={`${number(m.offers.visible)} visíveis agora · +${number(m.offers.recent)} no período`} />
       </dl>
     </section>
