@@ -1,9 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LocateIcon, XIcon } from "@/components/icons";
-import { detectCurrentCity, readLocationSelectionMode, saveSelectedCity } from "@/lib/location-client";
+import {
+  detectCurrentCity,
+  isLocationPermissionDeniedError,
+  readLocationSelectionMode,
+  saveSelectedCity,
+  wasLocationPermissionDeniedThisSession,
+  wasLocationRequestHandledThisSession,
+} from "@/lib/location-client";
+import {
+  cityChangeEventName,
+  locationPermissionDeniedEventName,
+} from "@/lib/location";
 
 type InstallEvent = Event & {
   prompt: () => Promise<void>;
@@ -11,6 +22,7 @@ type InstallEvent = Event & {
 };
 type Platform = "ios" | "android" | "windows" | "other";
 const installDismissedKey = "ocalcadao:install-dismissed-until";
+const installDismissedSessionKey = "ocalcadao:install-dismissed";
 const locationDismissedKey = "ocalcadao:location-dismissed";
 
 function installedMode() {
@@ -36,12 +48,14 @@ const manualInstallSteps: Record<Platform, string> = {
 export function PwaExperience() {
   const router = useRouter();
   const [installed, setInstalled] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const [platform, setPlatform] = useState<Platform>("other");
   const [showInstall, setShowInstall] = useState(false);
   const [showLocation, setShowLocation] = useState(false);
   const [installEvent, setInstallEvent] = useState<InstallEvent | null>(null);
   const [detecting, setDetecting] = useState(false);
   const [locationError, setLocationError] = useState("");
+  const installSuppressedRef = useRef(false);
 
   useEffect(() => {
     if ("serviceWorker" in navigator && window.isSecureContext) {
@@ -69,6 +83,7 @@ export function PwaExperience() {
     const initializationTimer = window.setTimeout(() => {
       setPlatform(devicePlatform());
       updateDisplayMode();
+      setInitialized(true);
     }, 0);
     media.addEventListener("change", updateDisplayMode);
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
@@ -82,26 +97,49 @@ export function PwaExperience() {
   }, []);
 
   useEffect(() => {
-    if (installed) return;
+    if (!initialized || installed || installSuppressedRef.current) return;
     let dismissedUntil = 0;
+    let dismissedThisSession = false;
     try {
       dismissedUntil = Number(window.localStorage.getItem(installDismissedKey)) || 0;
     } catch {}
-    if (Date.now() < dismissedUntil) return;
+    try {
+      dismissedThisSession =
+        window.sessionStorage.getItem(installDismissedSessionKey) === "1";
+    } catch {}
+    if (dismissedThisSession || Date.now() < dismissedUntil) {
+      installSuppressedRef.current = true;
+      return;
+    }
     const timer = window.setTimeout(() => setShowInstall(true), 2500);
     return () => window.clearTimeout(timer);
-  }, [installed]);
+  }, [initialized, installed]);
 
   useEffect(() => {
-    if (!installed) return;
-    try {
-      if (window.sessionStorage.getItem(locationDismissedKey)) return;
-    } catch {}
+    if (!initialized || !installed) return;
     let cancelled = false;
     let status: PermissionStatus | undefined;
-    const updatePermission = () => {
-      if (!cancelled && status) setShowLocation(status.state !== "granted");
+    const locationNoticeWasHandled = () => {
+      try {
+        if (window.sessionStorage.getItem(locationDismissedKey)) return true;
+      } catch {}
+      return (
+        readLocationSelectionMode() === "manual" ||
+        wasLocationRequestHandledThisSession() ||
+        wasLocationPermissionDeniedThisSession()
+      );
     };
+    const updatePermission = () => {
+      if (!cancelled && status) {
+        setShowLocation(
+          status.state !== "granted" && !locationNoticeWasHandled(),
+        );
+      }
+    };
+    const handleCityChange = () => {
+      if (readLocationSelectionMode() === "manual") setShowLocation(false);
+    };
+    const handlePermissionDenied = () => setShowLocation(false);
 
     if (navigator.permissions?.query) {
       void navigator.permissions.query({ name: "geolocation" })
@@ -112,25 +150,61 @@ export function PwaExperience() {
           status.addEventListener("change", updatePermission);
         })
         .catch(() => {
-          if (!cancelled) setShowLocation(readLocationSelectionMode() !== "auto");
+          if (!cancelled) {
+            setShowLocation(
+              readLocationSelectionMode() !== "auto" &&
+                !locationNoticeWasHandled(),
+            );
+          }
         });
     } else {
       const timer = window.setTimeout(
-        () => setShowLocation(readLocationSelectionMode() !== "auto"),
+        () =>
+          setShowLocation(
+            readLocationSelectionMode() !== "auto" &&
+              !locationNoticeWasHandled(),
+          ),
         0,
       );
-      return () => window.clearTimeout(timer);
+      window.addEventListener(cityChangeEventName, handleCityChange);
+      window.addEventListener(
+        locationPermissionDeniedEventName,
+        handlePermissionDenied,
+      );
+      return () => {
+        window.clearTimeout(timer);
+        window.removeEventListener(cityChangeEventName, handleCityChange);
+        window.removeEventListener(
+          locationPermissionDeniedEventName,
+          handlePermissionDenied,
+        );
+      };
     }
+    window.addEventListener(cityChangeEventName, handleCityChange);
+    window.addEventListener(
+      locationPermissionDeniedEventName,
+      handlePermissionDenied,
+    );
     return () => {
       cancelled = true;
       status?.removeEventListener("change", updatePermission);
+      window.removeEventListener(cityChangeEventName, handleCityChange);
+      window.removeEventListener(
+        locationPermissionDeniedEventName,
+        handlePermissionDenied,
+      );
     };
-  }, [installed]);
+  }, [initialized, installed]);
 
   const dismissInstall = () => {
+    installSuppressedRef.current = true;
     setShowInstall(false);
+    setInstallEvent(null);
     try {
       window.localStorage.setItem(installDismissedKey, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+    } catch {}
+    try {
+      window.sessionStorage.setItem(installDismissedSessionKey, "1");
     } catch {}
   };
 
@@ -163,7 +237,11 @@ export function PwaExperience() {
       setShowLocation(false);
       router.refresh();
     } catch (reason) {
-      setLocationError(reason instanceof Error ? reason.message : "Não foi possível obter sua localização.");
+      if (isLocationPermissionDeniedError(reason)) {
+        dismissLocation();
+      } else {
+        setLocationError(reason instanceof Error ? reason.message : "Não foi possível obter sua localização.");
+      }
     } finally {
       setDetecting(false);
     }
@@ -180,7 +258,7 @@ export function PwaExperience() {
         type="button"
         onClick={installed ? dismissLocation : dismissInstall}
         aria-label="Fechar aviso"
-        className="absolute right-3 top-3 grid size-9 place-items-center rounded-full text-muted hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-full text-muted hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         <XIcon className="size-4" />
       </button>

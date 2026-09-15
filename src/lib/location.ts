@@ -27,5 +27,11 @@ export type LocationSelectionMode = "auto" | "manual";
 export const selectedCityStorageKey = "ocalcadao:selected-city";
 export const selectedCoordinatesStorageKey = "ocalcadao:current-coordinates";
 export const locationSelectionModeStorageKey = "ocalcadao:location-mode";
+export const locationRequestHandledSessionKey =
+  "ocalcadao:location-request-handled";
+export const locationPermissionDeniedSessionKey =
+  "ocalcadao:location-permission-denied";
+export const locationPermissionDeniedEventName =
+  "ocalcadao:location-permission-denied";
 export const selectedCityCookieName = "ocalcadao_city_id";
 export const cityChangeEventName = "ocalcadao:city-change";

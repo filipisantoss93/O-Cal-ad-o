@@ -4,9 +4,12 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   detectCurrentCity,
+  readCurrentCoordinates,
   readLocationSelectionMode,
   readSelectedCity,
   saveSelectedCity,
+  wasLocationPermissionDeniedThisSession,
+  wasLocationRequestHandledThisSession,
 } from "@/lib/location-client";
 
 const minimumBackgroundTimeMs = 60_000;
@@ -20,14 +23,23 @@ export function LocationAutoRefresh() {
     const refreshLocation = async (allowInitialRequest = false) => {
       const selectionMode = readLocationSelectionMode();
       const previousCity = readSelectedCity();
-      // No app instalado, a primeira permissão é pedida pelo botão visível
-      // de localização para que a solicitação tenha uma ação do usuário.
+      const currentCoordinates = readCurrentCoordinates();
+      const requestHandled = wasLocationRequestHandledThisSession();
+      // No PWA instalado, a primeira permissão é pedida pelo botão visível.
+      // No navegador, a tentativa inicial acontece uma única vez por sessão.
       const installed =
         window.matchMedia("(display-mode: standalone)").matches ||
         ("standalone" in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
       const shouldRequestInitialLocation =
-        allowInitialRequest && !installed && selectionMode === null && !previousCity;
-      const shouldRefreshAutomaticLocation = selectionMode === "auto";
+        allowInitialRequest &&
+        !installed &&
+        selectionMode === null &&
+        !previousCity &&
+        !requestHandled;
+      const shouldRefreshAutomaticLocation =
+        selectionMode === "auto" &&
+        !wasLocationPermissionDeniedThisSession() &&
+        (Boolean(currentCoordinates) || !requestHandled);
 
       if (
         refreshingRef.current ||

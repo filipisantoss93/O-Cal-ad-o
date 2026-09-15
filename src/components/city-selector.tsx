@@ -132,20 +132,20 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
         }}
         className={
           variant === "hero"
-            ? "inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-surface px-4 text-sm font-extrabold text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            : "inline-flex min-h-10 max-w-44 items-center gap-2 rounded-full px-3 text-sm font-extrabold text-ink transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            ? "inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-full border border-line bg-surface px-4 text-sm font-extrabold text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            : "inline-flex min-h-10 min-w-0 max-w-44 items-center gap-2 overflow-hidden rounded-full px-3 text-sm font-extrabold text-ink transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         }
         aria-haspopup="dialog"
         aria-label={selectedCity ? `Cidade: ${selectedCity.name}, ${selectedCity.stateCode}` : "Escolher cidade"}
       >
         <MapPinIcon className="size-4 shrink-0 text-brand" />
-        <span className={variant === "compact" ? "hidden truncate sm:block" : "truncate"}>
+        <span className={variant === "compact" ? "hidden min-w-0 truncate sm:block" : "min-w-0 truncate"}>
           {selectedCity ? `${selectedCity.name} - ${selectedCity.stateCode}` : "Escolher cidade"}
         </span>
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[100] grid place-items-end bg-ink/45 p-0 sm:place-items-center sm:p-4">
+        <div className="fixed inset-0 z-[100] grid max-w-full place-items-end overflow-x-hidden bg-ink/45 p-0 sm:place-items-center sm:p-4">
           <button
             type="button"
             aria-label="Fechar seleção de cidade"
@@ -156,10 +156,10 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
             role="dialog"
             aria-modal="true"
             aria-labelledby="city-selector-title"
-            className="relative z-10 w-full rounded-t-[2rem] border border-line bg-surface p-5 shadow-2xl sm:max-w-lg sm:rounded-[2rem] sm:p-7"
+            className="relative z-10 w-full min-w-0 max-w-full overflow-x-hidden rounded-t-[2rem] border border-line bg-surface p-5 shadow-2xl sm:max-w-lg sm:rounded-[2rem] sm:p-7"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
+            <div className="flex min-w-0 items-start justify-between gap-4">
+              <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
                   Sua localização
                 </p>
@@ -195,11 +195,11 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
               <span className="h-px flex-1 bg-line" /> ou escolha manualmente <span className="h-px flex-1 bg-line" />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-extrabold text-ink">
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+              <label className="min-w-0 text-sm font-extrabold text-ink">
                 Estado
                 <select
-                  className="mt-2 min-h-12 w-full rounded-xl border border-line bg-white px-3 outline-none focus:border-brand focus:ring-4 focus:ring-brand/10"
+                  className="mt-2 min-h-12 w-full min-w-0 max-w-full rounded-xl border border-line bg-white px-3 outline-none focus:border-brand focus:ring-4 focus:ring-brand/10"
                   value={stateCode}
                   disabled={loadingStates}
                   onChange={(event) => {
@@ -213,10 +213,10 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
                   {states.map((state) => <option key={state.code} value={state.code}>{state.name}</option>)}
                 </select>
               </label>
-              <label className="text-sm font-extrabold text-ink">
+              <label className="min-w-0 text-sm font-extrabold text-ink">
                 Cidade
                 <select
-                  className="mt-2 min-h-12 w-full rounded-xl border border-line bg-white px-3 outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 disabled:bg-canvas"
+                  className="mt-2 min-h-12 w-full min-w-0 max-w-full rounded-xl border border-line bg-white px-3 outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 disabled:bg-canvas"
                   value={cityId}
                   disabled={!stateCode || loadingCities}
                   onChange={(event) => setCityId(event.target.value)}

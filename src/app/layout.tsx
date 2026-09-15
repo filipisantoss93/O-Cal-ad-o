@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { LocationAutoRefresh } from "@/components/location-auto-refresh";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { PwaExperience } from "@/components/pwa-experience";
+import { ZoomGuard } from "@/components/zoom-guard";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -43,6 +44,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   themeColor: "#172321",
   colorScheme: "light",
 };
@@ -55,6 +58,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
+        <ZoomGuard />
         <LocationAutoRefresh />
         <PullToRefresh />
         <PwaExperience />

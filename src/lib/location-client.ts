@@ -1,5 +1,8 @@
 import {
   cityChangeEventName,
+  locationPermissionDeniedEventName,
+  locationPermissionDeniedSessionKey,
+  locationRequestHandledSessionKey,
   locationSelectionModeStorageKey,
   selectedCityCookieName,
   selectedCityStorageKey,
@@ -10,10 +13,80 @@ import {
   type SelectedCity,
 } from "@/lib/location";
 
+type LocationClientErrorCode = "permission-denied";
+
+class LocationClientError extends Error {
+  readonly code: LocationClientErrorCode;
+
+  constructor(code: LocationClientErrorCode, message: string) {
+    super(message);
+    this.name = "LocationClientError";
+    this.code = code;
+  }
+}
+
+function readSessionFlag(key: string) {
+  try {
+    return window.sessionStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeSessionFlag(key: string) {
+  try {
+    window.sessionStorage.setItem(key, "1");
+  } catch {}
+}
+
+export function wasLocationRequestHandledThisSession() {
+  return readSessionFlag(locationRequestHandledSessionKey);
+}
+
+export function wasLocationPermissionDeniedThisSession() {
+  return readSessionFlag(locationPermissionDeniedSessionKey);
+}
+
+function markLocationRequestHandled() {
+  writeSessionFlag(locationRequestHandledSessionKey);
+}
+
+function markLocationPermissionDenied() {
+  writeSessionFlag(locationPermissionDeniedSessionKey);
+  window.dispatchEvent(new Event(locationPermissionDeniedEventName));
+}
+
+function clearLocationPermissionDenied() {
+  try {
+    window.sessionStorage.removeItem(locationPermissionDeniedSessionKey);
+  } catch {}
+}
+
+export function isLocationPermissionDeniedError(reason: unknown) {
+  return (
+    reason instanceof LocationClientError && reason.code === "permission-denied"
+  );
+}
+
 export function readSelectedCity() {
   try {
     const value = window.localStorage.getItem(selectedCityStorageKey);
     return value ? (JSON.parse(value) as SelectedCity) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function readCurrentCoordinates() {
+  try {
+    const value = window.sessionStorage.getItem(selectedCoordinatesStorageKey);
+    if (!value) return null;
+
+    const coordinates = JSON.parse(value) as CurrentCoordinates;
+    return Number.isFinite(coordinates.latitude) &&
+      Number.isFinite(coordinates.longitude)
+      ? coordinates
+      : null;
   } catch {
     return null;
   }
@@ -24,16 +97,7 @@ export function readLocationSelectionMode(): LocationSelectionMode | null {
     const storedMode = window.localStorage.getItem(locationSelectionModeStorageKey);
     if (storedMode === "auto" || storedMode === "manual") return storedMode;
 
-    const storedCoordinates = window.sessionStorage.getItem(
-      selectedCoordinatesStorageKey,
-    );
-    if (!storedCoordinates) return null;
-
-    const coordinates = JSON.parse(storedCoordinates) as CurrentCoordinates;
-    const hasValidCoordinates =
-      Number.isFinite(coordinates.latitude) &&
-      Number.isFinite(coordinates.longitude);
-    if (!hasValidCoordinates) return null;
+    if (!readCurrentCoordinates()) return null;
 
     window.localStorage.setItem(locationSelectionModeStorageKey, "auto");
     return "auto";
@@ -61,6 +125,8 @@ export function saveSelectedCity(
     coordinates ? "auto" : "manual",
   );
   if (coordinates) {
+    markLocationRequestHandled();
+    clearLocationPermissionDenied();
     window.sessionStorage.setItem(
       selectedCoordinatesStorageKey,
       JSON.stringify(coordinates),
@@ -77,6 +143,8 @@ export function saveSelectedCity(
 }
 
 export async function detectCurrentCity(): Promise<DetectedCity> {
+  markLocationRequestHandled();
+
   if (!window.isSecureContext) {
     throw new Error(
       "A localização só funciona em uma conexão segura (HTTPS).",
@@ -104,7 +172,9 @@ export async function detectCurrentCity(): Promise<DetectedCity> {
   } catch (firstError) {
     const error = firstError as GeolocationPositionError;
     if (error.code === error.PERMISSION_DENIED) {
-      throw new Error(
+      markLocationPermissionDenied();
+      throw new LocationClientError(
+        "permission-denied",
         "A localização está bloqueada. Nas permissões do navegador ou aplicativo, permita Localização e tente novamente.",
       );
     }
@@ -120,7 +190,9 @@ export async function detectCurrentCity(): Promise<DetectedCity> {
     } catch (secondError) {
       const retryError = secondError as GeolocationPositionError;
       if (retryError.code === retryError.PERMISSION_DENIED) {
-        throw new Error(
+        markLocationPermissionDenied();
+        throw new LocationClientError(
+          "permission-denied",
           "A localização está bloqueada. Nas permissões do navegador ou aplicativo, permita Localização e tente novamente.",
         );
       }
