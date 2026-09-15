@@ -1,9 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRightIcon, StarIcon, WhatsAppIcon } from "@/components/icons";
 import {
-  catalogConversionLabel,
-  catalogWhatsappHref,
+  ArrowRightIcon,
+  GlobeIcon,
+  PhoneIcon,
+  StarIcon,
+  WhatsAppIcon,
+} from "@/components/icons";
+import {
+  catalogContactHref,
+  catalogContactLabel,
 } from "@/lib/catalog-conversion";
 import { catalogPricePresentation } from "@/lib/catalog-pricing";
 import type { FeaturedCatalogItem } from "@/types/catalog";
@@ -14,9 +20,26 @@ export function FeaturedItemCard({ item }: { item: FeaturedCatalogItem }) {
     item.price,
     item.promotionalPrice,
   );
-  const whatsappHref = catalogWhatsappHref(item.whatsapp, item.businessName, item);
-  const conversionLabel = catalogConversionLabel(item);
+  const contactHref = catalogContactHref({
+    action: item.contactAction,
+    contactUrl: item.contactUrl,
+    whatsapp: item.whatsapp,
+    phone: item.phone,
+    businessName: item.businessName,
+    item,
+  });
+  const contactLabel = catalogContactLabel(item.contactAction, item);
+  const ContactIcon =
+    item.contactAction === "phone"
+      ? PhoneIcon
+      : item.contactAction === "link"
+        ? GlobeIcon
+        : WhatsAppIcon;
   const storeHref = `/loja/${item.businessSlug}?item=${encodeURIComponent(item.id)}#item-${encodeURIComponent(item.id)}`;
+  const contactClass =
+    item.contactAction === "whatsapp"
+      ? "bg-[#1f9d61] text-white hover:bg-[#17834f] focus-visible:ring-[#1f9d61]"
+      : "bg-ink text-white hover:bg-ink/90 focus-visible:ring-ink";
 
   return (
     <article className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm sm:rounded-3xl">
@@ -60,15 +83,16 @@ export function FeaturedItemCard({ item }: { item: FeaturedCatalogItem }) {
           <span className="text-sm font-black text-ink sm:text-base">{price.primary}</span>
 
           <div className="mt-3 grid gap-2">
-            {whatsappHref ? (
+            {contactHref ? (
               <a
-                href={whatsappHref}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-xl bg-[#1f9d61] px-1.5 py-2 text-center text-[10px] font-black leading-tight text-white transition hover:bg-[#17834f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f9d61] focus-visible:ring-offset-2 sm:px-3 sm:text-xs"
+                href={contactHref}
+                {...(item.contactAction === "phone"
+                  ? {}
+                  : { target: "_blank", rel: "noreferrer" })}
+                className={`inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-xl px-1.5 py-2 text-center text-[10px] font-black leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:px-3 sm:text-xs ${contactClass}`}
               >
-                <WhatsAppIcon className="hidden size-4 shrink-0 sm:block" />
-                {conversionLabel}
+                <ContactIcon className="hidden size-4 shrink-0 sm:block" />
+                {contactLabel}
               </a>
             ) : null}
             <Link

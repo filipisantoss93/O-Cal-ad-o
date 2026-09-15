@@ -1,6 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRightIcon } from "@/components/icons";
+import {
+  ArrowRightIcon,
+  GlobeIcon,
+  PhoneIcon,
+  WhatsAppIcon,
+} from "@/components/icons";
+import {
+  contactActionLabel,
+  resolveContactHref,
+} from "@/lib/contact-action";
 import type { Promotion } from "@/types/catalog";
 
 type PromotionCardProps = {
@@ -14,7 +23,37 @@ function money(value: number) {
   }).format(value);
 }
 
+function promotionMessage(promotion: Promotion) {
+  const priceLine = promotion.offerPrice !== undefined
+    ? `Oferta: ${money(promotion.offerPrice)}.`
+    : "";
+  return [
+    `Olá! Encontrei a promoção “${promotion.title}” da ${promotion.businessName} no O Calçadão.`,
+    priceLine,
+    "Gostaria de saber mais detalhes sobre esta oferta.",
+  ].filter(Boolean).join("\n");
+}
+
 export function PromotionCard({ promotion }: PromotionCardProps) {
+  const contactHref = resolveContactHref({
+    action: promotion.contactAction,
+    contactUrl: promotion.contactUrl,
+    whatsapp: promotion.whatsapp,
+    phone: promotion.phone,
+    whatsappMessage: promotionMessage(promotion),
+  });
+  const contactLabel = contactActionLabel(promotion.contactAction, "Quero esta oferta");
+  const ContactIcon =
+    promotion.contactAction === "phone"
+      ? PhoneIcon
+      : promotion.contactAction === "link"
+        ? GlobeIcon
+        : WhatsAppIcon;
+  const contactClass =
+    promotion.contactAction === "whatsapp"
+      ? "bg-[#1f9d61] text-white hover:bg-[#17834f] focus-visible:ring-[#1f9d61]"
+      : "bg-ink text-white hover:bg-ink/90 focus-visible:ring-ink";
+
   return (
     <article
       className={`flex min-w-0 flex-col overflow-hidden rounded-2xl border border-ink/5 sm:rounded-3xl ${promotion.palette}`}
@@ -32,10 +71,7 @@ export function PromotionCard({ promotion }: PromotionCardProps) {
       ) : null}
       <div className="flex flex-1 flex-col p-3 sm:p-4">
         <div className="flex items-start justify-between gap-1">
-          <span
-            className="grid size-8 shrink-0 place-items-center rounded-xl bg-white/80 text-lg shadow-sm sm:size-10 sm:text-xl"
-            aria-hidden="true"
-          >
+          <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-white/80 text-lg shadow-sm sm:size-10 sm:text-xl" aria-hidden="true">
             {promotion.symbol}
           </span>
           <span className="rounded-full bg-ink px-1.5 py-1 text-[9px] font-black text-white sm:px-2 sm:text-[10px]">
@@ -52,24 +88,28 @@ export function PromotionCard({ promotion }: PromotionCardProps) {
         {promotion.offerPrice !== undefined ? (
           <div className="mt-3">
             {promotion.originalPrice !== null && promotion.originalPrice !== undefined ? (
-              <span className="block text-[10px] font-bold text-muted line-through">
-                {money(promotion.originalPrice)}
-              </span>
+              <span className="block text-[10px] font-bold text-muted line-through">{money(promotion.originalPrice)}</span>
             ) : null}
-            <span className="text-sm font-black text-ink sm:text-base">
-              {money(promotion.offerPrice)}
-            </span>
+            <span className="text-sm font-black text-ink sm:text-base">{money(promotion.offerPrice)}</span>
           </div>
         ) : null}
-        <div className="mt-auto flex flex-wrap items-end justify-between gap-1 pt-3">
-          <span className="text-[10px] font-bold text-muted sm:text-xs">
-            {promotion.expiresLabel}
-          </span>
+        <span className="mt-2 text-[10px] font-bold text-muted sm:text-xs">{promotion.expiresLabel}</span>
+        <div className="mt-auto grid gap-2 pt-3">
+          {contactHref ? (
+            <a
+              href={contactHref}
+              {...(promotion.contactAction === "phone" ? {} : { target: "_blank", rel: "noreferrer" })}
+              className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${contactClass}`}
+            >
+              <ContactIcon className="size-4 shrink-0" />
+              {contactLabel}
+            </a>
+          ) : null}
           <Link
             href={`/loja/${promotion.businessSlug}`}
-            className="inline-flex min-h-9 items-center gap-1 rounded-lg text-xs font-black text-ink outline-none hover:text-brand-dark focus-visible:ring-2 focus-visible:ring-brand"
+            className="inline-flex min-h-9 items-center justify-center gap-1 rounded-lg text-xs font-black text-ink outline-none hover:text-brand-dark focus-visible:ring-2 focus-visible:ring-brand"
           >
-            Ver oferta
+            Ver loja
             <ArrowRightIcon className="size-3.5" />
           </Link>
         </div>

@@ -1,5 +1,9 @@
+import {
+  contactActionLabel,
+  resolveContactHref,
+} from "@/lib/contact-action";
 import { catalogPricePresentation } from "@/lib/catalog-pricing";
-import type { CatalogPriceMode } from "@/types/catalog";
+import type { CatalogPriceMode, ContactAction } from "@/types/catalog";
 
 type CatalogConversionItem = {
   kind: "product" | "service";
@@ -7,9 +11,14 @@ type CatalogConversionItem = {
   priceMode: CatalogPriceMode;
   price: number | null;
   promotionalPrice?: number | null;
+  contactAction?: ContactAction;
+  contactUrl?: string | null;
+  phone?: string | null;
 };
 
-export function catalogConversionLabel(item: Pick<CatalogConversionItem, "kind" | "priceMode">) {
+export function catalogConversionLabel(item: Pick<CatalogConversionItem, "kind" | "priceMode" | "contactAction">) {
+  if (item.contactAction === "phone") return "Ligar agora";
+  if (item.contactAction === "link") return "Abrir link";
   if (item.kind === "service") {
     return item.priceMode === "consult" ? "Solicitar orçamento" : "Quero este serviço";
   }
@@ -51,9 +60,42 @@ export function catalogWhatsappHref(
   businessName: string,
   item: CatalogConversionItem,
 ) {
-  const digits = whatsapp?.replace(/\D/g, "") ?? "";
-  if (!digits) return null;
-  return `https://wa.me/${digits}?text=${encodeURIComponent(
-    catalogConversionMessage(businessName, item),
-  )}`;
+  return resolveContactHref({
+    action: item.contactAction ?? "whatsapp",
+    contactUrl: item.contactUrl,
+    phone: item.phone,
+    whatsapp,
+    whatsappMessage: catalogConversionMessage(businessName, item),
+  });
+}
+
+export function catalogContactHref({
+  action,
+  contactUrl,
+  whatsapp,
+  phone,
+  businessName,
+  item,
+}: {
+  action: ContactAction;
+  contactUrl?: string | null;
+  whatsapp?: string | null;
+  phone?: string | null;
+  businessName: string;
+  item: CatalogConversionItem;
+}) {
+  return resolveContactHref({
+    action,
+    contactUrl,
+    whatsapp,
+    phone,
+    whatsappMessage: catalogConversionMessage(businessName, item),
+  });
+}
+
+export function catalogContactLabel(
+  action: ContactAction,
+  item: Pick<CatalogConversionItem, "kind" | "priceMode">,
+) {
+  return contactActionLabel(action, catalogConversionLabel(item));
 }

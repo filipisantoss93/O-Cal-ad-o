@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/action-state";
 import { actionError } from "@/lib/action-state";
+import { validateContactSelection } from "@/lib/contact-action";
 import {
   imageFromForm,
   removeMerchantImages,
@@ -19,6 +20,7 @@ import {
   requiredText,
   ValidationError,
 } from "@/lib/validation";
+import type { ContactAction } from "@/types/catalog";
 import type { Database } from "@/types/database";
 
 type PromotionFeatureUpdateQuery = {
@@ -28,6 +30,11 @@ type PromotionFeatureUpdateQuery = {
 
 type PromotionFeatureTable = {
   update: (values: { is_featured: boolean }) => PromotionFeatureUpdateQuery;
+};
+
+type PromotionWrite = Database["public"]["Tables"]["promotions"]["Update"] & {
+  contact_action: ContactAction;
+  contact_url: string | null;
 };
 
 function promotionFeatureTable(supabase: SupabaseClient<Database>) {
@@ -56,7 +63,7 @@ async function ownedBusiness(
   }
   return supabase
     .from("businesses")
-    .select("id")
+    .select("id, whatsapp_e164, phone_e164")
     .eq("id", businessId)
     .eq("owner_id", userId)
     .maybeSingle();
@@ -114,6 +121,14 @@ export async function savePromotionAction(
       "A descrição",
       1200,
     );
+    const { contactAction, contactUrl } = validateContactSelection(
+      formString(formData, "contact_action"),
+      formString(formData, "contact_url"),
+      {
+        whatsapp: businessResult.data.whatsapp_e164,
+        phone: businessResult.data.phone_e164,
+      },
+    );
     const offerPrice = parseMoney(
       formString(formData, "offer_price"),
       "offer_price",
@@ -158,7 +173,7 @@ export async function savePromotionAction(
       uploadedPaths.push(imagePath);
     }
 
-    const values = {
+    const values: PromotionWrite = {
       title,
       description,
       original_price: originalPrice,
@@ -167,16 +182,18 @@ export async function savePromotionAction(
       ends_at: endsAt,
       image_path: imagePath,
       is_active: formData.get("is_active") === "on",
+      contact_action: contactAction,
+      contact_url: contactUrl,
     };
     const result = existing
       ? await supabase
           .from("promotions")
-          .update(values)
+          .update(values as Database["public"]["Tables"]["promotions"]["Update"])
           .eq("id", existing.id)
           .eq("business_id", businessId)
       : await supabase
           .from("promotions")
-          .insert({ ...values, business_id: businessId });
+          .insert({ ...values, business_id: businessId } as Database["public"]["Tables"]["promotions"]["Insert"]);
 
     if (result.error) {
       await removeMerchantImages(supabase, user.id, uploadedPaths);

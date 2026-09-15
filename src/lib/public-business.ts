@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { requireAdmin } from "@/lib/admin/dal";
 import { getBusinessSchedule } from "@/lib/business-hours";
+import { normalizePublicContactAction } from "@/lib/contact-action";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -31,6 +32,8 @@ type PublicCatalogRow = {
   promotional_price: number | null;
   image_path: string | null;
   is_featured: boolean;
+  contact_action: string;
+  contact_url: string | null;
 };
 
 function initials(name: string) {
@@ -53,9 +56,7 @@ function safePublicUrl(value: string | null, allowedHostname?: string) {
     if (
       (url.protocol !== "https:" && url.protocol !== "http:") ||
       (allowedHostname && url.hostname.toLowerCase() !== allowedHostname)
-    ) {
-      return null;
-    }
+    ) return null;
     return url.toString();
   } catch {
     return null;
@@ -63,17 +64,11 @@ function safePublicUrl(value: string | null, allowedHostname?: string) {
 }
 
 function directionsUrls(latitude: number | null, longitude: number | null) {
-  const unavailable = {
-    directionsUrl: null,
-    appleMapsUrl: null,
-    wazeUrl: null,
-  };
+  const unavailable = { directionsUrl: null, appleMapsUrl: null, wazeUrl: null };
   if (latitude === null || longitude === null) return unavailable;
   const destinationLatitude = Number(latitude);
   const destinationLongitude = Number(longitude);
-  if (!Number.isFinite(destinationLatitude) || !Number.isFinite(destinationLongitude)) {
-    return unavailable;
-  }
+  if (!Number.isFinite(destinationLatitude) || !Number.isFinite(destinationLongitude)) return unavailable;
   const destination = encodeURIComponent(`${destinationLatitude},${destinationLongitude}`);
   return {
     directionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`,
@@ -89,20 +84,14 @@ async function loadBusiness(
 ): Promise<Business | null> {
   let query = supabase
     .from("businesses")
-    .select(
-      "id, city_id, category_id, slug, name, description, listing_type, public_place_kind, official_source_url, tags, whatsapp_e164, phone_e164, website_url, instagram_url, facebook_url, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path, status",
-    )
+    .select("id, city_id, category_id, slug, name, description, listing_type, public_place_kind, official_source_url, tags, whatsapp_e164, phone_e164, website_url, instagram_url, facebook_url, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path, status")
     .eq("slug", slug);
 
   if (publishedOnly) {
-    query = query
-      .eq("publication_status", "published")
-      .eq("is_active", true)
-      .eq("billing_suspended", false);
+    query = query.eq("publication_status", "published").eq("is_active", true).eq("billing_suspended", false);
   }
 
   const { data: business, error } = await query.limit(1).maybeSingle();
-
   if (error || !business) return null;
 
   const now = new Date().toISOString();
@@ -111,37 +100,17 @@ async function loadBusiness(
     supabase.from("cities").select("name, state_code, timezone").eq("id", business.city_id).maybeSingle(),
     supabase
       .from("catalog_items")
-      .select("id, kind, price_mode, name, description, price, promotional_price, image_path, is_featured")
+      .select("id, kind, price_mode, name, description, price, promotional_price, image_path, is_featured, contact_action, contact_url")
       .eq("business_id", business.id)
       .eq("is_active", true)
       .order("is_featured", { ascending: false })
       .order("name")
       .limit(24),
-    supabase
-      .from("business_hours")
-      .select("weekday, opens_at, closes_at, is_closed")
-      .eq("business_id", business.id)
-      .order("weekday")
-      .order("display_order"),
-    supabase
-      .from("highlight_campaigns")
-      .select("id, placement")
-      .eq("business_id", business.id)
-      .eq("status", "active")
-      .lte("starts_at", now)
-      .gt("ends_at", now)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    supabase.from("business_hours").select("weekday, opens_at, closes_at, is_closed").eq("business_id", business.id).order("weekday").order("display_order"),
+    supabase.from("highlight_campaigns").select("id, placement").eq("business_id", business.id).eq("status", "active").lte("starts_at", now).gt("ends_at", now).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
-  if (
-    categoryResult.error ||
-    cityResult.error ||
-    itemsResult.error ||
-    hoursResult.error ||
-    highlightResult.error
-  ) return null;
+  if (categoryResult.error || cityResult.error || itemsResult.error || hoursResult.error || highlightResult.error) return null;
   const category = categoryResult.data;
   const city = cityResult.data;
   if (!category || !city) return null;
@@ -153,11 +122,7 @@ async function loadBusiness(
     id: String(business.id),
     slug: business.slug,
     name: business.name,
-    description:
-      business.description ||
-      (isPublicPlace
-        ? `Consulte as informações de ${business.name}.`
-        : `Conheça a ${business.name} no O Calçadão.`),
+    description: business.description || (isPublicPlace ? `Consulte as informações de ${business.name}.` : `Conheça a ${business.name} no O Calçadão.`),
     listingType: listingType(business.listing_type),
     publicPlaceKind: business.public_place_kind as PublicPlaceKind | null,
     officialSourceUrl: safePublicUrl(business.official_source_url),
@@ -175,24 +140,13 @@ async function loadBusiness(
     coverUrl: publicMediaUrl(supabase, business.cover_path),
     verified: business.status === "approved",
     isSponsored: Boolean(highlightResult.data),
-    highlightCampaignId: highlightResult.data?.id
-      ? Number(highlightResult.data.id)
-      : null,
-    sponsoredPlacement: highlightResult.data?.placement as
-      | "category"
-      | "city"
-      | "combo"
-      | undefined,
-    tags: [...(business.tags ?? []), category.name, business.neighborhood, city.name]
-      .filter((tag, index, values) => values.indexOf(tag) === index)
-      .slice(0, 12),
+    highlightCampaignId: highlightResult.data?.id ? Number(highlightResult.data.id) : null,
+    sponsoredPlacement: highlightResult.data?.placement as "category" | "city" | "combo" | undefined,
+    tags: [...(business.tags ?? []), category.name, business.neighborhood, city.name].filter((tag, index, values) => values.indexOf(tag) === index).slice(0, 12),
     whatsapp: business.whatsapp_e164?.replace(/\D/g, "") ?? null,
     phone: business.phone_e164,
     websiteUrl: safePublicUrl(business.website_url),
-    instagramUrl: safePublicUrl(
-      business.instagram_url,
-      "www.instagram.com",
-    ),
+    instagramUrl: safePublicUrl(business.instagram_url, "www.instagram.com"),
     facebookUrl: safePublicUrl(business.facebook_url, "www.facebook.com"),
     ...directionsUrls(business.latitude, business.longitude),
     products: isPublicPlace ? [] : catalogItems.map((item) => ({
@@ -205,6 +159,9 @@ async function loadBusiness(
       ...(item.promotional_price !== null ? { promotionalPrice: Number(item.promotional_price) } : {}),
       imageUrl: publicMediaUrl(supabase, item.image_path),
       isFeatured: item.is_featured,
+      contactAction: normalizePublicContactAction(item.contact_action),
+      contactUrl: safePublicUrl(item.contact_url),
+      phone: business.phone_e164,
     })),
   };
 }

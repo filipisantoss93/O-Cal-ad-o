@@ -8,6 +8,7 @@ import {
   savePromotionAction,
   togglePromotionAction,
 } from "@/app/painel/promocoes/actions";
+import { ContactActionFields } from "@/components/contact-action-fields";
 import {
   EditIcon,
   ImageIcon,
@@ -19,6 +20,7 @@ import {
   type ActionState,
   initialActionState,
 } from "@/lib/action-state";
+import type { ContactAction } from "@/types/catalog";
 
 export type PromotionFormValue = {
   id: number;
@@ -31,6 +33,8 @@ export type PromotionFormValue = {
   isActive: boolean;
   billingSuspended: boolean;
   imageUrl: string | null;
+  contactAction: ContactAction;
+  contactUrl: string | null;
 };
 
 type PromotionManagerProps = {
@@ -62,17 +66,9 @@ function Feedback({ state }: { state: ActionState }) {
   );
 }
 
-function FieldError({
-  state,
-  name,
-}: {
-  state: ActionState;
-  name: string;
-}) {
+function FieldError({ state, name }: { state: ActionState; name: string }) {
   const error = state.fieldErrors?.[name]?.[0];
-  return error ? (
-    <p className="mt-1.5 text-sm font-semibold text-brand-dark">{error}</p>
-  ) : null;
+  return error ? <p className="mt-1.5 text-sm font-semibold text-brand-dark">{error}</p> : null;
 }
 
 export function PromotionManager({
@@ -88,68 +84,29 @@ export function PromotionManager({
   return (
     <div>
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.1em] text-muted">
-            Cota da loja
-          </p>
-          <p className="mt-2 text-2xl font-black text-ink">{limit}</p>
-        </div>
-        <div className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.1em] text-muted">
-            Cadastradas
-          </p>
-          <p className="mt-2 text-2xl font-black text-ink">{promotions.length}</p>
-        </div>
-        <div className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.1em] text-muted">
-            Disponíveis
-          </p>
-          <p className="mt-2 text-2xl font-black text-ink">{remaining}</p>
-        </div>
+        <Metric label="Cota da loja" value={limit} />
+        <Metric label="Cadastradas" value={promotions.length} />
+        <Metric label="Disponíveis" value={remaining} />
       </div>
 
       <div className="grid gap-8 xl:grid-cols-[0.92fr_1.08fr] xl:items-start">
-        <section
-          id="nova-promocao"
-          className="scroll-mt-40 rounded-[2rem] border border-line bg-surface p-5 shadow-sm sm:p-7"
-        >
+        <section id="nova-promocao" className="scroll-mt-40 rounded-[2rem] border border-line bg-surface p-5 shadow-sm sm:p-7">
           <div className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center rounded-xl bg-brand/10 text-brand-dark">
-              <PlusIcon className="size-5" />
-            </span>
+            <span className="grid size-11 place-items-center rounded-xl bg-brand/10 text-brand-dark"><PlusIcon className="size-5" /></span>
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
-                Nova oferta
-              </p>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">Nova oferta</p>
               <h2 className="text-xl font-black text-ink">Criar promoção</h2>
             </div>
           </div>
           <div className="mt-6">
             {canCreate ? (
-              <PromotionForm
-                businessId={businessId}
-                mode="create"
-                today={today}
-                suggestedEndDate={suggestedEndDate}
-              />
+              <PromotionForm businessId={businessId} mode="create" today={today} suggestedEndDate={suggestedEndDate} />
             ) : (
               <div className="rounded-2xl border border-brand/15 bg-brand/5 p-5 text-center">
-                <span className="mx-auto grid size-12 place-items-center rounded-xl bg-brand/10 text-brand-dark">
-                  <SparklesIcon className="size-5" />
-                </span>
-                <h3 className="mt-4 text-lg font-black text-ink">
-                  Limite de promoções atingido
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-muted">
-                  Compre um pacote de 5, 10, 20 ou 50 promoções para esta loja.
-                  Se a loja estiver suspensa, regularize primeiro o plano Pro.
-                </p>
-                <Link
-                  href={`/painel/assinatura?loja=${businessId}#promocoes-extras`}
-                  className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-brand px-4 text-sm font-black text-white transition hover:bg-brand-dark"
-                >
-                  Ver pacotes adicionais
-                </Link>
+                <span className="mx-auto grid size-12 place-items-center rounded-xl bg-brand/10 text-brand-dark"><SparklesIcon className="size-5" /></span>
+                <h3 className="mt-4 text-lg font-black text-ink">Limite de promoções atingido</h3>
+                <p className="mt-2 text-sm leading-6 text-muted">Compre um pacote de 5, 10, 20 ou 50 promoções para esta loja. Se a loja estiver suspensa, regularize primeiro o plano Pro.</p>
+                <Link href={`/painel/assinatura?loja=${businessId}#promocoes-extras`} className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-brand px-4 text-sm font-black text-white transition hover:bg-brand-dark">Ver pacotes adicionais</Link>
               </div>
             )}
           </div>
@@ -158,44 +115,36 @@ export function PromotionManager({
         <section>
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
-                Suas ofertas
-              </p>
-              <h2 className="mt-1 text-2xl font-black text-ink">
-                Promoções cadastradas
-              </h2>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">Suas ofertas</p>
+              <h2 className="mt-1 text-2xl font-black text-ink">Promoções cadastradas</h2>
             </div>
-            <span className="rounded-full bg-ink px-3 py-1.5 text-xs font-black text-white">
-              {promotions.length}/{limit}
-            </span>
+            <span className="rounded-full bg-ink px-3 py-1.5 text-xs font-black text-white">{promotions.length}/{limit}</span>
           </div>
 
           {promotions.length === 0 ? (
             <div className="rounded-[2rem] border border-dashed border-line bg-surface p-8 text-center">
-              <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-canvas text-muted">
-                <ImageIcon className="size-6" />
-              </span>
-              <h3 className="mt-4 text-lg font-black text-ink">
-                Nenhuma promoção ainda
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-muted">
-                Preencha o formulário para publicar sua primeira oferta.
-              </p>
+              <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-canvas text-muted"><ImageIcon className="size-6" /></span>
+              <h3 className="mt-4 text-lg font-black text-ink">Nenhuma promoção ainda</h3>
+              <p className="mt-2 text-sm leading-6 text-muted">Preencha o formulário para publicar sua primeira oferta.</p>
             </div>
           ) : (
             <div className="space-y-4">
               {promotions.map((promotion) => (
-                <PromotionItem
-                  key={promotion.id}
-                  businessId={businessId}
-                  promotion={promotion}
-                  today={today}
-                />
+                <PromotionItem key={promotion.id} businessId={businessId} promotion={promotion} today={today} />
               ))}
             </div>
           )}
         </section>
       </div>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.1em] text-muted">{label}</p>
+      <p className="mt-2 text-2xl font-black text-ink">{value}</p>
     </div>
   );
 }
@@ -213,330 +162,121 @@ function PromotionForm({
   today?: string;
   suggestedEndDate?: string;
 }) {
-  const [state, action, pending] = useActionState(
-    savePromotionAction,
-    initialActionState,
-  );
+  const [state, action, pending] = useActionState(savePromotionAction, initialActionState);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (mode === "create" && state.status === "success") {
-      formRef.current?.reset();
-    }
+    if (mode === "create" && state.status === "success") formRef.current?.reset();
   }, [mode, state]);
 
   return (
     <form ref={formRef} action={action} className="space-y-5">
       <input type="hidden" name="business_id" value={businessId} />
-      {promotion && (
-        <input type="hidden" name="promotion_id" value={promotion.id} />
-      )}
+      {promotion && <input type="hidden" name="promotion_id" value={promotion.id} />}
       <Feedback state={state} />
       <fieldset className="space-y-5" disabled={pending}>
         <div>
-          <label
-            className={labelClass}
-            htmlFor={`promotion-title-${promotion?.id ?? "new"}`}
-          >
-            Título
-          </label>
-          <input
-            className={inputClass}
-            id={`promotion-title-${promotion?.id ?? "new"}`}
-            name="title"
-            type="text"
-            defaultValue={promotion?.title}
-            required
-            minLength={2}
-            maxLength={160}
-            placeholder="Ex.: 20% de desconto nesta semana"
-          />
+          <label className={labelClass} htmlFor={`promotion-title-${promotion?.id ?? "new"}`}>Título</label>
+          <input className={inputClass} id={`promotion-title-${promotion?.id ?? "new"}`} name="title" type="text" defaultValue={promotion?.title} required minLength={2} maxLength={160} placeholder="Ex.: 20% de desconto nesta semana" />
           <FieldError state={state} name="title" />
         </div>
 
         <div>
-          <label
-            className={labelClass}
-            htmlFor={`promotion-description-${promotion?.id ?? "new"}`}
-          >
-            Descrição{" "}
-            <span className="font-semibold text-muted">(opcional)</span>
-          </label>
-          <textarea
-            className="mt-2 min-h-24 w-full resize-y rounded-xl border border-line bg-white px-4 py-3 text-base leading-7 text-ink outline-none transition placeholder:text-muted/65 focus:border-brand focus:ring-4 focus:ring-brand/10"
-            id={`promotion-description-${promotion?.id ?? "new"}`}
-            name="description"
-            defaultValue={promotion?.description}
-            maxLength={1200}
-            placeholder="Explique o que está incluído e as condições."
-          />
+          <label className={labelClass} htmlFor={`promotion-description-${promotion?.id ?? "new"}`}>Descrição <span className="font-semibold text-muted">(opcional)</span></label>
+          <textarea className="mt-2 min-h-24 w-full resize-y rounded-xl border border-line bg-white px-4 py-3 text-base leading-7 text-ink outline-none transition placeholder:text-muted/65 focus:border-brand focus:ring-4 focus:ring-brand/10" id={`promotion-description-${promotion?.id ?? "new"}`} name="description" defaultValue={promotion?.description} maxLength={1200} placeholder="Explique o que está incluído e as condições." />
           <FieldError state={state} name="description" />
         </div>
 
+        <ContactActionFields defaultAction={promotion?.contactAction} defaultUrl={promotion?.contactUrl} />
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label
-              className={labelClass}
-              htmlFor={`promotion-original-${promotion?.id ?? "new"}`}
-            >
-              Preço original{" "}
-              <span className="font-semibold text-muted">(opcional)</span>
-            </label>
-            <input
-              className={inputClass}
-              id={`promotion-original-${promotion?.id ?? "new"}`}
-              name="original_price"
-              type="text"
-              inputMode="decimal"
-              defaultValue={promotion?.originalPrice ?? ""}
-              placeholder="99,90"
-            />
+            <label className={labelClass} htmlFor={`promotion-original-${promotion?.id ?? "new"}`}>Preço original <span className="font-semibold text-muted">(opcional)</span></label>
+            <input className={inputClass} id={`promotion-original-${promotion?.id ?? "new"}`} name="original_price" type="text" inputMode="decimal" defaultValue={promotion?.originalPrice ?? ""} placeholder="99,90" />
             <FieldError state={state} name="original_price" />
           </div>
           <div>
-            <label
-              className={labelClass}
-              htmlFor={`promotion-offer-${promotion?.id ?? "new"}`}
-            >
-              Preço da oferta
-            </label>
-            <input
-              className={inputClass}
-              id={`promotion-offer-${promotion?.id ?? "new"}`}
-              name="offer_price"
-              type="text"
-              inputMode="decimal"
-              defaultValue={promotion?.offerPrice ?? ""}
-              required
-              placeholder="79,90"
-            />
+            <label className={labelClass} htmlFor={`promotion-offer-${promotion?.id ?? "new"}`}>Preço da oferta</label>
+            <input className={inputClass} id={`promotion-offer-${promotion?.id ?? "new"}`} name="offer_price" type="text" inputMode="decimal" defaultValue={promotion?.offerPrice ?? ""} required placeholder="79,90" />
             <FieldError state={state} name="offer_price" />
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label
-              className={labelClass}
-              htmlFor={`promotion-start-${promotion?.id ?? "new"}`}
-            >
-              Começa em
-            </label>
-            <input
-              className={inputClass}
-              id={`promotion-start-${promotion?.id ?? "new"}`}
-              name="starts_on"
-              type="date"
-              defaultValue={promotion?.startsOn ?? today}
-              required
-            />
+            <label className={labelClass} htmlFor={`promotion-start-${promotion?.id ?? "new"}`}>Começa em</label>
+            <input className={inputClass} id={`promotion-start-${promotion?.id ?? "new"}`} name="starts_on" type="date" defaultValue={promotion?.startsOn ?? today} required />
             <FieldError state={state} name="starts_on" />
           </div>
           <div>
-            <label
-              className={labelClass}
-              htmlFor={`promotion-end-${promotion?.id ?? "new"}`}
-            >
-              Termina em
-            </label>
-            <input
-              className={inputClass}
-              id={`promotion-end-${promotion?.id ?? "new"}`}
-              name="ends_on"
-              type="date"
-              defaultValue={promotion?.endsOn ?? suggestedEndDate}
-              required
-            />
+            <label className={labelClass} htmlFor={`promotion-end-${promotion?.id ?? "new"}`}>Termina em</label>
+            <input className={inputClass} id={`promotion-end-${promotion?.id ?? "new"}`} name="ends_on" type="date" defaultValue={promotion?.endsOn ?? suggestedEndDate} required />
             <FieldError state={state} name="ends_on" />
           </div>
         </div>
 
         <div>
-          <label
-            className={labelClass}
-            htmlFor={`promotion-image-${promotion?.id ?? "new"}`}
-          >
-            Imagem <span className="font-semibold text-muted">(opcional)</span>
-          </label>
+          <label className={labelClass} htmlFor={`promotion-image-${promotion?.id ?? "new"}`}>Imagem <span className="font-semibold text-muted">(opcional)</span></label>
           {promotion?.imageUrl && (
             <div className="relative mt-2 aspect-[16/7] overflow-hidden rounded-2xl border border-line">
-              <Image
-                src={promotion.imageUrl}
-                alt={`Imagem atual de ${promotion.title}`}
-                fill
-                sizes="(max-width: 1280px) 100vw, 45vw"
-                className="object-cover"
-              />
+              <Image src={promotion.imageUrl} alt={`Imagem atual de ${promotion.title}`} fill sizes="(max-width: 1280px) 100vw, 45vw" className="object-cover" />
             </div>
           )}
-          <input
-            className="mt-2 block w-full rounded-xl border border-line bg-white p-2 text-sm font-semibold text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-ink file:px-3 file:py-2 file:text-sm file:font-black file:text-white"
-            id={`promotion-image-${promotion?.id ?? "new"}`}
-            name="image"
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/avif"
-          />
-          <p className="mt-1.5 text-xs font-semibold text-muted">
-            JPG, PNG, WebP ou AVIF, até 5 MB.
-          </p>
+          <input className="mt-2 block w-full rounded-xl border border-line bg-white p-2 text-sm font-semibold text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-ink file:px-3 file:py-2 file:text-sm file:font-black file:text-white" id={`promotion-image-${promotion?.id ?? "new"}`} name="image" type="file" accept="image/jpeg,image/png,image/webp,image/avif" />
+          <p className="mt-1.5 text-xs font-semibold text-muted">JPG, PNG, WebP ou AVIF, até 5 MB.</p>
         </div>
 
         <label className="flex items-start gap-3 rounded-xl border border-line bg-canvas p-4">
-          <input
-            className="mt-1 size-4 accent-brand"
-            name="is_active"
-            type="checkbox"
-            defaultChecked={promotion?.isActive ?? true}
-          />
-          <span>
-            <span className="block text-sm font-black text-ink">
-              Promoção ativa
-            </span>
-            <span className="mt-1 block text-xs font-semibold leading-5 text-muted">
-              Ela aparece apenas durante o período escolhido e quando a loja
-              estiver publicada e liberada pelo plano.
-            </span>
-          </span>
+          <input className="mt-1 size-4 accent-brand" name="is_active" type="checkbox" defaultChecked={promotion?.isActive ?? true} />
+          <span><span className="block text-sm font-black text-ink">Promoção ativa</span><span className="mt-1 block text-xs font-semibold leading-5 text-muted">Ela aparece apenas durante o período escolhido e quando a loja estiver publicada e liberada pelo plano.</span></span>
         </label>
       </fieldset>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-brand px-5 text-base font-black text-white shadow-[0_10px_24px_rgba(185,61,37,0.2)] transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-65"
-      >
-        {pending
-          ? "Salvando..."
-          : mode === "create"
-            ? "Criar promoção"
-            : "Salvar promoção"}
+      <button type="submit" disabled={pending} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-brand px-5 text-base font-black text-white shadow-[0_10px_24px_rgba(185,61,37,0.2)] transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-65">
+        {pending ? "Salvando..." : mode === "create" ? "Criar promoção" : "Salvar promoção"}
       </button>
     </form>
   );
 }
 
-function PromotionItem({
-  businessId,
-  promotion,
-  today,
-}: {
-  businessId: number;
-  promotion: PromotionFormValue;
-  today: string;
-}) {
+function PromotionItem({ businessId, promotion, today }: { businessId: number; promotion: PromotionFormValue; today: string }) {
   const hasStarted = promotion.startsOn <= today;
   const hasEnded = promotion.endsOn < today;
-  const state = promotion.billingSuspended
-    ? "Suspensa pelo plano"
-    : !promotion.isActive
-      ? "Pausada"
-      : hasEnded
-        ? "Encerrada"
-        : hasStarted
-          ? "Ativa"
-          : "Agendada";
-  const stateClass =
-    state === "Ativa"
-      ? "bg-positive-soft text-positive"
-      : state === "Agendada"
-        ? "bg-accent/25 text-accent-dark"
-        : state === "Suspensa pelo plano"
-          ? "bg-brand/10 text-brand-dark"
-          : "bg-canvas text-muted";
+  const state = promotion.billingSuspended ? "Suspensa pelo plano" : !promotion.isActive ? "Pausada" : hasEnded ? "Encerrada" : hasStarted ? "Ativa" : "Agendada";
+  const stateClass = state === "Ativa" ? "bg-positive-soft text-positive" : state === "Agendada" ? "bg-accent/25 text-accent-dark" : state === "Suspensa pelo plano" ? "bg-brand/10 text-brand-dark" : "bg-canvas text-muted";
+  const actionLabel = promotion.contactAction === "phone" ? "Telefone" : promotion.contactAction === "link" ? "Link" : "WhatsApp";
 
   return (
     <article className="overflow-hidden rounded-[1.5rem] border border-line bg-surface shadow-sm">
-      {promotion.imageUrl && (
-        <div className="relative aspect-[16/6]">
-          <Image
-            src={promotion.imageUrl}
-            alt={promotion.title}
-            fill
-            sizes="(max-width: 1280px) 100vw, 50vw"
-            className="object-cover"
-          />
-        </div>
-      )}
+      {promotion.imageUrl && <div className="relative aspect-[16/6]"><Image src={promotion.imageUrl} alt={promotion.title} fill sizes="(max-width: 1280px) 100vw, 50vw" className="object-cover" /></div>}
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <span
-              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${stateClass}`}
-            >
-              {state}
-            </span>
-            <h3 className="mt-3 text-lg font-black text-ink">
-              {promotion.title}
-            </h3>
+            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${stateClass}`}>{state}</span>
+            <h3 className="mt-3 text-lg font-black text-ink">{promotion.title}</h3>
           </div>
           <div className="text-right">
-            {promotion.originalPrice !== null && (
-              <p className="text-xs font-bold text-muted line-through">
-                {formatCurrency(promotion.originalPrice)}
-              </p>
-            )}
-            <p className="text-xl font-black text-brand-dark">
-              {formatCurrency(promotion.offerPrice)}
-            </p>
+            {promotion.originalPrice !== null && <p className="text-xs font-bold text-muted line-through">{formatCurrency(promotion.originalPrice)}</p>}
+            <p className="text-xl font-black text-brand-dark">{formatCurrency(promotion.offerPrice)}</p>
           </div>
         </div>
-        {promotion.description && (
-          <p className="mt-3 text-sm leading-6 text-muted">
-            {promotion.description}
-          </p>
-        )}
-        <p className="mt-3 text-xs font-bold text-muted">
-          {formatDate(promotion.startsOn)} a {formatDate(promotion.endsOn)}
-        </p>
+        {promotion.description && <p className="mt-3 text-sm leading-6 text-muted">{promotion.description}</p>}
+        <p className="mt-3 text-xs font-bold text-muted">{formatDate(promotion.startsOn)} a {formatDate(promotion.endsOn)} · Ação: {actionLabel}</p>
 
         <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
           {!promotion.billingSuspended && (
             <form action={togglePromotionAction}>
-              <input type="hidden" name="business_id" value={businessId} />
-              <input type="hidden" name="promotion_id" value={promotion.id} />
-              <input
-                type="hidden"
-                name="next_active"
-                value={String(!promotion.isActive)}
-              />
-              <button
-                type="submit"
-                className="inline-flex min-h-10 items-center rounded-xl border border-line px-3 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              >
-                {promotion.isActive ? "Pausar" : "Ativar"}
-              </button>
+              <input type="hidden" name="business_id" value={businessId} /><input type="hidden" name="promotion_id" value={promotion.id} /><input type="hidden" name="next_active" value={String(!promotion.isActive)} />
+              <button type="submit" className="inline-flex min-h-10 items-center rounded-xl border border-line px-3 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">{promotion.isActive ? "Pausar" : "Ativar"}</button>
             </form>
           )}
           <details className="group flex-1">
-            <summary className="inline-flex min-h-10 list-none items-center gap-2 rounded-xl border border-line px-3 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
-              <EditIcon className="size-4" />
-              Editar
-            </summary>
-            <div className="mt-4 rounded-2xl border border-line bg-canvas p-4">
-              <PromotionForm
-                businessId={businessId}
-                promotion={promotion}
-                mode="edit"
-              />
-            </div>
+            <summary className="inline-flex min-h-10 list-none items-center gap-2 rounded-xl border border-line px-3 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><EditIcon className="size-4" />Editar</summary>
+            <div className="mt-4 rounded-2xl border border-line bg-canvas p-4"><PromotionForm businessId={businessId} promotion={promotion} mode="edit" /></div>
           </details>
-          <form
-            action={deletePromotionAction}
-            onSubmit={(event) => {
-              if (!window.confirm("Excluir esta promoção definitivamente?")) {
-                event.preventDefault();
-              }
-            }}
-          >
-            <input type="hidden" name="business_id" value={businessId} />
-            <input type="hidden" name="promotion_id" value={promotion.id} />
-            <button
-              type="submit"
-              className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-brand/20 px-3 text-sm font-black text-brand-dark transition hover:bg-brand/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              <TrashIcon className="size-4" />
-              Excluir
-            </button>
+          <form action={deletePromotionAction} onSubmit={(event) => { if (!window.confirm("Excluir esta promoção definitivamente?")) event.preventDefault(); }}>
+            <input type="hidden" name="business_id" value={businessId} /><input type="hidden" name="promotion_id" value={promotion.id} />
+            <button type="submit" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-brand/20 px-3 text-sm font-black text-brand-dark transition hover:bg-brand/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><TrashIcon className="size-4" />Excluir</button>
           </form>
         </div>
       </div>
@@ -545,10 +285,7 @@ function PromotionItem({
 }
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
 function formatDate(value: string) {
