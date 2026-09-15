@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { normalizeCatalogPriceMode } from "@/lib/catalog-pricing";
+import { validateContactSelection } from "@/lib/contact-action";
 import {
   imageFromForm,
   removeMerchantImages,
@@ -15,11 +16,13 @@ import {
   parseMoney,
   requiredText,
 } from "@/lib/validation";
-import type { CatalogPriceMode } from "@/types/catalog";
+import type { CatalogPriceMode, ContactAction } from "@/types/catalog";
 import type { Database } from "@/types/database";
 
 type CatalogItemWrite = Database["public"]["Tables"]["catalog_items"]["Update"] & {
   price_mode: CatalogPriceMode;
+  contact_action: ContactAction;
+  contact_url: string | null;
 };
 
 function catalogUrl(businessId: number, params: Record<string, string> = {}) {
@@ -33,7 +36,7 @@ async function ownedBusiness(businessId: number) {
   if (!user) return { supabase, user: null, business: null };
   const { data: business } = await supabase
     .from("businesses")
-    .select("id, slug")
+    .select("id, slug, whatsapp_e164, phone_e164")
     .eq("id", businessId)
     .eq("owner_id", user.id)
     .maybeSingle();
@@ -104,6 +107,14 @@ export async function saveCatalogItemAction(formData: FormData) {
       "A descrição",
       1200,
     );
+    const { contactAction, contactUrl } = validateContactSelection(
+      formString(formData, "contact_action"),
+      formString(formData, "contact_url"),
+      {
+        whatsapp: business.whatsapp_e164,
+        phone: business.phone_e164,
+      },
+    );
     const priceMode = normalizeCatalogPriceMode(
       kind,
       formString(formData, "price_mode"),
@@ -158,6 +169,8 @@ export async function saveCatalogItemAction(formData: FormData) {
       image_path: imagePath,
       is_active: isActive,
       is_featured: isFeatured,
+      contact_action: contactAction,
+      contact_url: contactUrl,
     };
     const result = existing
       ? await supabase
@@ -182,8 +195,18 @@ export async function saveCatalogItemAction(formData: FormData) {
       await removeMerchantImages(supabase, user.id, [newImagePath]);
     }
     console.error("Falha ao salvar item do catálogo", error);
-    if (String(error).includes("BILLING_CATALOG_LIMIT")) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("BILLING_CATALOG_LIMIT")) {
       redirect(catalogUrl(businessId, { erro: "limite_catalogo" }));
+    }
+    if (message.includes("WhatsApp da loja")) {
+      redirect(catalogUrl(businessId, { erro: "whatsapp_ausente" }));
+    }
+    if (message.includes("telefone fixo")) {
+      redirect(catalogUrl(businessId, { erro: "telefone_ausente" }));
+    }
+    if (message.includes("link") || message.includes("http")) {
+      redirect(catalogUrl(businessId, { erro: "link_invalido" }));
     }
     redirect(catalogUrl(businessId, { erro: "salvar_item" }));
   }
