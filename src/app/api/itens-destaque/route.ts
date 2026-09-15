@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { normalizePublicContactAction } from "@/lib/contact-action";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import { createPublicClient } from "@/lib/supabase/server";
 import type { CatalogPriceMode, FeaturedCatalogItem } from "@/types/catalog";
@@ -11,7 +12,8 @@ type FeaturedItemsRequest = {
 type BusinessSummary = {
   slug: string;
   name: string;
-  whatsapp_e164: string;
+  whatsapp_e164: string | null;
+  phone_e164: string | null;
 };
 
 type CatalogRow = {
@@ -24,6 +26,8 @@ type CatalogRow = {
   price: number | null;
   promotional_price: number | null;
   image_path: string | null;
+  contact_action: string;
+  contact_url: string | null;
   updated_at: string;
   businesses: BusinessSummary | BusinessSummary[] | null;
 };
@@ -51,7 +55,7 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase
     .from("catalog_items")
     .select(
-      "id, business_id, kind, price_mode, name, description, price, promotional_price, image_path, updated_at, businesses!inner(slug, name, whatsapp_e164, city_id, publication_status, is_active, billing_suspended)",
+      "id, business_id, kind, price_mode, name, description, price, promotional_price, image_path, contact_action, contact_url, updated_at, businesses!inner(slug, name, whatsapp_e164, phone_e164, city_id, publication_status, is_active, billing_suspended)",
     )
     .eq("is_active", true)
     .eq("is_featured", true)
@@ -72,9 +76,7 @@ export async function POST(request: NextRequest) {
 
   const rows = (data ?? []) as unknown as CatalogRow[];
   const items: FeaturedCatalogItem[] = rows.flatMap((item) => {
-    const business = Array.isArray(item.businesses)
-      ? item.businesses[0]
-      : item.businesses;
+    const business = Array.isArray(item.businesses) ? item.businesses[0] : item.businesses;
     if (!business) return [];
 
     return [{
@@ -82,16 +84,16 @@ export async function POST(request: NextRequest) {
       businessSlug: business.slug,
       businessName: business.name,
       whatsapp: business.whatsapp_e164?.replace(/\D/g, "") || null,
+      phone: business.phone_e164,
       kind: item.kind === "service" ? "service" : "product",
       priceMode: publicPriceMode(item.price_mode),
       name: item.name,
-      description:
-        item.description || "Consulte disponibilidade diretamente com o comércio.",
+      description: item.description || "Consulte disponibilidade diretamente com o comércio.",
       price: item.price === null ? null : Number(item.price),
-      ...(item.promotional_price !== null
-        ? { promotionalPrice: Number(item.promotional_price) }
-        : {}),
+      ...(item.promotional_price !== null ? { promotionalPrice: Number(item.promotional_price) } : {}),
       imageUrl: publicMediaUrl(supabase, item.image_path),
+      contactAction: normalizePublicContactAction(item.contact_action),
+      contactUrl: item.contact_url,
     }];
   });
 
