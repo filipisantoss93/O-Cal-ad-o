@@ -13,6 +13,8 @@ import {
 } from "@/lib/location";
 import { recordHighlightEvent } from "@/lib/highlights-client";
 
+const nearbyListLimit = 10;
+
 type NearbyBusiness = {
   id: number;
   slug: string;
@@ -135,7 +137,7 @@ export function NearbyBusinesses() {
   useEffect(() => {
     recordHighlightEvent(
       businesses
-        .slice(0, 3)
+        .slice(0, nearbyListLimit)
         .map((business) => business.highlightCampaignId),
       "impression",
     );
@@ -157,7 +159,7 @@ export function NearbyBusinesses() {
     return (
       <div className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3" aria-live="polite" aria-label="Carregando locais próximos">
         {[0, 1, 2].map((item) => (
-          <div key={item} className={`h-[68px] animate-pulse rounded-xl bg-canvas sm:h-[74px] sm:rounded-2xl ${item === 2 ? "hidden sm:block" : ""}`} />
+          <div key={item} className="h-[68px] animate-pulse rounded-xl bg-canvas sm:h-[74px] sm:rounded-2xl" />
         ))}
       </div>
     );
@@ -184,11 +186,11 @@ export function NearbyBusinesses() {
         {coordinates ? `Ordenados pela distância em ${city.name}` : `Locais de ${city.name}`}
       </p>
       <div className="mt-2.5 space-y-2.5 sm:mt-3 sm:space-y-3">
-        {businesses.slice(0, 3).map((business, index) => (
+        {businesses.slice(0, nearbyListLimit).map((business) => (
           <Link
             key={business.id}
             href={`/loja/${business.slug}`}
-            className={`group items-center gap-2.5 rounded-xl border border-line/80 p-2.5 transition hover:border-ink/15 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:gap-3 sm:rounded-2xl sm:p-3 ${index === 2 ? "hidden sm:flex" : "flex"}`}
+            className="group flex items-center gap-2.5 rounded-xl border border-line/80 p-2.5 transition hover:border-ink/15 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:gap-3 sm:rounded-2xl sm:p-3"
           >
             <span className="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand to-accent-dark text-xs font-black text-white sm:size-12 sm:text-sm">
               {business.logoUrl ? (
