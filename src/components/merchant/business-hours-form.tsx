@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { saveBusinessHoursAction } from "@/app/painel/loja/actions";
+import type { ActionState } from "@/lib/action-state";
 import { initialActionState } from "@/lib/action-state";
 
 export type BusinessHourValue = {
@@ -61,12 +62,16 @@ function initialSchedule(hours: BusinessHourValue[]): DaySchedule[] {
 export function BusinessHoursForm({
   businessId,
   hours,
+  saveAction = saveBusinessHoursAction,
+  subjectLabel = "a loja",
 }: {
   businessId: number;
   hours: BusinessHourValue[];
+  saveAction?: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  subjectLabel?: string;
 }) {
   const [state, action, pending] = useActionState(
-    saveBusinessHoursAction,
+    saveAction,
     initialActionState,
   );
   const [alwaysOpen, setAlwaysOpen] = useState(() => isAlwaysOpen(hours));
@@ -110,7 +115,7 @@ export function BusinessHoursForm({
             Aberto 24 horas, todos os dias
           </span>
           <span className="mt-1 block text-xs font-semibold leading-5 text-muted">
-            Marque esta opção se a loja nunca fecha.
+            Marque esta opção se {subjectLabel} nunca fecha.
           </span>
         </span>
       </label>

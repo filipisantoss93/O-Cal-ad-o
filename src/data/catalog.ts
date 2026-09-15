@@ -37,6 +37,13 @@ export const categories: Category[] = [
     accent: "bg-[#e5f7f2]",
   },
   {
+    slug: "locais-publicos",
+    name: "Locais Públicos",
+    icon: "🏛️",
+    description: "Saúde, atendimento ao cidadão, transporte, cultura e lazer",
+    accent: "bg-[#e8f5ee]",
+  },
+  {
     slug: "casa-decoracao",
     name: "Casa, Móveis e Decoração",
     icon: "🏠",

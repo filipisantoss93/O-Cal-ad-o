@@ -5,6 +5,7 @@ import type { Database } from "@/types/database";
 
 export type DashboardMetrics = {
   accounts: { total: number; recent: number; pro: number };
+  public_places: { total: number; published: number };
   stores: {
     total: number; recent: number; pending: number; approved: number;
     rejected: number; suspended: number; published: number; billing_suspended: number;
@@ -27,6 +28,7 @@ export async function getAdminDashboard(
     supabase.rpc("admin_dashboard_metrics", { p_days: days }),
     supabase.from("businesses")
       .select("id, name, slug, status, created_at, cities(name, state_code)")
+      .eq("listing_type", "business")
       .order("created_at", { ascending: false }).limit(5),
     supabase.from("highlight_campaigns")
       .select("id, status, provider, placement, charged_price_cents, created_at, businesses(name, slug)")

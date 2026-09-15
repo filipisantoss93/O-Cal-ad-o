@@ -64,6 +64,7 @@ export async function getMerchantWorkspace(returnTo = "/painel") {
         "id, owner_id, city_id, category_id, slug, name, description, whatsapp_e164, phone_e164, public_email, website_url, instagram_url, facebook_url, street, address_number, complement, neighborhood, postal_code, latitude, longitude, logo_path, cover_path, status, publication_status, moderation_note, plan, is_active, billing_suspended, billing_suspension_reason, created_at, updated_at",
       )
       .eq("owner_id", user.id)
+      .eq("listing_type", "business")
       .order("created_at", { ascending: true }),
   ]);
 

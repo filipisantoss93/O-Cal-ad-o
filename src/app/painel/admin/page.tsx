@@ -29,6 +29,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     .select(
       "id, slug, name, description, street, address_number, neighborhood, postal_code, latitude, longitude, status, publication_status, moderation_note, created_at, categories(name), cities(name, state_code)",
     )
+    .eq("listing_type", "business")
     .eq("status", selectedStatus)
     .order("created_at", { ascending: true })
     .limit(100);
@@ -49,7 +50,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <ShieldCheckIcon className="size-4" /> Acesso administrativo
         </span>
       </div>
-      <Link href="/painel/admin/dashboard" className="mt-4 inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink hover:border-brand/40">Ver dashboard administrativo</Link>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link href="/painel/admin/dashboard" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink hover:border-brand/40">Ver dashboard administrativo</Link>
+        <Link href="/painel/admin/locais-publicos" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink hover:border-brand/40">Gerir locais públicos</Link>
+      </div>
 
       {params.sucesso && (
         <p role="status" className="mt-6 rounded-2xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold text-positive">

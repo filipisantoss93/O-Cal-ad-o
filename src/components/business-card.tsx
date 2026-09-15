@@ -16,6 +16,8 @@ type BusinessCardProps = {
 };
 
 export function BusinessCard({ business, compact = false }: BusinessCardProps) {
+  const isPublicPlace = business.listingType === "public_place";
+
   return (
     <article
       data-highlight-campaign={business.highlightCampaignId ?? undefined}
@@ -32,7 +34,7 @@ export function BusinessCard({ business, compact = false }: BusinessCardProps) {
           <>
             <Image
               src={business.coverUrl}
-              alt={`Capa da ${business.name}`}
+              alt={`Capa de ${business.name}`}
               fill
               sizes={compact ? "(max-width: 640px) 45vw, 25vw" : "(max-width: 768px) 90vw, 25vw"}
               className="object-cover"
@@ -50,7 +52,7 @@ export function BusinessCard({ business, compact = false }: BusinessCardProps) {
         )}
         <span className={`relative grid shrink-0 place-items-center overflow-hidden border border-white/50 bg-white/25 font-black shadow-lg backdrop-blur-sm ${compact ? "size-10 rounded-xl text-sm sm:size-12" : "size-16 rounded-2xl text-xl"}`}>
           {business.logoUrl ? (
-            <Image src={business.logoUrl} alt={`Logo da ${business.name}`} fill sizes={compact ? "48px" : "64px"} className="object-cover" />
+            <Image src={business.logoUrl} alt={`Imagem de ${business.name}`} fill sizes={compact ? "48px" : "64px"} className="object-cover" />
           ) : business.initials}
         </span>
         <span className={`relative ml-auto rounded-full text-center font-black shadow-sm ${compact ? "max-w-[82px] px-1.5 py-1 text-[9px] leading-tight sm:max-w-none sm:px-2 sm:text-[10px]" : "px-3 py-1.5 text-xs"} ${
@@ -80,14 +82,18 @@ export function BusinessCard({ business, compact = false }: BusinessCardProps) {
               {business.verified && (
                 <>
                   <ShieldCheckIcon className={`shrink-0 text-[#25835f] ${compact ? "size-4" : "size-5"}`} />
-                  <span className="sr-only">Comércio verificado</span>
+                  <span className="sr-only">
+                    {isPublicPlace ? "Informações conferidas" : "Comércio verificado"}
+                  </span>
                 </>
               )}
             </h3>
           </div>
           <span className={`items-center gap-1 font-black text-ink ${compact ? "hidden text-xs sm:inline-flex" : "inline-flex text-sm"}`}>
             <StarIcon className="size-4 fill-accent stroke-accent-dark" />
-            {business.reviewCount > 0
+            {isPublicPlace
+              ? "Público"
+              : business.reviewCount > 0
               ? business.rating.toLocaleString("pt-BR")
               : "Novo"}
           </span>
@@ -118,7 +124,7 @@ export function BusinessCard({ business, compact = false }: BusinessCardProps) {
           href={`/loja/${business.slug}`}
           className={`inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-ink font-black text-white transition hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${compact ? "mt-3 min-h-10 px-2 text-xs sm:text-sm" : "mt-5 min-h-11 px-4 text-sm"}`}
         >
-          {compact ? "Ver loja" : "Ver vitrine"}
+          {isPublicPlace ? "Ver local" : compact ? "Ver loja" : "Ver vitrine"}
           <ArrowRightIcon className={`transition-transform group-hover:translate-x-1 ${compact ? "size-3.5" : "size-4"}`} />
         </Link>
       </div>

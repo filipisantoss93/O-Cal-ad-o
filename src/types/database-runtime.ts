@@ -45,12 +45,21 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       businesses: {
         Row: GeneratedBusinessTable["Row"] & {
           publication_status: string;
+          listing_type: string;
+          public_place_kind: string | null;
+          official_source_url: string | null;
         };
         Insert: GeneratedBusinessTable["Insert"] & {
           publication_status?: string;
+          listing_type?: string;
+          public_place_kind?: string | null;
+          official_source_url?: string | null;
         };
         Update: GeneratedBusinessTable["Update"] & {
           publication_status?: string;
+          listing_type?: string;
+          public_place_kind?: string | null;
+          official_source_url?: string | null;
         };
         Relationships: GeneratedBusinessTable["Relationships"];
       };

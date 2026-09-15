@@ -4,6 +4,7 @@ import { logoutAction } from "@/app/(auth)/actions";
 import {
   HomeIcon,
   LogOutIcon,
+  MapPinIcon,
   SparklesIcon,
   StoreIcon,
   TagIcon,
@@ -145,6 +146,13 @@ export function MerchantShell({
               >
                 <ShieldCheckIcon className="size-4" />
                 Moderação
+              </Link>
+              <Link
+                href="/painel/admin/locais-publicos"
+                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-line bg-canvas px-4 text-sm font-extrabold text-ink transition hover:border-brand/30 hover:bg-brand/5"
+              >
+                <MapPinIcon className="size-4" />
+                Locais públicos
               </Link>
               <Link
                 href="/painel/admin/destaques"
@@ -290,6 +298,13 @@ export function MerchantShell({
                     >
                       <ShieldCheckIcon className="size-4" />
                       Moderação
+                    </Link>
+                    <Link
+                      href="/painel/admin/locais-publicos"
+                      className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink transition hover:bg-canvas"
+                    >
+                      <MapPinIcon className="size-4" />
+                      Locais públicos
                     </Link>
                     <Link
                       href="/painel/admin/destaques"

@@ -23,6 +23,7 @@ type NearbyBusiness = {
   distanceKm: number | null;
   isFeatured: boolean;
   highlightCampaignId: number | null;
+  listingType: "business" | "public_place";
 };
 
 function formatDistance(distanceKm: number | null) {
@@ -109,19 +110,19 @@ export function NearbyBusinesses() {
           };
         } catch {
           if (!response.ok) {
-            throw new Error("Não foi possível carregar os comércios próximos.");
+            throw new Error("Não foi possível carregar os locais próximos.");
           }
         }
 
         if (!response.ok) {
-          throw new Error(payload.error || "Não foi possível carregar os comércios próximos.");
+          throw new Error(payload.error || "Não foi possível carregar os locais próximos.");
         }
         setBusinesses(payload.businesses ?? []);
       } catch (reason: unknown) {
         if (controller.signal.aborted) return;
         console.error("[nearby-businesses] load failed", reason);
         setBusinesses([]);
-        setError("Não foi possível carregar os comércios próximos. Tente novamente.");
+        setError("Não foi possível carregar os locais próximos. Tente novamente.");
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -146,7 +147,7 @@ export function NearbyBusinesses() {
         <LocateIcon className="mx-auto size-5 text-brand sm:size-6" />
         <p className="mt-2 text-sm font-black text-ink sm:mt-3">Informe sua localização</p>
         <p className="mt-1 text-xs font-semibold leading-5 text-muted">
-          Use o botão “Escolher cidade” para encontrar os comércios mais próximos.
+          Use o botão “Escolher cidade” para encontrar lojas, serviços e locais públicos próximos.
         </p>
       </div>
     );
@@ -154,7 +155,7 @@ export function NearbyBusinesses() {
 
   if (loading) {
     return (
-      <div className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3" aria-live="polite" aria-label="Carregando comércios próximos">
+      <div className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3" aria-live="polite" aria-label="Carregando locais próximos">
         {[0, 1, 2].map((item) => (
           <div key={item} className={`h-[68px] animate-pulse rounded-xl bg-canvas sm:h-[74px] sm:rounded-2xl ${item === 2 ? "hidden sm:block" : ""}`} />
         ))}
@@ -169,9 +170,9 @@ export function NearbyBusinesses() {
   if (businesses.length === 0) {
     return (
       <div className="mt-4 rounded-xl border border-dashed border-line bg-canvas p-4 text-center sm:mt-5 sm:rounded-2xl sm:p-5">
-        <p className="text-sm font-black text-ink">Nenhum comércio publicado em {city.name}</p>
+        <p className="text-sm font-black text-ink">Nenhum local publicado em {city.name}</p>
         <p className="mt-1 text-xs font-semibold leading-5 text-muted">
-          Novas vitrines aparecem assim que são cadastradas e podem continuar em análise pela moderação.
+          Novas vitrines e informações públicas aparecem assim que são cadastradas.
         </p>
       </div>
     );
@@ -180,7 +181,7 @@ export function NearbyBusinesses() {
   return (
     <>
       <p className="mt-3 text-[11px] font-bold text-muted sm:mt-4 sm:text-xs">
-        {coordinates ? `Ordenados pela distância em ${city.name}` : `Comércios de ${city.name}`}
+        {coordinates ? `Ordenados pela distância em ${city.name}` : `Locais de ${city.name}`}
       </p>
       <div className="mt-2.5 space-y-2.5 sm:mt-3 sm:space-y-3">
         {businesses.slice(0, 3).map((business, index) => (
@@ -191,7 +192,7 @@ export function NearbyBusinesses() {
           >
             <span className="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand to-accent-dark text-xs font-black text-white sm:size-12 sm:text-sm">
               {business.logoUrl ? (
-                <Image src={business.logoUrl} alt={`Logo da ${business.name}`} fill sizes="48px" className="object-cover" />
+                <Image src={business.logoUrl} alt={`Imagem de ${business.name}`} fill sizes="48px" className="object-cover" />
               ) : initials(business.name)}
             </span>
             <span className="min-w-0 flex-1">
@@ -204,7 +205,7 @@ export function NearbyBusinesses() {
                 )}
               </span>
               <span className="mt-0.5 block truncate text-[11px] font-semibold text-muted sm:text-xs">
-                {business.categoryName} · {business.neighborhood}
+                {business.listingType === "public_place" ? "Local público" : business.categoryName} · {business.neighborhood}
               </span>
             </span>
             <span className="shrink-0 text-[11px] font-black text-brand-dark sm:text-xs">

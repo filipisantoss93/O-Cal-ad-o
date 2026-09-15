@@ -11,9 +11,9 @@ import { selectedCityCookieName } from "@/lib/location";
 import { searchPublicBusinesses } from "@/lib/public-search";
 
 export const metadata: Metadata = {
-  title: "Explorar comércios",
+  title: "Explorar a cidade",
   description:
-    "Pesquise lojas, produtos e serviços disponíveis no comércio local.",
+    "Pesquise lojas, produtos, serviços e locais públicos da sua cidade.",
 };
 
 type SearchPageProps = {
@@ -77,7 +77,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               Encontre na sua cidade
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted sm:text-base">
-              Pesquise pelo nome da loja, produto, serviço, tag ou bairro. Os resultados são limitados à cidade selecionada.
+              Pesquise por loja, produto, serviço, local público, tag ou bairro. Os resultados são limitados à cidade selecionada.
             </p>
             <div className="mt-6">
               <SearchForm
@@ -126,7 +126,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   {hasSelectedCity
                     ? hasFilter
                       ? "Resultados encontrados na cidade selecionada"
-                      : "Comércios da cidade selecionada"
+                      : "Locais da cidade selecionada"
                     : "Selecione sua cidade"}
                 </p>
                 <h2 className="mt-1 text-2xl font-black tracking-tight text-ink">
@@ -149,7 +149,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   Escolha sua cidade para pesquisar
                 </h2>
                 <p className="mt-2 max-w-md text-sm leading-6 text-muted">
-                  Use o seletor de cidade no topo da página ou sua localização atual. Assim mostramos somente comércios da sua cidade.
+                  Use o seletor de cidade no topo da página ou sua localização atual. Assim mostramos somente locais da sua cidade.
                 </p>
               </div>
             ) : results.length > 0 ? (
@@ -162,7 +162,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 {searchResult.totalPages > 1 && (
                   <nav
                     className="mt-9 flex flex-wrap items-center justify-center gap-3"
-                    aria-label="Paginação dos comércios"
+                    aria-label="Paginação dos locais"
                   >
                     {searchResult.page > 1 ? (
                       <Link
@@ -210,7 +210,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   <SearchIcon className="size-6" />
                 </span>
                 <h2 className="mt-5 text-xl font-black text-ink">
-                  Nenhum comércio encontrado nesta cidade
+                  Nenhum local encontrado nesta cidade
                 </h2>
                 <p className="mt-2 max-w-md text-sm leading-6 text-muted">
                   Tente outro termo ou retire o filtro de categoria para ampliar a busca dentro da cidade selecionada.
