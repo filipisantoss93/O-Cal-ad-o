@@ -31,6 +31,12 @@ export function HighlightTracker({
     const eventType = element?.dataset.highlightEvent as
       | HighlightEventType
       | undefined;
+
+    if (eventType === "whatsapp") {
+      const anchor = element?.closest<HTMLAnchorElement>("a[href]");
+      if (!anchor?.href.includes("wa.me/")) return;
+    }
+
     if (eventType && trackedEvents.has(eventType)) {
       recordHighlightEvent([campaignId], eventType);
     }
