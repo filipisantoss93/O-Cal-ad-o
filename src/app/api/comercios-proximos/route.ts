@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     p_latitude: coordinatesAreValid ? (body.latitude as number) : null,
     p_longitude: coordinatesAreValid ? (body.longitude as number) : null,
     p_business_ids: businessIds,
-    p_limit: businessIds?.length ?? 3,
+    p_limit: businessIds?.length ?? 10,
   });
 
   if (error) {
