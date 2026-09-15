@@ -161,6 +161,7 @@ async function loadBusiness(
       isFeatured: item.is_featured,
       contactAction: normalizePublicContactAction(item.contact_action),
       contactUrl: safePublicUrl(item.contact_url),
+      phone: business.phone_e164,
     })),
   };
 }
