@@ -8,6 +8,8 @@ export type Category = {
 
 export type CatalogPriceMode = "fixed" | "from" | "consult";
 
+export type ContactAction = "whatsapp" | "phone" | "link";
+
 export type ListingType = "business" | "public_place";
 
 export type PublicPlaceKind =
@@ -31,6 +33,8 @@ export type Product = {
   promotionalPrice?: number;
   imageUrl?: string | null;
   isFeatured?: boolean;
+  contactAction: ContactAction;
+  contactUrl?: string | null;
 };
 
 export type FeaturedCatalogItem = {
@@ -38,6 +42,7 @@ export type FeaturedCatalogItem = {
   businessSlug: string;
   businessName: string;
   whatsapp: string | null;
+  phone: string | null;
   kind: "product" | "service";
   priceMode: CatalogPriceMode;
   name: string;
@@ -45,6 +50,8 @@ export type FeaturedCatalogItem = {
   price: number | null;
   promotionalPrice?: number;
   imageUrl?: string | null;
+  contactAction: ContactAction;
+  contactUrl?: string | null;
 };
 
 export type Business = {
@@ -100,4 +107,8 @@ export type Promotion = {
   offerPrice?: number;
   imageUrl?: string | null;
   isFeatured?: boolean;
+  whatsapp: string | null;
+  phone: string | null;
+  contactAction: ContactAction;
+  contactUrl?: string | null;
 };
