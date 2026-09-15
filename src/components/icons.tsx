@@ -107,6 +107,41 @@ export function WhatsAppIcon(props: IconProps) {
   );
 }
 
+export function PhoneIcon(props: IconProps) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M6.6 3.8 9 3l2 5-2.1 1.3a15 15 0 0 0 5.8 5.8L16 13l5 2-0.8 2.4a4 4 0 0 1-4.5 2.7A15.5 15.5 0 0 1 3.9 8.3 4 4 0 0 1 6.6 3.8Z" />
+    </svg>
+  );
+}
+
+export function GlobeIcon(props: IconProps) {
+  return (
+    <svg {...baseProps} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3c2.2 2.5 3.3 5.5 3.3 9S14.2 18.5 12 21c-2.2-2.5-3.3-5.5-3.3-9S9.8 5.5 12 3Z" />
+    </svg>
+  );
+}
+
+export function InstagramIcon(props: IconProps) {
+  return (
+    <svg {...baseProps} {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M17.5 6.5h.01" />
+    </svg>
+  );
+}
+
+export function FacebookIcon(props: IconProps) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M14 21v-8h3l.5-4H14V7.5c0-1.2.7-2 2.2-2H18V2.2c-.7-.1-1.7-.2-2.8-.2C11.8 2 9.5 4.1 9.5 7.8V9H6v4h3.5v8H14Z" />
+    </svg>
+  );
+}
+
 export function StoreIcon(props: IconProps) {
   return (
     <svg {...baseProps} {...props}>

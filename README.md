@@ -21,11 +21,13 @@ A aplicação contém:
 - listagem com busca e filtro por categoria;
 - página pública de cada comércio;
 - seleção manual por estado e município e identificação da cidade pela
-  localização atual do dispositivo;
+  localização atual do dispositivo, com busca pelo endereço da loja como
+  alternativa quando o GPS não estiver disponível;
 - estados de carregamento, erro e página não encontrada;
 - criação de conta, confirmação de e-mail, login, logout e recuperação de senha;
 - painel protegido para o comerciante;
 - cadastro e edição da loja, com logo e capa;
+- contatos públicos opcionais para site, Instagram, Facebook e telefone fixo;
 - criação, edição, ativação, pausa e exclusão de promoções;
 - contratação de lojas em destaque por cidade, categoria ou nos dois espaços,
   com pacotes de 7, 15 e 30 dias;
@@ -93,6 +95,9 @@ Preencha em `.env.local`:
 NEXT_PUBLIC_SUPABASE_URL=https://mieekhdagjlzdbeklrxp.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sua_chave_publicavel
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Opcional: permite trocar a instância Nominatim usada na busca por endereço.
+GEOCODING_API_URL=https://nominatim.openstreetmap.org/search
 ```
 
 Use somente a chave publicável no navegador. Nunca adicione a chave secreta ou
@@ -163,6 +168,10 @@ arquivos oficiais do IBGE pelo script `scripts/generate-brazil-locations.mjs`.
 A localização exata recebida pelo endpoint `/api/localizacao` é usada somente
 durante a consulta espacial e não é persistida; o navegador guarda apenas a
 cidade escolhida.
+
+Quando o comerciante solicita a busca pelo endereço, o endpoint autenticado
+`/api/geocodificar-endereco` consulta o provedor configurado, limita e mantém em
+cache as chamadas e só aceita coordenadas que pertençam ao município escolhido.
 
 ## Comandos
 

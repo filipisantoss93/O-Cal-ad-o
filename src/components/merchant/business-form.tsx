@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { saveBusinessAction } from "@/app/painel/loja/actions";
 import { ImageIcon, LocateIcon } from "@/components/icons";
 import {
@@ -20,8 +20,11 @@ export type BusinessFormValue = {
   description: string;
   tags?: string[];
   whatsapp: string;
+  phone: string;
   publicEmail: string;
   websiteUrl: string;
+  instagramUrl: string;
+  facebookUrl: string;
   street: string;
   addressNumber: string;
   complement: string;
@@ -68,6 +71,7 @@ export function BusinessForm({
   initialCity,
   categories,
 }: BusinessFormProps) {
+  const formRef = useRef<HTMLFormElement>(null);
   const [state, action, pending] = useActionState(
     saveBusinessAction,
     initialActionState,
@@ -80,7 +84,9 @@ export function BusinessForm({
   const [cities, setCities] = useState<CityOption[]>(initialCity ? [initialCity] : []);
   const [loadingCities, setLoadingCities] = useState(false);
   const [detectingCity, setDetectingCity] = useState(false);
+  const [locatingByAddress, setLocatingByAddress] = useState(false);
   const [cityError, setCityError] = useState("");
+  const [locationMessage, setLocationMessage] = useState("");
   const [locationCaptured, setLocationCaptured] = useState(
     business?.latitude !== null && business?.latitude !== undefined,
   );
@@ -115,9 +121,94 @@ export function BusinessForm({
     }
   }
 
+  function clearCoordinates() {
+    setLatitude("");
+    setLongitude("");
+    setLocationCaptured(false);
+    setLocationMessage("");
+    setCityError("");
+  }
+
+  async function locateRegisteredAddress(gpsError = "") {
+    const form = formRef.current;
+    if (!form) return false;
+
+    const formData = new FormData(form);
+    const street = String(formData.get("street") ?? "").trim();
+    const addressNumber = String(
+      formData.get("address_number") ?? "",
+    ).trim();
+    const neighborhood = String(formData.get("neighborhood") ?? "").trim();
+    const postalCode = String(formData.get("postal_code") ?? "").trim();
+
+    if (!cityId || !street || !addressNumber || !neighborhood) {
+      setCityError(
+        [
+          gpsError,
+          "Preencha cidade, rua, número e bairro e use “Buscar coordenadas deste endereço”.",
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
+      return false;
+    }
+
+    setLocatingByAddress(true);
+    setCityError("");
+    setLocationMessage("");
+    try {
+      const response = await fetch("/api/geocodificar-endereco", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cityId: Number(cityId),
+          street,
+          addressNumber,
+          neighborhood,
+          postalCode,
+        }),
+      });
+      const payload = (await response.json()) as {
+        latitude?: number;
+        longitude?: number;
+        error?: string;
+      };
+
+      if (
+        !response.ok ||
+        !Number.isFinite(payload.latitude) ||
+        !Number.isFinite(payload.longitude)
+      ) {
+        throw new Error(
+          payload.error ?? "Não foi possível localizar esse endereço.",
+        );
+      }
+
+      setLatitude(String(payload.latitude));
+      setLongitude(String(payload.longitude));
+      setLocationCaptured(true);
+      setLocationMessage(
+        gpsError
+          ? "O GPS não ficou disponível; as coordenadas foram encontradas pelo endereço. Salve as alterações para gravar."
+          : "Coordenadas encontradas pelo endereço. Salve as alterações para gravar.",
+      );
+      return true;
+    } catch (reason) {
+      const addressError =
+        reason instanceof Error
+          ? reason.message
+          : "Não foi possível localizar esse endereço.";
+      setCityError([gpsError, addressError].filter(Boolean).join(" "));
+      return false;
+    } finally {
+      setLocatingByAddress(false);
+    }
+  }
+
   async function useCurrentLocation() {
     setDetectingCity(true);
     setCityError("");
+    setLocationMessage("");
     try {
       const city = await detectCurrentCity();
       setStateCode(city.stateCode);
@@ -125,19 +216,22 @@ export function BusinessForm({
       setLongitude(String(city.longitude));
       await loadCities(city.stateCode, String(city.id));
       setLocationCaptured(true);
+      setLocationMessage(
+        "Localização atual capturada. Salve as alterações para gravar.",
+      );
     } catch (reason) {
-      setCityError(
+      const message =
         reason instanceof Error
           ? reason.message
-          : "Não foi possível identificar a cidade.",
-      );
+          : "Não foi possível identificar a cidade.";
+      await locateRegisteredAddress(message);
     } finally {
       setDetectingCity(false);
     }
   }
 
   return (
-    <form action={action} className="space-y-8">
+    <form ref={formRef} action={action} className="space-y-8">
       {business && (
         <input type="hidden" name="business_id" value={business.id} />
       )}
@@ -220,7 +314,7 @@ export function BusinessForm({
             <button
               type="button"
               onClick={useCurrentLocation}
-              disabled={pending || detectingCity}
+              disabled={pending || detectingCity || locatingByAddress}
               className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-black text-brand-dark transition hover:bg-brand/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
             >
               <LocateIcon className="size-4" />
@@ -241,9 +335,7 @@ export function BusinessForm({
                   const nextStateCode = event.target.value;
                   setStateCode(nextStateCode);
                   setCityId("");
-                  setLatitude("");
-                  setLongitude("");
-                  setLocationCaptured(false);
+                  clearCoordinates();
                   setCityError("");
                   void loadCities(nextStateCode);
                 }}
@@ -271,9 +363,7 @@ export function BusinessForm({
                 value={cityId}
                 onChange={(event) => {
                   setCityId(event.target.value);
-                  setLatitude("");
-                  setLongitude("");
-                  setLocationCaptured(false);
+                  clearCoordinates();
                   setCityError("");
                 }}
                 onFocus={() => {
@@ -305,13 +395,13 @@ export function BusinessForm({
           )}
           {locationCaptured && !cityError && (
             <p role="status" className="mt-2 text-sm font-bold text-positive">
-              Localização capturada. Toque em “Salvar alterações” para gravar na
-              loja.
+              {locationMessage || "Esta loja já possui coordenadas cadastradas."}
             </p>
           )}
           <p className="mt-2 text-xs font-semibold leading-5 text-muted">
-            Para aparecer por distância, use “Localização atual” enquanto estiver
-            no endereço da loja.
+            Para maior precisão, use a localização atual enquanto estiver na
+            loja. Se o GPS não funcionar, o endereço cadastrado será usado como
+            segunda opção.
           </p>
           {fieldError(state, "city_id")}
         </div>
@@ -403,6 +493,22 @@ export function BusinessForm({
           {fieldError(state, "whatsapp_e164")}
         </div>
         <div>
+          <label className={labelClass} htmlFor="business-phone">
+            Telefone fixo <span className="font-semibold text-muted">(opcional)</span>
+          </label>
+          <input
+            className={inputClass}
+            id="business-phone"
+            name="phone_e164"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            defaultValue={business?.phone}
+            placeholder="(18) 3322-1234"
+          />
+          {fieldError(state, "phone_e164")}
+        </div>
+        <div>
           <label className={labelClass} htmlFor="business-email">
             E-mail público <span className="font-semibold text-muted">(opcional)</span>
           </label>
@@ -417,9 +523,9 @@ export function BusinessForm({
           />
           {fieldError(state, "public_email")}
         </div>
-        <div className="sm:col-span-2">
+        <div>
           <label className={labelClass} htmlFor="business-website">
-            Site ou rede social <span className="font-semibold text-muted">(opcional)</span>
+            Site <span className="font-semibold text-muted">(opcional)</span>
           </label>
           <input
             className={inputClass}
@@ -428,9 +534,42 @@ export function BusinessForm({
             type="text"
             inputMode="url"
             defaultValue={business?.websiteUrl}
-            placeholder="instagram.com/sualoja"
+            maxLength={500}
+            placeholder="www.sualoja.com.br"
           />
           {fieldError(state, "website_url")}
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="business-instagram">
+            Instagram <span className="font-semibold text-muted">(opcional)</span>
+          </label>
+          <input
+            className={inputClass}
+            id="business-instagram"
+            name="instagram_url"
+            type="text"
+            inputMode="url"
+            defaultValue={business?.instagramUrl}
+            maxLength={500}
+            placeholder="@sualoja"
+          />
+          {fieldError(state, "instagram_url")}
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="business-facebook">
+            Facebook <span className="font-semibold text-muted">(opcional)</span>
+          </label>
+          <input
+            className={inputClass}
+            id="business-facebook"
+            name="facebook_url"
+            type="text"
+            inputMode="url"
+            defaultValue={business?.facebookUrl}
+            maxLength={500}
+            placeholder="facebook.com/sualoja"
+          />
+          {fieldError(state, "facebook_url")}
         </div>
       </fieldset>
 
@@ -449,6 +588,7 @@ export function BusinessForm({
             type="text"
             autoComplete="street-address"
             defaultValue={business?.street}
+            onChange={clearCoordinates}
             required
             maxLength={160}
           />
@@ -464,6 +604,7 @@ export function BusinessForm({
             name="address_number"
             type="text"
             defaultValue={business?.addressNumber}
+            onChange={clearCoordinates}
             required
             maxLength={20}
             placeholder="123 ou S/N"
@@ -494,6 +635,7 @@ export function BusinessForm({
             name="neighborhood"
             type="text"
             defaultValue={business?.neighborhood}
+            onChange={clearCoordinates}
             required
             maxLength={120}
           />
@@ -511,10 +653,37 @@ export function BusinessForm({
             inputMode="numeric"
             autoComplete="postal-code"
             defaultValue={business?.postalCode}
+            onChange={clearCoordinates}
             maxLength={9}
             placeholder="12345-678"
           />
           {fieldError(state, "postal_code")}
+        </div>
+        <div className="sm:col-span-2">
+          <button
+            type="button"
+            onClick={() => void locateRegisteredAddress()}
+            disabled={pending || detectingCity || locatingByAddress}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-brand/25 bg-brand/8 px-4 text-sm font-black text-brand-dark transition hover:border-brand/45 hover:bg-brand/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <LocateIcon className="size-5 shrink-0" />
+            {locatingByAddress
+              ? "Buscando coordenadas..."
+              : "Buscar coordenadas deste endereço"}
+          </button>
+          <p className="mt-2 text-xs font-semibold leading-5 text-muted">
+            Use esta opção quando não puder estar fisicamente na loja ou quando
+            o GPS falhar. Busca de endereço por{" "}
+            <a
+              href="https://www.openstreetmap.org/copyright"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-brand-dark"
+            >
+              OpenStreetMap
+            </a>
+            .
+          </p>
         </div>
       </fieldset>
 

@@ -14,6 +14,7 @@ import {
   formString,
   normalizePhone,
   normalizePostalCode,
+  normalizeSocialProfile,
   normalizeSlug,
   normalizeWebsite,
   optionalText,
@@ -42,7 +43,7 @@ function optionalCoordinate(
   if (!rawValue) return null;
   const value = Number(rawValue);
   if (!Number.isFinite(value) || value < minimum || value > maximum) {
-    throw new ValidationError("Localização da loja inválida.", name);
+    throw new ValidationError(name, "Localização da loja inválida.");
   }
   return value;
 }
@@ -61,17 +62,17 @@ function businessTags(formData: FormData, required: boolean) {
 
   if (uniqueTags.length < 3) {
     throw new ValidationError(
-      "Adicione pelo menos 3 tags específicas para ajudar os clientes a encontrar sua loja.",
       "tags",
+      "Adicione pelo menos 3 tags específicas para ajudar os clientes a encontrar sua loja.",
     );
   }
   if (uniqueTags.length > 12) {
-    throw new ValidationError("Use no máximo 12 tags.", "tags");
+    throw new ValidationError("tags", "Use no máximo 12 tags.");
   }
   if (uniqueTags.some((tag) => tag.length < 2 || tag.length > 40)) {
     throw new ValidationError(
-      "Cada tag deve ter entre 2 e 40 caracteres.",
       "tags",
+      "Cada tag deve ter entre 2 e 40 caracteres.",
     );
   }
 
@@ -81,7 +82,7 @@ function businessTags(formData: FormData, required: boolean) {
 function businessTime(formData: FormData, name: string) {
   const value = formString(formData, name);
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
-    throw new ValidationError("Revise os horários informados.", name);
+    throw new ValidationError(name, "Revise os horários informados.");
   }
   return value;
 }
@@ -133,8 +134,8 @@ export async function saveBusinessHoursAction(
 
       if (!isClosed && !alwaysOpen && opensAt === closesAt) {
         throw new ValidationError(
-          "Abertura e fechamento precisam ser diferentes. Para funcionamento contínuo, marque “Aberto 24 horas”.",
           `day_${weekday}_closes`,
+          "Abertura e fechamento precisam ser diferentes. Para funcionamento contínuo, marque “Aberto 24 horas”.",
         );
       }
 
@@ -229,11 +230,24 @@ export async function saveBusinessAction(
       formString(formData, "whatsapp_e164"),
       "whatsapp_e164",
     );
+    const phone = normalizePhone(
+      formString(formData, "phone_e164"),
+      "phone_e164",
+      false,
+    );
     const publicEmailValue = formString(formData, "public_email");
     const publicEmail = publicEmailValue
       ? validateEmail(publicEmailValue, "public_email")
       : null;
     const websiteUrl = normalizeWebsite(formString(formData, "website_url"));
+    const instagramUrl = normalizeSocialProfile(
+      formString(formData, "instagram_url"),
+      "instagram",
+    );
+    const facebookUrl = normalizeSocialProfile(
+      formString(formData, "facebook_url"),
+      "facebook",
+    );
     const street = requiredText(formData, "street", "Rua ou avenida", 2, 160);
     const addressNumber = requiredText(
       formData,
@@ -262,8 +276,8 @@ export async function saveBusinessAction(
     const longitude = optionalCoordinate(formData, "longitude", -180, 180);
     if ((latitude === null) !== (longitude === null)) {
       throw new ValidationError(
-        "Use novamente a localização atual da loja.",
         "city_id",
+        "Use novamente a localização atual ou busque as coordenadas pelo endereço.",
       );
     }
     const logoFile = imageFromForm(formData, "logo");
@@ -298,8 +312,11 @@ export async function saveBusinessAction(
       tags,
       description,
       whatsapp_e164: whatsapp,
+      phone_e164: phone,
       public_email: publicEmail,
       website_url: websiteUrl,
+      instagram_url: instagramUrl,
+      facebook_url: facebookUrl,
       street,
       address_number: addressNumber,
       complement,
