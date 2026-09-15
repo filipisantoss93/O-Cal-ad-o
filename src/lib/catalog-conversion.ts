@@ -11,9 +11,14 @@ type CatalogConversionItem = {
   priceMode: CatalogPriceMode;
   price: number | null;
   promotionalPrice?: number | null;
+  contactAction?: ContactAction;
+  contactUrl?: string | null;
+  phone?: string | null;
 };
 
-export function catalogConversionLabel(item: Pick<CatalogConversionItem, "kind" | "priceMode">) {
+export function catalogConversionLabel(item: Pick<CatalogConversionItem, "kind" | "priceMode" | "contactAction">) {
+  if (item.contactAction === "phone") return "Ligar agora";
+  if (item.contactAction === "link") return "Abrir link";
   if (item.kind === "service") {
     return item.priceMode === "consult" ? "Solicitar orçamento" : "Quero este serviço";
   }
@@ -56,7 +61,9 @@ export function catalogWhatsappHref(
   item: CatalogConversionItem,
 ) {
   return resolveContactHref({
-    action: "whatsapp",
+    action: item.contactAction ?? "whatsapp",
+    contactUrl: item.contactUrl,
+    phone: item.phone,
     whatsapp,
     whatsappMessage: catalogConversionMessage(businessName, item),
   });
