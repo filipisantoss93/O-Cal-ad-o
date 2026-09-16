@@ -17,10 +17,38 @@ const OPTIMIZED_PATHS = new Set([
   "/painel/admin/pre-cadastros",
 ]);
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
-const TARGET_BYTES = 900 * 1024;
-const MAX_OUTPUT_BYTES = 1300 * 1024;
-const DIMENSIONS = [1600, 1440, 1280, 1080];
-const QUALITIES = [0.82, 0.74, 0.66, 0.58];
+
+type ImageProfile = {
+  label: string;
+  targetBytes: number;
+  maxOutputBytes: number;
+  dimensions: number[];
+  qualities: number[];
+};
+
+const IMAGE_PROFILES: Record<"image" | "logo" | "cover", ImageProfile> = {
+  logo: {
+    label: "Logo",
+    targetBytes: 150 * 1024,
+    maxOutputBytes: 250 * 1024,
+    dimensions: [800, 720, 640, 512],
+    qualities: [0.88, 0.84, 0.8, 0.76, 0.72],
+  },
+  cover: {
+    label: "Capa",
+    targetBytes: 350 * 1024,
+    maxOutputBytes: 600 * 1024,
+    dimensions: [1600, 1440, 1280, 1080],
+    qualities: [0.82, 0.78, 0.74, 0.7, 0.66],
+  },
+  image: {
+    label: "Foto",
+    targetBytes: 900 * 1024,
+    maxOutputBytes: 1300 * 1024,
+    dimensions: [1600, 1440, 1280, 1080],
+    qualities: [0.82, 0.74, 0.66, 0.58],
+  },
+};
 
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -73,7 +101,15 @@ function canvasToWebp(canvas: HTMLCanvasElement, quality: number) {
   });
 }
 
-async function optimizeImage(source: File) {
+function fileFromBlob(source: File, blob: Blob) {
+  const baseName = source.name.replace(/\.[^.]+$/, "") || "imagem";
+  return new File([blob], `${baseName}.webp`, {
+    type: "image/webp",
+    lastModified: Date.now(),
+  });
+}
+
+async function optimizeImage(source: File, profile: ImageProfile) {
   if (!ALLOWED_TYPES.has(source.type)) {
     throw new Error("Use uma foto JPG, PNG, WebP ou AVIF.");
   }
@@ -87,30 +123,24 @@ async function optimizeImage(source: File) {
   }
 
   let smallest: Blob | null = null;
-  for (const dimension of DIMENSIONS) {
+  for (const dimension of profile.dimensions) {
     const canvas = canvasFor(image, dimension);
-    for (const quality of QUALITIES) {
+    for (const quality of profile.qualities) {
       const blob = await canvasToWebp(canvas, quality);
       if (!smallest || blob.size < smallest.size) smallest = blob;
-      if (blob.size <= TARGET_BYTES) {
-        const baseName = source.name.replace(/\.[^.]+$/, "") || "imagem";
-        return new File([blob], `${baseName}.webp`, {
-          type: "image/webp",
-          lastModified: Date.now(),
-        });
+      if (blob.size <= profile.targetBytes) {
+        return fileFromBlob(source, blob);
       }
     }
   }
 
-  if (!smallest || smallest.size > MAX_OUTPUT_BYTES) {
-    throw new Error("A foto ficou grande demais mesmo após a otimização. Escolha outra imagem.");
+  if (!smallest || smallest.size > profile.maxOutputBytes) {
+    throw new Error(
+      `${profile.label} ficou grande demais mesmo após a otimização. Escolha outra imagem.`,
+    );
   }
 
-  const baseName = source.name.replace(/\.[^.]+$/, "") || "imagem";
-  return new File([smallest], `${baseName}.webp`, {
-    type: "image/webp",
-    lastModified: Date.now(),
-  });
+  return fileFromBlob(source, smallest);
 }
 
 function statusElement(input: HTMLInputElement) {
@@ -160,12 +190,18 @@ function setFormOptimizing(form: HTMLFormElement | null, optimizing: boolean) {
 }
 
 async function optimizeInput(input: HTMLInputElement, source: File) {
+  const profile = IMAGE_PROFILES[input.name as keyof typeof IMAGE_PROFILES];
+  if (!profile) return;
+
   const form = input.form;
   setFormOptimizing(form, true);
-  setStatus(input, `Otimizando ${formatBytes(source.size)} antes do envio...`);
+  setStatus(
+    input,
+    `Otimizando ${profile.label.toLowerCase()} de ${formatBytes(source.size)} antes do envio...`,
+  );
 
   try {
-    const optimized = await optimizeImage(source);
+    const optimized = await optimizeImage(source, profile);
     if (typeof DataTransfer === "undefined") {
       throw new Error("Seu navegador não permite substituir a foto otimizada.");
     }
@@ -177,7 +213,7 @@ async function optimizeInput(input: HTMLInputElement, source: File) {
       : 0;
     setStatus(
       input,
-      `Foto pronta: ${formatBytes(optimized.size)} em WebP${reduction > 0 ? ` · ${reduction}% menor` : ""}.`,
+      `${profile.label} pronta: ${formatBytes(optimized.size)} em WebP${reduction > 0 ? ` · ${reduction}% menor` : ""}.`,
     );
   } catch (error) {
     input.value = "";
