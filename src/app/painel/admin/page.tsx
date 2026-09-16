@@ -54,6 +54,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <div className="mt-4 flex flex-wrap gap-2">
         <Link href="/painel/admin/dashboard" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink hover:border-brand/40">Ver dashboard administrativo</Link>
         <Link href="/painel/admin/locais-publicos" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink hover:border-brand/40">Gerir locais públicos</Link>
+        <Link href="/painel/admin/pre-cadastros" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink hover:border-brand/40">Pré-cadastrar loja</Link>
       </div>
 
       {params.sucesso && (
