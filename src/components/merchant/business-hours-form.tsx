@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { saveBusinessHoursAction } from "@/app/painel/loja/actions";
+import { FloatingNotice } from "@/components/floating-notice";
 import type { ActionState } from "@/lib/action-state";
 import { initialActionState } from "@/lib/action-state";
 
@@ -89,16 +90,9 @@ export function BusinessHoursForm({
     <form action={action} className="space-y-6">
       <input type="hidden" name="business_id" value={businessId} />
       {state.message && (
-        <div
-          role={state.status === "success" ? "status" : "alert"}
-          className={
-            state.status === "success"
-              ? "rounded-xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold text-positive"
-              : "rounded-xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold text-brand-dark"
-          }
-        >
+        <FloatingNotice tone={state.status === "success" ? "success" : "error"}>
           {state.message}
-        </div>
+        </FloatingNotice>
       )}
 
       <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-accent-dark/15 bg-accent/20 p-4">

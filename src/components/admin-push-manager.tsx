@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { subscribeAdminPush, unsubscribeAdminPush } from "@/app/painel/admin/notificacoes/actions";
+import { FloatingNotice } from "@/components/floating-notice";
 
 function decodeBase64Url(input: string) {
   const raw = atob(input.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - input.length % 4) % 4));
@@ -12,7 +13,10 @@ export function AdminPushManager({ publicKey }: { publicKey: string | null }) {
   const [supported, setSupported] = useState<boolean | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState<{
+    tone: "success" | "error";
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     const available = !!publicKey && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
@@ -32,7 +36,7 @@ export function AdminPushManager({ publicKey }: { publicKey: string | null }) {
   async function enable() {
     if (!publicKey || busy) return;
     setBusy(true);
-    setMessage("");
+    setNotice(null);
     try {
       // The permission prompt must originate from this button tap, including on iOS.
       const permission = await Notification.requestPermission();
@@ -43,9 +47,15 @@ export function AdminPushManager({ publicKey }: { publicKey: string | null }) {
       const result = await subscribeAdminPush(subscription.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } });
       if (!result.ok) throw new Error(result.message);
       setEnabled(true);
-      setMessage(result.message);
+      setNotice({ tone: "success", message: result.message });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível ativar as notificações.");
+      setNotice({
+        tone: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível ativar as notificações.",
+      });
     } finally {
       setBusy(false);
     }
@@ -62,9 +72,18 @@ export function AdminPushManager({ publicKey }: { publicKey: string | null }) {
         await subscription.unsubscribe();
       }
       setEnabled(false);
-      setMessage("Notificações desativadas neste dispositivo.");
+      setNotice({
+        tone: "success",
+        message: "Notificações desativadas neste dispositivo.",
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Falha ao desativar notificações.");
+      setNotice({
+        tone: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Falha ao desativar notificações.",
+      });
     } finally {
       setBusy(false);
     }
@@ -77,6 +96,6 @@ export function AdminPushManager({ publicKey }: { publicKey: string | null }) {
     {supported && <button type="button" disabled={busy} onClick={enabled ? disable : enable} className="mt-4 min-h-11 rounded-xl bg-ink px-4 text-sm font-black text-white disabled:opacity-50">
       {busy ? "Aguarde..." : enabled ? "Desativar neste dispositivo" : "Ativar notificações"}
     </button>}
-    {message && <p role="status" className="mt-3 text-sm font-semibold text-ink">{message}</p>}
+    {notice && <FloatingNotice tone={notice.tone}>{notice.message}</FloatingNotice>}
   </section>;
 }

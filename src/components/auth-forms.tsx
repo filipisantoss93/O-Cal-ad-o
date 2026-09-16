@@ -8,6 +8,7 @@ import {
   signupAction,
   updateRecoveredPasswordAction,
 } from "@/app/(auth)/actions";
+import { FloatingNotice } from "@/components/floating-notice";
 import {
   type ActionState,
   initialActionState,
@@ -34,18 +35,10 @@ function FieldError({
 
 export function ActionMessage({ state }: { state: ActionState }) {
   if (!state.message || state.status === "idle") return null;
-  const success = state.status === "success";
   return (
-    <div
-      role={success ? "status" : "alert"}
-      className={
-        success
-          ? "mb-5 rounded-xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold leading-6 text-positive"
-          : "mb-5 rounded-xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold leading-6 text-brand-dark"
-      }
-    >
+    <FloatingNotice tone={state.status === "success" ? "success" : "error"}>
       {state.message}
-    </div>
+    </FloatingNotice>
   );
 }
 

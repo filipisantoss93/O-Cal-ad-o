@@ -2,8 +2,13 @@
 
 import Image from "next/image";
 import { useActionState, useRef, useState } from "react";
-import { saveBusinessAction } from "@/app/painel/loja/actions";
+import {
+  saveBusinessAction,
+  type SaveBusinessState,
+} from "@/app/painel/loja/actions";
+import { FloatingNotice } from "@/components/floating-notice";
 import { ImageIcon, LocateIcon } from "@/components/icons";
+import { BusinessShareDialog } from "@/components/merchant/business-share-dialog";
 import {
   type ActionState,
   initialActionState,
@@ -47,6 +52,7 @@ type BusinessFormProps = {
 const inputClass =
   "mt-2 min-h-12 w-full rounded-xl border border-line bg-white px-4 text-base text-ink outline-none transition placeholder:text-muted/65 focus:border-brand focus:ring-4 focus:ring-brand/10 disabled:cursor-not-allowed disabled:bg-canvas";
 const labelClass = "block text-sm font-extrabold text-ink";
+const initialBusinessState: SaveBusinessState = initialActionState;
 
 function fieldError(state: ActionState, name: string) {
   const message = state.fieldErrors?.[name]?.[0];
@@ -74,7 +80,7 @@ export function BusinessForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [state, action, pending] = useActionState(
     saveBusinessAction,
-    initialActionState,
+    initialBusinessState,
   );
   const [name, setName] = useState(business?.name ?? "");
   const [slug, setSlug] = useState(business?.slug ?? "");
@@ -231,24 +237,21 @@ export function BusinessForm({
   }
 
   return (
-    <form ref={formRef} action={action} className="space-y-8">
+    <>
+      {state.share && (
+        <BusinessShareDialog key={state.share.slug} share={state.share} />
+      )}
+      <form ref={formRef} action={action} className="space-y-8">
       {business && (
         <input type="hidden" name="business_id" value={business.id} />
       )}
       <input type="hidden" name="latitude" value={latitude} />
       <input type="hidden" name="longitude" value={longitude} />
 
-      {state.message && (
-        <div
-          role={state.status === "success" ? "status" : "alert"}
-          className={
-            state.status === "success"
-              ? "rounded-xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold leading-6 text-positive"
-              : "rounded-xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold leading-6 text-brand-dark"
-          }
-        >
+      {state.message && !state.share && (
+        <FloatingNotice tone={state.status === "success" ? "success" : "error"}>
           {state.message}
-        </div>
+        </FloatingNotice>
       )}
 
       <fieldset className="grid gap-5 sm:grid-cols-2" disabled={pending}>
@@ -748,7 +751,8 @@ export function BusinessForm({
               : "Cadastrar loja"}
         </button>
       </div>
-    </form>
+      </form>
+    </>
   );
 }
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FloatingNotice } from "@/components/floating-notice";
 import {
   ArrowRightIcon,
   EditIcon,
@@ -111,12 +112,9 @@ export default async function MerchantDashboard({
   return (
     <div>
       {params["boas-vindas"] === "1" && (
-        <div
-          role="status"
-          className="mb-6 rounded-2xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold text-positive"
-        >
+        <FloatingNotice tone="success">
           Conta confirmada. Agora complete sua loja para começar.
-        </div>
+        </FloatingNotice>
       )}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

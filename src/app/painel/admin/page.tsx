@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { moderateBusinessAction } from "@/app/painel/admin/actions";
+import { FloatingNotice } from "@/components/floating-notice";
 import { MapPinIcon, ShieldCheckIcon, StoreIcon } from "@/components/icons";
 import { requireAdmin } from "@/lib/admin/dal";
 
@@ -56,14 +57,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </div>
 
       {params.sucesso && (
-        <p role="status" className="mt-6 rounded-2xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold text-positive">
+        <FloatingNotice tone="success">
           Moderação salva com sucesso.
-        </p>
+        </FloatingNotice>
       )}
       {params.erro && (
-        <p role="alert" className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold text-brand-dark">
+        <FloatingNotice tone="error">
           {params.erro === "informe-o-motivo" ? "Informe um motivo com pelo menos 5 caracteres." : "Não foi possível concluir a moderação."}
-        </p>
+        </FloatingNotice>
       )}
 
       <nav aria-label="Filtrar moderação" className="mt-7 flex gap-2 overflow-x-auto pb-2">

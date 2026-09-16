@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { markAdminNotificationRead, resolveAdminMessage } from "@/app/painel/admin/notificacoes/actions";
 import { AdminPushManager } from "@/components/admin-push-manager";
+import { FloatingNotice } from "@/components/floating-notice";
 import { requireAdmin } from "@/lib/admin/dal";
 
 export const metadata: Metadata = { title: "Notificações administrativas" };
@@ -47,7 +48,7 @@ export default async function AdminNotifications({ searchParams }: { searchParam
       <h1 className="mt-2 text-3xl font-black text-ink sm:text-4xl">Notificações</h1>
       <p className="mt-2 text-sm text-muted">Acompanhe novos usuários, mensagens de suporte e denúncias de lojas.</p>
     </div>
-    {params.erro && <p role="alert" className="rounded-xl bg-brand/8 p-4 text-sm font-bold text-brand-dark">Não foi possível salvar a alteração. Tente novamente.</p>}
+    {params.erro && <FloatingNotice tone="error">Não foi possível salvar a alteração. Tente novamente.</FloatingNotice>}
     <AdminPushManager publicKey={publicKeyResult.data ?? null} />
 
     <nav aria-label="Filtrar notificações" className="flex gap-2 overflow-x-auto pb-1">
