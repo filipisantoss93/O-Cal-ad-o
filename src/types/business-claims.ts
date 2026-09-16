@@ -5,12 +5,15 @@ type BaseBusinessTable = Database["public"]["Tables"]["businesses"];
 type BusinessTableWithPreRegistration = {
   Row: BaseBusinessTable["Row"] & {
     pre_registered: boolean;
+    publication_status: string;
   };
   Insert: BaseBusinessTable["Insert"] & {
     pre_registered?: boolean;
+    publication_status?: string;
   };
   Update: BaseBusinessTable["Update"] & {
     pre_registered?: boolean;
+    publication_status?: string;
   };
   Relationships: BaseBusinessTable["Relationships"];
 };
