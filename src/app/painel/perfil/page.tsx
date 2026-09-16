@@ -5,7 +5,8 @@ import {
   PasswordForm,
   ProfileForm,
 } from "@/components/merchant/account-forms";
-import { ShieldCheckIcon, UserIcon } from "@/components/icons";
+import { FloatingNotice } from "@/components/floating-notice";
+import { UserIcon } from "@/components/icons";
 import { getMerchantWorkspace } from "@/lib/merchant/dal";
 
 export const metadata: Metadata = {
@@ -42,17 +43,11 @@ export default async function ProfilePage({
       </div>
 
       {(params.senha === "alterada" || params.email === "confirmado") && (
-        <div
-          role="status"
-          className="mt-6 flex gap-3 rounded-2xl border border-positive/20 bg-positive-soft p-4 text-positive"
-        >
-          <ShieldCheckIcon className="mt-0.5 size-5 shrink-0" />
-          <p className="text-sm font-bold leading-6">
-            {params.senha === "alterada"
-              ? "Sua nova senha foi salva."
-              : "A confirmação do novo e-mail foi processada."}
-          </p>
-        </div>
+        <FloatingNotice tone="success">
+          {params.senha === "alterada"
+            ? "Sua nova senha foi salva."
+            : "A confirmação do novo e-mail foi processada."}
+        </FloatingNotice>
       )}
 
       <div className="mt-8 space-y-6">

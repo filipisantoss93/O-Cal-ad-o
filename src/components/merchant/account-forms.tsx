@@ -7,6 +7,7 @@ import {
   updatePasswordAction,
   updateProfileAction,
 } from "@/app/painel/perfil/actions";
+import { FloatingNotice } from "@/components/floating-notice";
 import { AlertTriangleIcon, TrashIcon } from "@/components/icons";
 import {
   type ActionState,
@@ -22,16 +23,9 @@ const primaryButton =
 function Feedback({ state }: { state: ActionState }) {
   if (!state.message) return null;
   return (
-    <div
-      role={state.status === "success" ? "status" : "alert"}
-      className={
-        state.status === "success"
-          ? "rounded-xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold leading-6 text-positive"
-          : "rounded-xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold leading-6 text-brand-dark"
-      }
-    >
+    <FloatingNotice tone={state.status === "success" ? "success" : "error"}>
       {state.message}
-    </div>
+    </FloatingNotice>
   );
 }
 

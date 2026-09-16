@@ -8,6 +8,7 @@ import {
   updateHighlightCapacityAction,
   updateHighlightPackageAction,
 } from "@/app/painel/admin/destaques/actions";
+import { FloatingNotice } from "@/components/floating-notice";
 import {
   ShieldCheckIcon,
   SparklesIcon,
@@ -192,14 +193,14 @@ export default async function AdminHighlightsPage({
       </div>
 
       {params.erro && (
-        <p role="alert" className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold text-brand-dark">
+        <FloatingNotice tone="error">
           {errorMessages[params.erro] ?? "Não foi possível concluir a operação."}
-        </p>
+        </FloatingNotice>
       )}
       {params.sucesso && (
-        <p role="status" className="mt-6 rounded-2xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold text-positive">
+        <FloatingNotice tone="success">
           Alteração salva com sucesso.
-        </p>
+        </FloatingNotice>
       )}
 
       <section className="mt-8 grid gap-4 sm:grid-cols-3">

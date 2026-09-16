@@ -238,3 +238,12 @@ export function ImageIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function DownloadIcon(props: IconProps) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M12 3v12M7 10l5 5 5-5" />
+      <path d="M5 20h14" />
+    </svg>
+  );
+}

@@ -9,6 +9,7 @@ import {
   togglePromotionAction,
 } from "@/app/painel/promocoes/actions";
 import { ContactActionFields } from "@/components/contact-action-fields";
+import { FloatingNotice } from "@/components/floating-notice";
 import {
   EditIcon,
   ImageIcon,
@@ -53,16 +54,9 @@ const labelClass = "block text-sm font-extrabold text-ink";
 function Feedback({ state }: { state: ActionState }) {
   if (!state.message) return null;
   return (
-    <div
-      role={state.status === "success" ? "status" : "alert"}
-      className={
-        state.status === "success"
-          ? "rounded-xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold leading-6 text-positive"
-          : "rounded-xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold leading-6 text-brand-dark"
-      }
-    >
+    <FloatingNotice tone={state.status === "success" ? "success" : "error"}>
       {state.message}
-    </div>
+    </FloatingNotice>
   );
 }
 

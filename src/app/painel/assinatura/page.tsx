@@ -13,6 +13,7 @@ import {
   startProPixCheckoutAction,
   startPromotionPackCheckoutAction,
 } from "@/app/painel/assinatura/actions";
+import { FloatingNotice } from "@/components/floating-notice";
 import { getMerchantBillingSummary } from "@/lib/merchant/billing";
 import { getMerchantWorkspace } from "@/lib/merchant/dal";
 
@@ -128,21 +129,15 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
       </div>
 
       {errorMessage && (
-        <div
-          role="alert"
-          className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold leading-6 text-brand-dark"
-        >
+        <FloatingNotice tone="error">
           {errorMessage}
-        </div>
+        </FloatingNotice>
       )}
 
       {successMessage && (
-        <div
-          role="status"
-          className="mt-6 rounded-2xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold leading-6 text-positive"
-        >
+        <FloatingNotice tone="success">
           {successMessage}
-        </div>
+        </FloatingNotice>
       )}
 
       {!providerConfigured && (

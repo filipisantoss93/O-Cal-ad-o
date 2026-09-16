@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import { savePublicPlaceAction } from "@/app/painel/admin/actions";
+import { FloatingNotice } from "@/components/floating-notice";
 import { LocateIcon } from "@/components/icons";
 import type { ActionState } from "@/lib/action-state";
 import { initialActionState } from "@/lib/action-state";
@@ -196,16 +197,9 @@ export function PublicPlaceForm({
       <input type="hidden" name="longitude" value={longitude} />
 
       {state.message && (
-        <div
-          role={state.status === "success" ? "status" : "alert"}
-          className={
-            state.status === "success"
-              ? "rounded-xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold leading-6 text-positive"
-              : "rounded-xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold leading-6 text-brand-dark"
-          }
-        >
+        <FloatingNotice tone={state.status === "success" ? "success" : "error"}>
           {state.message}
-        </div>
+        </FloatingNotice>
       )}
 
       <fieldset className="grid gap-5 sm:grid-cols-2" disabled={pending}>

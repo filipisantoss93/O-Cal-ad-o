@@ -9,6 +9,7 @@ import {
 } from "@/app/painel/catalogo/actions";
 import { CatalogPricingFields } from "@/components/catalog-pricing-fields";
 import { ContactActionFields } from "@/components/contact-action-fields";
+import { FloatingNotice } from "@/components/floating-notice";
 import {
   ArrowRightIcon,
   SparklesIcon,
@@ -122,9 +123,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         </div>
       </section>
 
-      {params.erro && errorMessages[params.erro] ? <p role="alert" className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold text-brand-dark">{errorMessages[params.erro]}</p> : null}
-      {params.erro === "limite_catalogo" && !billing.proActive && <Link href="/painel/assinatura" className="mt-2 inline-flex text-sm font-black text-brand-dark underline underline-offset-4">Conhecer o Pro e ampliar para 20 itens</Link>}
-      {params.sucesso === "item_salvo" ? <p role="status" className="mt-6 rounded-2xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold text-positive">Item salvo na vitrine.</p> : null}
+      {params.erro && errorMessages[params.erro] ? <FloatingNotice tone="error">{errorMessages[params.erro]} {params.erro === "limite_catalogo" && !billing.proActive ? <Link href="/painel/assinatura" className="underline underline-offset-4">Conhecer o Pro e ampliar para 20 itens.</Link> : null}</FloatingNotice> : null}
+      {params.sucesso === "item_salvo" ? <FloatingNotice tone="success">Item salvo na vitrine.</FloatingNotice> : null}
 
       {business.billing_suspended ? (
         <div className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-5">

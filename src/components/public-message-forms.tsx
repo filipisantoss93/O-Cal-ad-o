@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { sendSupportMessage } from "@/app/contato/actions";
 import { sendBusinessReport } from "@/app/loja/[slug]/denunciar/actions";
+import { FloatingNotice } from "@/components/floating-notice";
 import { initialActionState } from "@/lib/action-state";
 
 const input = "mt-2 min-h-12 w-full rounded-xl border border-line bg-white px-4 text-base text-ink outline-none focus:border-brand focus:ring-4 focus:ring-brand/10";
@@ -10,7 +11,7 @@ const label = "block text-sm font-extrabold text-ink";
 
 function Message({ status, message }: { status: string; message?: string }) {
   if (!message) return null;
-  return <p role={status === "error" ? "alert" : "status"} className={`rounded-xl p-4 text-sm font-bold ${status === "error" ? "bg-brand/8 text-brand-dark" : "bg-positive-soft text-positive"}`}>{message}</p>;
+  return <FloatingNotice tone={status === "error" ? "error" : "success"}>{message}</FloatingNotice>;
 }
 
 function IdentityFields({ pending }: { pending: boolean }) {

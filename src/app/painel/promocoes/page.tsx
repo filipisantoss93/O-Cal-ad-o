@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { setFeaturedPromotionAction } from "@/app/painel/promocoes/actions";
+import { FloatingNotice } from "@/components/floating-notice";
 import {
   AlertTriangleIcon,
   ArrowRightIcon,
@@ -131,7 +132,7 @@ export default async function PromotionsPage({ searchParams }: PromotionsPagePro
         </div>
       )}
 
-      {params.erro === "pro_necessario" && <p role="alert" className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold text-brand-dark">Somente usuários do Calçadão Pro podem destacar promoções. <Link href="/painel/assinatura" className="underline underline-offset-4">Conhecer o Pro</Link></p>}
+      {params.erro === "pro_necessario" && <FloatingNotice tone="error">Somente usuários do Calçadão Pro podem destacar promoções. <Link href="/painel/assinatura" className="underline underline-offset-4">Conhecer o Pro.</Link></FloatingNotice>}
 
       {business.publication_status !== "published" && !business.billing_suspended && <div className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold leading-6 text-brand-dark">As promoções continuam salvas, mas não aparecem ao público enquanto a vitrine estiver fora do ar.</div>}
 

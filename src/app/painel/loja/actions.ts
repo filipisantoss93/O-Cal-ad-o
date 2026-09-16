@@ -25,6 +25,15 @@ import {
 } from "@/lib/validation";
 import type { Database, TablesInsert, TablesUpdate } from "@/types/database";
 
+export type BusinessSharePayload = {
+  businessName: string;
+  slug: string;
+};
+
+export type SaveBusinessState = ActionState & {
+  share?: BusinessSharePayload;
+};
+
 function saveError(error: unknown): ActionState {
   if (error instanceof ValidationError) {
     return actionError(error.message, error.field);
@@ -167,9 +176,9 @@ export async function saveBusinessHoursAction(
 }
 
 export async function saveBusinessAction(
-  _state: ActionState,
+  _state: SaveBusinessState,
   formData: FormData,
-): Promise<ActionState> {
+): Promise<SaveBusinessState> {
   let cleanupClient: SupabaseClient<Database> | null = null;
   let cleanupUserId = "";
   const uploadedPaths: string[] = [];
@@ -402,6 +411,7 @@ export async function saveBusinessAction(
           : result.data.status === "pending"
             ? "Dados salvos. A vitrine continua publicada e está em análise."
             : "Dados salvos. A vitrine continua publicada.",
+      share: !existing ? { businessName: name, slug } : undefined,
     };
   } catch (error) {
     if (cleanupClient && cleanupUserId && uploadedPaths.length > 0) {

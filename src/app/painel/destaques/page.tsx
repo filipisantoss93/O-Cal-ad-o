@@ -4,6 +4,7 @@ import {
   replaceBannerCreativeAction,
   startHighlightCheckoutAction,
 } from "@/app/painel/destaques/actions";
+import { FloatingNotice } from "@/components/floating-notice";
 import {
   ClockIcon,
   MapPinIcon,
@@ -198,17 +199,14 @@ export default async function HighlightsPage({
       </div>
 
       {errorMessage && (
-        <p
-          role="alert"
-          className="mt-6 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-sm font-bold leading-6 text-brand-dark"
-        >
+        <FloatingNotice tone="error">
           {errorMessage}
-        </p>
+        </FloatingNotice>
       )}
       {params.sucesso === "banner_reenviado" && (
-        <p role="status" className="mt-6 rounded-2xl border border-positive/20 bg-positive-soft p-4 text-sm font-bold text-positive">
+        <FloatingNotice tone="success">
           Nova arte enviada para análise.
-        </p>
+        </FloatingNotice>
       )}
 
       <section className="mt-8 grid gap-4 sm:grid-cols-3">

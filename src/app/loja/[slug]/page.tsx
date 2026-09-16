@@ -61,9 +61,35 @@ export async function generateMetadata({
     return { title: "Local não encontrado" };
   }
 
+  const socialTitle = `${business.name} está no O Calçadão`;
+  const socialDescription = `Agora você também encontra ${business.name} no O Calçadão. Conheça a vitrine e fale direto com o comércio local.`;
+  const socialImage = `/api/cartao-loja/${encodeURIComponent(business.slug)}`;
+
   return {
     title: business.name,
     description: business.description,
+    openGraph: {
+      type: "website",
+      locale: "pt_BR",
+      siteName: "O Calçadão",
+      title: socialTitle,
+      description: socialDescription,
+      url: `/loja/${business.slug}`,
+      images: [
+        {
+          url: socialImage,
+          width: 1080,
+          height: 1080,
+          alt: `${business.name} no O Calçadão`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: socialTitle,
+      description: socialDescription,
+      images: [socialImage],
+    },
   };
 }
 
