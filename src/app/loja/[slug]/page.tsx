@@ -17,6 +17,7 @@ import {
 import { HighlightTracker } from "@/components/highlight-tracker";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { StorefrontShareButton } from "@/components/storefront-share-button";
 import {
   catalogConversionLabel,
   catalogWhatsappHref,
@@ -209,13 +210,23 @@ export default async function BusinessPage({
             {business.coverUrl && <div className="absolute inset-0 bg-ink/55" />}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(255,255,255,0.24),transparent_30%)]" />
             <div className="relative mx-auto max-w-7xl px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-8">
-              <Link
-                href={isAdminPreview ? "/painel/admin" : "/buscar"}
-                className="inline-flex items-center gap-2 rounded-lg text-sm font-bold text-white/80 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white"
-              >
-                <span aria-hidden="true">←</span>
-                {isAdminPreview ? "Voltar para moderação" : "Voltar ao Centro Comercial"}
-              </Link>
+              <div className="flex items-center justify-between gap-3">
+                <Link
+                  href={isAdminPreview ? "/painel/admin" : "/buscar"}
+                  className="inline-flex min-w-0 items-center gap-2 rounded-lg text-sm font-bold text-white/80 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  <span aria-hidden="true">←</span>
+                  <span className="truncate">
+                    {isAdminPreview ? "Voltar para moderação" : "Voltar ao Centro Comercial"}
+                  </span>
+                </Link>
+                {!isAdminPreview && (
+                  <StorefrontShareButton
+                    businessName={business.name}
+                    slug={business.slug}
+                  />
+                )}
+              </div>
 
               <div className="mt-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex items-start gap-4 sm:items-center">
