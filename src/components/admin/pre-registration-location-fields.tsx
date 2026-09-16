@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LocateIcon } from "@/components/icons";
 import { detectCurrentCity } from "@/lib/location-client";
 
@@ -76,7 +76,7 @@ export function PreRegistrationLocationFields({ states }: Props) {
     }
   }
 
-  async function locateRegisteredAddress(gpsError = "") {
+  const locateRegisteredAddress = useCallback(async (gpsError = "") => {
     const street = inputValue("pre-street");
     const addressNumber = inputValue("pre-number");
     const neighborhood = inputValue("pre-neighborhood");
@@ -143,9 +143,9 @@ export function PreRegistrationLocationFields({ states }: Props) {
     } finally {
       setLocatingByAddress(false);
     }
-  }
+  }, [cityId]);
 
-  async function useCurrentLocation() {
+  async function captureCurrentLocation() {
     setDetecting(true);
     setError("");
     setLocationMessage("");
@@ -224,7 +224,7 @@ export function PreRegistrationLocationFields({ states }: Props) {
       addressInputs.forEach((input) => input.removeEventListener("input", onAddressChange));
       form?.removeEventListener("submit", onSubmit);
     };
-  }, [cityId]);
+  }, [cityId, locateRegisteredAddress]);
 
   return (
     <div>
@@ -238,7 +238,7 @@ export function PreRegistrationLocationFields({ states }: Props) {
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
           <button
             type="button"
-            onClick={() => void useCurrentLocation()}
+            onClick={() => void captureCurrentLocation()}
             disabled={detecting || locatingByAddress}
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-black text-white transition hover:bg-brand-dark disabled:cursor-wait disabled:opacity-60"
           >
