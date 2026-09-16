@@ -14,6 +14,7 @@ import {
 } from "@/components/icons";
 import { Logo } from "@/components/logo";
 import { AdminNotificationBadge } from "@/components/admin-notification-badge";
+import { MerchantMobileNavigation } from "@/components/merchant-mobile-navigation";
 
 type MerchantShellProps = {
   name: string;
@@ -33,13 +34,6 @@ const desktopNavigation = [
   { href: "/painel/destaques", label: "Publicidade", icon: StarIcon },
   { href: "/painel/planos-e-recursos", label: "Planos e recursos", icon: SparklesIcon },
   { href: "/painel/perfil", label: "Minha conta", icon: UserIcon },
-];
-
-const mobilePrimaryNavigation = [
-  { href: "/painel", label: "Início", icon: HomeIcon },
-  { href: "/painel/loja", label: "Lojas", icon: StoreIcon },
-  { href: "/painel/promocoes", label: "Promoções", icon: TagIcon },
-  { href: "/painel/destaques", label: "Publicidade", icon: StarIcon },
 ];
 
 function money(cents: number | null) {
@@ -216,121 +210,12 @@ export function MerchantShell({
         {children}
       </main>
 
-      <nav
-        className="fixed inset-x-0 bottom-0 z-[60] border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:hidden"
-        aria-label="Navegação principal do comerciante"
-      >
-        <div className="mx-auto grid max-w-xl grid-cols-5 px-1 pt-1.5">
-          {mobilePrimaryNavigation.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-black text-muted transition active:bg-brand/8 active:text-brand-dark sm:text-[11px]"
-            >
-              <Icon className="size-5" />
-              <span className="max-w-full truncate">{label}</span>
-            </Link>
-          ))}
-
-          <details className="group static">
-            <summary className="flex min-h-[58px] cursor-pointer list-none flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-black text-muted marker:content-none transition active:bg-brand/8 active:text-brand-dark sm:text-[11px]">
-              <span className="grid h-5 place-items-center text-lg font-black leading-none" aria-hidden="true">
-                •••
-              </span>
-              <span>Mais</span>
-            </summary>
-
-            <div className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-[70] mx-auto max-w-lg overflow-hidden rounded-[1.5rem] border border-line bg-surface shadow-[0_24px_60px_rgba(15,23,42,0.2)]">
-              <div className="border-b border-line px-4 py-3">
-                <p className="text-sm font-black text-ink">Olá, {firstName}</p>
-                <p className="mt-0.5 truncate text-xs font-semibold text-muted">{email}</p>
-              </div>
-
-              <div className="grid gap-1 p-2">
-                <Link
-                  href="/painel/catalogo"
-                  className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink transition hover:bg-canvas"
-                >
-                  <TagIcon className="size-4 text-brand-dark" />
-                  Produtos e serviços
-                </Link>
-                <Link
-                  href="/painel/planos-e-recursos"
-                  className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink transition hover:bg-canvas"
-                >
-                  <SparklesIcon className="size-4 text-brand-dark" />
-                  Planos e recursos
-                </Link>
-                <Link
-                  href="/painel/assinatura#calcadao-pro"
-                  className={`flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-black transition ${
-                    proActive
-                      ? "bg-positive-soft text-positive"
-                      : "bg-brand text-white shadow-sm"
-                  }`}
-                >
-                  <SparklesIcon className="size-4" />
-                  {proActive ? "Plano Pro ativo" : "Assinar Calçadão Pro"}
-                </Link>
-                <Link
-                  href="/painel/perfil"
-                  className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink transition hover:bg-canvas"
-                >
-                  <UserIcon className="size-4 text-brand-dark" />
-                  Minha conta
-                </Link>
-                <Link
-                  href="/"
-                  className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink transition hover:bg-canvas"
-                >
-                  <HomeIcon className="size-4 text-brand-dark" />
-                  Ver Centro Comercial
-                </Link>
-
-                {isAdmin && (
-                  <>
-                    <div className="my-1 border-t border-line" />
-                    <Link href="/painel/admin/dashboard" className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink hover:bg-canvas"><HomeIcon className="size-4" /> Dashboard admin</Link>
-                    <Link href="/painel/admin/notificacoes" className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink hover:bg-canvas">🔔 Notificações</Link>
-                    <Link
-                      href="/painel/admin"
-                      className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-positive transition hover:bg-positive-soft"
-                    >
-                      <ShieldCheckIcon className="size-4" />
-                      Moderação
-                    </Link>
-                    <Link
-                      href="/painel/admin/locais-publicos"
-                      className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink transition hover:bg-canvas"
-                    >
-                      <MapPinIcon className="size-4" />
-                      Locais públicos
-                    </Link>
-                    <Link
-                      href="/painel/admin/destaques"
-                      className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-accent-dark transition hover:bg-accent/15"
-                    >
-                      <StarIcon className="size-4" />
-                      Gerir publicidade
-                    </Link>
-                  </>
-                )}
-
-                <div className="my-1 border-t border-line" />
-                <form action={logoutAction}>
-                  <button
-                    type="submit"
-                    className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-extrabold text-muted transition hover:bg-canvas hover:text-ink"
-                  >
-                    <LogOutIcon className="size-4" />
-                    Sair
-                  </button>
-                </form>
-              </div>
-            </div>
-          </details>
-        </div>
-      </nav>
+      <MerchantMobileNavigation
+        firstName={firstName}
+        email={email}
+        isAdmin={isAdmin}
+        proActive={proActive}
+      />
     </div>
   );
 }
