@@ -9,6 +9,13 @@ const ALLOWED_TYPES = new Set([
   "image/webp",
   "image/avif",
 ]);
+const OPTIMIZED_FIELDS = new Set(["image", "logo", "cover"]);
+const OPTIMIZED_PATHS = new Set([
+  "/painel/catalogo",
+  "/painel/promocoes",
+  "/painel/loja",
+  "/painel/admin/pre-cadastros",
+]);
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
 const TARGET_BYTES = 900 * 1024;
 const MAX_OUTPUT_BYTES = 1300 * 1024;
@@ -129,13 +136,21 @@ function setStatus(input: HTMLInputElement, message: string, error = false) {
 
 function setFormOptimizing(form: HTMLFormElement | null, optimizing: boolean) {
   if (!form) return;
-  form.dataset.imageOptimizing = optimizing ? "true" : "false";
+  const currentCount = Number(form.dataset.imageOptimizingCount ?? "0");
+  const nextCount = optimizing
+    ? currentCount + 1
+    : Math.max(0, currentCount - 1);
+  form.dataset.imageOptimizingCount = String(nextCount);
+  form.dataset.imageOptimizing = nextCount > 0 ? "true" : "false";
+
   const controls = form.querySelectorAll<HTMLButtonElement | HTMLInputElement>(
     'button[type="submit"], input[type="submit"]',
   );
   controls.forEach((control) => {
-    if (optimizing) {
-      control.dataset.imageOptimizerWasDisabled = control.disabled ? "true" : "false";
+    if (nextCount > 0) {
+      if (!control.dataset.imageOptimizerWasDisabled) {
+        control.dataset.imageOptimizerWasDisabled = control.disabled ? "true" : "false";
+      }
       control.disabled = true;
       return;
     }
@@ -180,15 +195,14 @@ export function MerchantImageOptimizer() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const enabled = pathname === "/painel/catalogo" || pathname === "/painel/promocoes";
-    if (!enabled) return;
+    if (!OPTIMIZED_PATHS.has(pathname)) return;
 
     const onChange = (event: Event) => {
       const input = event.target;
       if (
         !(input instanceof HTMLInputElement) ||
         input.type !== "file" ||
-        input.name !== "image"
+        !OPTIMIZED_FIELDS.has(input.name)
       ) return;
       const source = input.files?.[0];
       if (!source) return;
@@ -199,8 +213,16 @@ export function MerchantImageOptimizer() {
       const form = event.target;
       if (!(form instanceof HTMLFormElement) || form.dataset.imageOptimizing !== "true") return;
       event.preventDefault();
-      const input = form.querySelector<HTMLInputElement>('input[type="file"][name="image"]');
-      if (input) setStatus(input, "Aguarde a otimização da foto terminar antes de salvar.", true);
+      const input = form.querySelector<HTMLInputElement>(
+        'input[type="file"][name="image"], input[type="file"][name="logo"], input[type="file"][name="cover"]',
+      );
+      if (input) {
+        setStatus(
+          input,
+          "Aguarde a otimização das fotos terminar antes de salvar.",
+          true,
+        );
+      }
     };
 
     document.addEventListener("change", onChange, true);
