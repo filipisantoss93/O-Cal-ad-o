@@ -17,6 +17,7 @@ create index if not exists business_listing_requests_reviewed_by_idx
 
 drop policy if exists business_claim_requests_owner_read on public.business_claim_requests;
 drop policy if exists business_claim_requests_admin_read on public.business_claim_requests;
+drop policy if exists business_claim_requests_read on public.business_claim_requests;
 create policy business_claim_requests_read
   on public.business_claim_requests for select
   to authenticated
@@ -27,6 +28,7 @@ create policy business_claim_requests_read
 
 drop policy if exists business_listing_requests_owner_read on public.business_listing_requests;
 drop policy if exists business_listing_requests_admin_read on public.business_listing_requests;
+drop policy if exists business_listing_requests_read on public.business_listing_requests;
 create policy business_listing_requests_read
   on public.business_listing_requests for select
   to authenticated
