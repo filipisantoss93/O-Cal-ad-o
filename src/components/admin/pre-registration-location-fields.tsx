@@ -28,8 +28,12 @@ function setInputValue(id: string, value: string) {
 }
 
 function hasStoredCoordinates() {
-  const latitude = Number(inputValue("pre-latitude").replace(",", "."));
-  const longitude = Number(inputValue("pre-longitude").replace(",", "."));
+  const latitudeValue = inputValue("pre-latitude");
+  const longitudeValue = inputValue("pre-longitude");
+  if (!latitudeValue || !longitudeValue) return false;
+
+  const latitude = Number(latitudeValue.replace(",", "."));
+  const longitude = Number(longitudeValue.replace(",", "."));
   return Number.isFinite(latitude) && Number.isFinite(longitude);
 }
 
