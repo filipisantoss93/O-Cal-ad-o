@@ -1,5 +1,20 @@
 import type { Database } from "@/types/database";
 
+type BaseBusinessTable = Database["public"]["Tables"]["businesses"];
+
+type BusinessTableWithPreRegistration = {
+  Row: BaseBusinessTable["Row"] & {
+    pre_registered: boolean;
+  };
+  Insert: BaseBusinessTable["Insert"] & {
+    pre_registered?: boolean;
+  };
+  Update: BaseBusinessTable["Update"] & {
+    pre_registered?: boolean;
+  };
+  Relationships: BaseBusinessTable["Relationships"];
+};
+
 type BusinessClaimsTable = {
   Row: {
     business_id: number;
@@ -30,7 +45,8 @@ type BusinessClaimsTable = {
 
 export type DatabaseWithBusinessClaims = Omit<Database, "public"> & {
   public: Omit<Database["public"], "Tables"> & {
-    Tables: Database["public"]["Tables"] & {
+    Tables: Omit<Database["public"]["Tables"], "businesses"> & {
+      businesses: BusinessTableWithPreRegistration;
       business_claims: BusinessClaimsTable;
     };
   };
