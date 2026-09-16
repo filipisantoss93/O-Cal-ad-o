@@ -181,7 +181,7 @@ export async function createPreRegisteredBusinessAction(formData: FormData) {
       is_active: true,
     };
 
-    const { data: business, error: businessError } = await supabase
+    const { data: business, error: businessError } = await claimsClient
       .from("businesses")
       .insert(businessData)
       .select("id, slug")
