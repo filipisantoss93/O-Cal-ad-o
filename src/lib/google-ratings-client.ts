@@ -1,5 +1,3 @@
-import type { Business } from "@/types/catalog";
-
 type GoogleRatingPayload = {
   ratings?: Array<{
     businessId: number;
@@ -8,7 +6,13 @@ type GoogleRatingPayload = {
   }>;
 };
 
-export async function loadGoogleRatings<T extends Pick<Business, "id" | "rating" | "reviewCount">>(
+type RatingCandidate = {
+  id: string | number;
+  rating?: number | null;
+  reviewCount?: number | null;
+};
+
+export async function loadGoogleRatings<T extends RatingCandidate>(
   businesses: T[],
   signal?: AbortSignal,
 ): Promise<Array<T & { ratingSource?: "google" | null }>> {
