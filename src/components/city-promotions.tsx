@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { HomeFeedSection } from "@/components/home/home-feed-section";
 import { PromotionCard } from "@/components/promotion-card";
 import {
   cityChangeEventName,
@@ -8,6 +9,8 @@ import {
   type SelectedCity,
 } from "@/lib/location";
 import type { Promotion } from "@/types/catalog";
+
+const homePromotionLimit = 10;
 
 export function CityPromotions() {
   const storedCity = useSyncExternalStore(
@@ -63,31 +66,29 @@ export function CityPromotions() {
     return () => controller.abort();
   }, [city]);
 
-  if (!city) {
-    return (
-      <div className="mt-7 rounded-3xl border border-dashed border-line bg-surface p-7 text-center">
-        <p className="font-black text-ink">Selecione sua cidade para ver as ofertas locais.</p>
-      </div>
-    );
-  }
+  if (!city || result?.cityId !== city.id) return null;
 
-  const promotions = result?.cityId === city.id ? result.promotions : [];
-  if (result?.cityId === city.id && promotions.length === 0) {
-    return (
-      <div className="mt-7 rounded-3xl border border-dashed border-line bg-surface p-7 text-center">
-        <p className="font-black text-ink">Nenhuma oferta publicada nesta cidade ainda.</p>
-        <p className="mt-1 text-sm font-semibold text-muted">
-          Assim que um comércio publicar uma promoção real, ela aparecerá aqui.
-        </p>
-      </div>
-    );
-  }
+  const promotions = result.promotions.slice(0, homePromotionLimit);
+  if (promotions.length === 0) return null;
 
   return (
-    <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4">
-      {promotions.map((promotion) => (
-        <PromotionCard key={promotion.id} promotion={promotion} />
-      ))}
-    </div>
+    <HomeFeedSection
+      id="ofertas"
+      eyebrow="Vale aproveitar"
+      title="Ofertas da cidade"
+      description="Promoções publicadas pelos comércios locais."
+      tone="canvas"
+    >
+      <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
+        {promotions.map((promotion) => (
+          <div
+            key={promotion.id}
+            className="w-[72vw] max-w-[17.5rem] shrink-0 snap-start sm:w-[42vw] sm:max-w-[19rem] lg:w-auto lg:max-w-none lg:snap-none"
+          >
+            <PromotionCard promotion={promotion} />
+          </div>
+        ))}
+      </div>
+    </HomeFeedSection>
   );
 }
