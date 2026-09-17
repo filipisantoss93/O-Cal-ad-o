@@ -9,6 +9,8 @@ type CityOption = { id: number; name: string; stateCode: string };
 
 type Props = {
   states: StateOption[];
+  initialStateCode?: string;
+  initialCityId?: number | string;
 };
 
 const inputClass =
@@ -37,9 +39,9 @@ function hasStoredCoordinates() {
   return Number.isFinite(latitude) && Number.isFinite(longitude);
 }
 
-export function PreRegistrationLocationFields({ states }: Props) {
-  const [stateCode, setStateCode] = useState("");
-  const [cityId, setCityId] = useState("");
+export function PreRegistrationLocationFields({ states, initialStateCode = "", initialCityId = "" }: Props) {
+  const [stateCode, setStateCode] = useState(initialStateCode);
+  const [cityId, setCityId] = useState(initialCityId ? String(initialCityId) : "");
   const [cities, setCities] = useState<CityOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [detecting, setDetecting] = useState(false);
@@ -55,7 +57,7 @@ export function PreRegistrationLocationFields({ states }: Props) {
     setLocationMessage("");
   }
 
-  async function loadCities(nextState: string, preservedCityId = "") {
+  const loadCities = useCallback(async (nextState: string, preservedCityId = "") => {
     setStateCode(nextState);
     setCityId("");
     setCities([]);
@@ -74,7 +76,12 @@ export function PreRegistrationLocationFields({ states }: Props) {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!initialStateCode) return;
+    void loadCities(initialStateCode, initialCityId ? String(initialCityId) : "");
+  }, [initialCityId, initialStateCode, loadCities]);
 
   const locateRegisteredAddress = useCallback(async (gpsError = "") => {
     const street = inputValue("pre-street");
