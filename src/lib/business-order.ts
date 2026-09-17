@@ -5,12 +5,20 @@ export type DistanceRatingCandidate = {
   reviewCount?: number | null;
 };
 
-function effectiveRating(candidate: DistanceRatingCandidate) {
+const ratingPrior = 4;
+const ratingPriorWeight = 5;
+
+export function effectiveRating(candidate: DistanceRatingCandidate) {
   const reviewCount = Number(candidate.reviewCount ?? 0);
   const rating = Number(candidate.rating ?? 0);
 
   if (!Number.isFinite(reviewCount) || reviewCount <= 0) return 0;
-  return Number.isFinite(rating) ? rating : 0;
+  if (!Number.isFinite(rating) || rating <= 0) return 0;
+
+  return (
+    (reviewCount / (reviewCount + ratingPriorWeight)) * rating +
+    (ratingPriorWeight / (reviewCount + ratingPriorWeight)) * ratingPrior
+  );
 }
 
 export function compareByDistanceRatingName<T extends DistanceRatingCandidate>(
