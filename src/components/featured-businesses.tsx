@@ -7,10 +7,22 @@ import { useFeaturedLimit } from "@/components/use-featured-limit";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
+  selectedCoordinatesStorageKey,
+  type CurrentCoordinates,
   type SelectedCity,
 } from "@/lib/location";
 import { recordHighlightEvent } from "@/lib/highlights-client";
 import type { Business } from "@/types/catalog";
+
+type NearbyBusiness = {
+  slug: string;
+  distanceKm: number | null;
+};
+
+function formatDistance(distanceKm: number) {
+  if (distanceKm < 1) return `${Math.max(1, Math.round(distanceKm * 1_000))} m`;
+  return `${distanceKm.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km`;
+}
 
 export function FeaturedBusinesses() {
   const limit = useFeaturedLimit();
@@ -26,6 +38,14 @@ export function FeaturedBusinesses() {
     () => window.localStorage.getItem(selectedCityStorageKey),
     () => null,
   );
+  const storedCoordinates = useSyncExternalStore(
+    (onChange) => {
+      window.addEventListener(cityChangeEventName, onChange);
+      return () => window.removeEventListener(cityChangeEventName, onChange);
+    },
+    () => window.sessionStorage.getItem(selectedCoordinatesStorageKey),
+    () => null,
+  );
   const city = useMemo(() => {
     if (!storedCity) return null;
     try {
@@ -35,18 +55,31 @@ export function FeaturedBusinesses() {
       return null;
     }
   }, [storedCity]);
+  const coordinates = useMemo(() => {
+    if (!storedCoordinates) return null;
+    try {
+      const value = JSON.parse(storedCoordinates) as CurrentCoordinates;
+      return Number.isFinite(value.latitude) && Number.isFinite(value.longitude)
+        ? value
+        : null;
+    } catch {
+      return null;
+    }
+  }, [storedCoordinates]);
+  const requestKey = city
+    ? `${city.id}:${limit}:${coordinates ? `${coordinates.latitude}:${coordinates.longitude}` : "city"}`
+    : null;
   const [result, setResult] = useState<{
-    cityId: number;
-    limit: number;
+    requestKey: string;
     businesses: Business[];
   } | null>(null);
   const displayed = useMemo(
-    () => (city && result?.cityId === city.id ? result.businesses.slice(0, limit) : []),
-    [city, limit, result],
+    () => (requestKey && result?.requestKey === requestKey ? result.businesses.slice(0, limit) : []),
+    [limit, requestKey, result],
   );
 
   useEffect(() => {
-    if (!city) return;
+    if (!city || !requestKey) return;
     const controller = new AbortController();
 
     const load = async () => {
@@ -60,7 +93,66 @@ export function FeaturedBusinesses() {
         });
         if (!response.ok) return;
         const payload = (await response.json()) as { businesses?: Business[] };
-        setResult({ cityId: city.id, limit, businesses: payload.businesses ?? [] });
+        let businesses = payload.businesses ?? [];
+
+        if (coordinates && businesses.length > 0) {
+          const businessIds = businesses
+            .map((business) => Number(business.id))
+            .filter((id) => Number.isSafeInteger(id) && id > 0);
+
+          if (businessIds.length > 0) {
+            const distanceResponse = await fetch("/api/comercios-proximos", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                cityId: city.id,
+                latitude: coordinates.latitude,
+                longitude: coordinates.longitude,
+                businessIds,
+              }),
+              cache: "no-store",
+              signal: controller.signal,
+            });
+
+            if (distanceResponse.ok) {
+              const distancePayload = (await distanceResponse.json()) as {
+                businesses?: NearbyBusiness[];
+              };
+              const distances = new Map(
+                (distancePayload.businesses ?? [])
+                  .filter(
+                    (business): business is NearbyBusiness & { distanceKm: number } =>
+                      typeof business.distanceKm === "number",
+                  )
+                  .map((business) => [business.slug, business.distanceKm]),
+              );
+
+              businesses = businesses
+                .map((business) => {
+                  const distanceKm = distances.get(business.slug);
+                  return distanceKm === undefined
+                    ? business
+                    : { ...business, distance: formatDistance(distanceKm) };
+                })
+                .sort((first, second) => {
+                  const firstDistance = distances.get(first.slug);
+                  const secondDistance = distances.get(second.slug);
+                  const firstHasDistance = typeof firstDistance === "number";
+                  const secondHasDistance = typeof secondDistance === "number";
+
+                  if (firstHasDistance && secondHasDistance && firstDistance !== secondDistance) {
+                    return firstDistance - secondDistance;
+                  }
+                  if (firstHasDistance !== secondHasDistance) {
+                    return firstHasDistance ? -1 : 1;
+                  }
+                  return first.name.localeCompare(second.name, "pt-BR");
+                });
+            }
+          }
+        }
+
+        setResult({ requestKey, businesses });
       } catch (error) {
         if (!controller.signal.aborted) {
           console.error("[destaques] highlight lookup failed", error);
@@ -70,7 +162,7 @@ export function FeaturedBusinesses() {
 
     void load();
     return () => controller.abort();
-  }, [city, limit]);
+  }, [city, coordinates, limit, requestKey]);
 
   useEffect(() => {
     recordHighlightEvent(
@@ -89,7 +181,7 @@ export function FeaturedBusinesses() {
     }
   }
 
-  if (!city || result?.cityId !== city.id || result.limit !== limit || displayed.length === 0) {
+  if (!city || !requestKey || result?.requestKey !== requestKey || displayed.length === 0) {
     return null;
   }
 
@@ -97,7 +189,11 @@ export function FeaturedBusinesses() {
     <HomeFeedSection
       eyebrow="Boas escolhas por perto"
       title="Comércios em destaque"
-      description="Vitrines que ganharam mais visibilidade na sua cidade."
+      description={
+        coordinates
+          ? "Vitrines em destaque ordenadas do mais próximo ao mais distante."
+          : "Vitrines que ganharam mais visibilidade na sua cidade."
+      }
       linkHref="/buscar"
       linkLabel="Ver mais"
       tone="surface"
