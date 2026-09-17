@@ -16,6 +16,7 @@ import { FeaturedBusinesses } from "@/components/featured-businesses";
 import { FeaturedCatalogItems } from "@/components/featured-catalog-items";
 import { RegionalPaidBanners } from "@/components/regional-paid-banners";
 import { CompactCategories } from "@/components/home/compact-categories";
+import { DiscoveryBusinesses } from "@/components/home/discovery-businesses";
 import { HomeFeedSection } from "@/components/home/home-feed-section";
 import { categories } from "@/data/catalog";
 
@@ -81,6 +82,7 @@ export default function Home() {
         <CityPromotions />
         <NearbyBusinesses />
         <FeaturedCatalogItems />
+        <DiscoveryBusinesses />
 
         <section
           id="para-empresas"
