@@ -84,7 +84,7 @@ async function loadBusiness(
 ): Promise<Business | null> {
   let query = supabase
     .from("businesses")
-    .select("id, city_id, category_id, slug, name, description, listing_type, public_place_kind, official_source_url, tags, whatsapp_e164, phone_e164, website_url, instagram_url, facebook_url, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path, status")
+    .select("id, city_id, category_id, slug, name, description, listing_type, public_place_kind, official_source_url, pre_registered, tags, whatsapp_e164, phone_e164, website_url, instagram_url, facebook_url, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path, status")
     .eq("slug", slug);
 
   if (publishedOnly) {
@@ -138,7 +138,7 @@ async function loadBusiness(
     palette: palettes[business.id % palettes.length],
     logoUrl: publicMediaUrl(supabase, business.logo_path),
     coverUrl: publicMediaUrl(supabase, business.cover_path),
-    verified: business.status === "approved",
+    verified: business.status === "approved" && !business.pre_registered,
     isSponsored: Boolean(highlightResult.data),
     highlightCampaignId: highlightResult.data?.id ? Number(highlightResult.data.id) : null,
     sponsoredPlacement: highlightResult.data?.placement as "category" | "city" | "combo" | undefined,

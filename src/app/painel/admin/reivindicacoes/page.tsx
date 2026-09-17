@@ -1,0 +1,44 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { reviewBusinessClaimAction, reviewBusinessListingRequestAction } from "@/app/painel/admin/reivindicacoes/actions";
+import { FloatingNotice } from "@/components/floating-notice";
+import { ShieldCheckIcon } from "@/components/icons";
+import { requireAdmin } from "@/lib/admin/dal";
+import type { DatabaseWithBusinessClaims } from "@/types/business-claims";
+
+export const metadata: Metadata = { title: "Reivindicações e correções" };
+type PageProps = { searchParams: Promise<{ sucesso?: string; erro?: string }> };
+const relationshipLabels: Record<string, string> = { owner: "Proprietário", manager: "Gerente / responsável", employee: "Funcionário", agency: "Agência / prestador autorizado", other: "Outro vínculo" };
+const requestTypeLabels: Record<string, string> = { correction: "Correção de informação", update: "Atualização", removal: "Remoção do perfil" };
+
+export default async function AdminClaimsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const { supabase } = await requireAdmin("/painel/admin/reivindicacoes");
+  const client = supabase as unknown as SupabaseClient<DatabaseWithBusinessClaims>;
+  const [claimsResult, listingResult] = await Promise.all([
+    client.from("business_claim_requests").select("id, business_id, requester_name, requester_email, relationship, evidence, created_at").eq("status", "pending").order("created_at").limit(100),
+    client.from("business_listing_requests").select("id, business_id, requester_name, requester_email, request_type, details, created_at").eq("status", "pending").order("created_at").limit(100),
+  ]);
+  if (claimsResult.error || listingResult.error) throw new Error("Não foi possível carregar as solicitações pendentes.");
+  const claims = claimsResult.data ?? [];
+  const listingRequests = listingResult.data ?? [];
+  const ids = Array.from(new Set([...claims.map((item) => item.business_id), ...listingRequests.map((item) => item.business_id)]));
+  const businessResult = ids.length ? await client.from("businesses").select("id, name, slug, pre_registered, owner_id, publication_status, cities(name, state_code)").in("id", ids) : { data: [], error: null };
+  if (businessResult.error) throw new Error("Não foi possível carregar os estabelecimentos relacionados.");
+  const businesses = new Map((businessResult.data ?? []).map((business) => [business.id, business]));
+
+  return <div>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.14em] text-positive">Administração</p><h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-ink sm:text-4xl">Reivindicações e correções</h1><p className="mt-2 max-w-3xl text-base leading-7 text-muted">Valide quem solicita a propriedade de um perfil e trate pedidos de correção, atualização ou remoção.</p></div><span className="inline-flex w-fit items-center gap-2 rounded-full bg-positive-soft px-4 py-2 text-sm font-black text-positive"><ShieldCheckIcon className="size-4" /> Aprovação manual</span></div>
+    <div className="mt-4 flex flex-wrap gap-2"><Link href="/painel/admin" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink">Voltar para moderação</Link><Link href="/painel/admin/perfis-nao-reivindicados" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink">Perfis não reivindicados</Link></div>
+    {params.sucesso && <FloatingNotice tone="success">{params.sucesso}</FloatingNotice>}{params.erro && <FloatingNotice tone="error">{params.erro}</FloatingNotice>}
+
+    <section className="mt-8"><div className="flex items-center justify-between"><h2 className="text-2xl font-black text-ink">Reivindicações pendentes</h2><span className="rounded-full bg-canvas px-3 py-1.5 text-sm font-black text-muted">{claims.length}</span></div>
+      {claims.length === 0 ? <p className="mt-4 rounded-3xl border border-dashed border-line bg-surface p-6 text-sm font-semibold text-muted">Nenhuma reivindicação pendente.</p> : <div className="mt-4 space-y-4">{claims.map((claim) => { const business = businesses.get(claim.business_id); return <article key={claim.id} className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7"><div className="grid gap-5 lg:grid-cols-[1fr_22rem]"><div><p className="text-xs font-black uppercase tracking-wider text-brand-dark">{relationshipLabels[claim.relationship] ?? claim.relationship}</p><h3 className="mt-2 text-xl font-black text-ink">{business?.name ?? `Estabelecimento #${claim.business_id}`}</h3><p className="mt-2 text-sm font-bold text-ink">{claim.requester_name} · {claim.requester_email}</p><div className="mt-4 rounded-2xl bg-canvas p-4"><p className="text-xs font-black uppercase tracking-wider text-muted">Comprovação informada</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink">{claim.evidence}</p></div>{business?.slug && <Link href={`/loja/${business.slug}`} target="_blank" className="mt-4 inline-flex text-sm font-black text-brand-dark hover:underline">Abrir perfil público</Link>}</div><form action={reviewBusinessClaimAction} className="rounded-2xl bg-canvas p-4"><input type="hidden" name="request_id" value={claim.id} /><input type="hidden" name="slug" value={business?.slug ?? ""} /><label className="text-sm font-extrabold text-ink">Observação administrativa<textarea name="admin_note" maxLength={1000} className="mt-2 min-h-24 w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" /></label><div className="mt-3 grid grid-cols-2 gap-2"><button name="decision" value="approve" className="min-h-11 rounded-xl bg-positive px-3 text-sm font-black text-white">Aprovar</button><button name="decision" value="reject" className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-black text-ink">Rejeitar</button></div><p className="mt-3 text-xs font-semibold leading-5 text-muted">A aprovação transfere a vitrine para a conta do solicitante.</p></form></div></article>; })}</div>}
+    </section>
+
+    <section className="mt-10"><div className="flex items-center justify-between"><h2 className="text-2xl font-black text-ink">Correções, atualizações e remoções</h2><span className="rounded-full bg-canvas px-3 py-1.5 text-sm font-black text-muted">{listingRequests.length}</span></div>
+      {listingRequests.length === 0 ? <p className="mt-4 rounded-3xl border border-dashed border-line bg-surface p-6 text-sm font-semibold text-muted">Nenhuma solicitação pendente.</p> : <div className="mt-4 space-y-4">{listingRequests.map((request) => { const business = businesses.get(request.business_id); return <article key={request.id} className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7"><div className="grid gap-5 lg:grid-cols-[1fr_22rem]"><div><p className="text-xs font-black uppercase tracking-wider text-brand-dark">{requestTypeLabels[request.request_type] ?? request.request_type}</p><h3 className="mt-2 text-xl font-black text-ink">{business?.name ?? `Estabelecimento #${request.business_id}`}</h3><p className="mt-2 text-sm font-bold text-ink">{request.requester_name} · {request.requester_email}</p><div className="mt-4 rounded-2xl bg-canvas p-4"><p className="whitespace-pre-wrap text-sm leading-6 text-ink">{request.details}</p></div>{business?.slug && <Link href={`/loja/${business.slug}`} target="_blank" className="mt-4 inline-flex text-sm font-black text-brand-dark hover:underline">Abrir perfil público</Link>}</div><form action={reviewBusinessListingRequestAction} className="rounded-2xl bg-canvas p-4"><input type="hidden" name="request_id" value={request.id} /><input type="hidden" name="slug" value={business?.slug ?? ""} /><label className="text-sm font-extrabold text-ink">Observação administrativa<textarea name="admin_note" maxLength={1000} className="mt-2 min-h-24 w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" /></label><div className="mt-3 grid gap-2 sm:grid-cols-2"><button name="decision" value="resolve" className="min-h-11 rounded-xl bg-positive px-3 text-sm font-black text-white">Marcar resolvida</button><button name="decision" value="reject" className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-black text-ink">Rejeitar</button>{request.request_type === "removal" && <button name="decision" value="remove" className="min-h-11 rounded-xl border border-brand/25 bg-brand/8 px-3 text-sm font-black text-brand-dark sm:col-span-2">Aprovar remoção e retirar do ar</button>}</div></form></div></article>; })}</div>}
+    </section>
+  </div>;
+}
