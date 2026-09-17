@@ -82,13 +82,14 @@ export function RegionalPaidBanners() {
   if (!city || !activeBanner) return null;
 
   return (
-    <section className="bg-canvas px-4 pb-8 pt-8 sm:px-6 lg:px-8" aria-label="Publicidade regional">
+    <section className="bg-canvas px-4 py-4 sm:px-6 sm:py-6 lg:px-8" aria-label="Publicidade regional">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-3 flex items-center justify-between gap-3 px-1">
-          <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-muted">
-            <MapPinIcon className="size-4 text-brand" /> Publicidade em {activeBanner.cityName}
+        <div className="mb-2 flex items-center justify-between gap-3 px-0.5 sm:mb-2.5">
+          <p className="inline-flex min-w-0 items-center gap-1.5 truncate text-[10px] font-black uppercase tracking-[0.12em] text-muted sm:text-xs">
+            <MapPinIcon className="size-3.5 shrink-0 text-brand sm:size-4" />
+            <span className="truncate">Publicidade em {activeBanner.cityName}</span>
           </p>
-          <span className="rounded-full border border-line bg-surface px-3 py-1 text-[10px] font-black uppercase tracking-wide text-muted">
+          <span className="shrink-0 rounded-full border border-line bg-surface px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-muted sm:text-[10px]">
             Patrocinado
           </span>
         </div>
@@ -98,7 +99,7 @@ export function RegionalPaidBanners() {
           onClick={() => recordHighlightEvent([activeBanner.campaignId], "store_view")}
           aria-label={`Abrir ${activeBanner.businessName}`}
           title={`${activeBanner.businessName} — ${activeBanner.title}`}
-          className="group relative block aspect-[16/5] overflow-hidden rounded-[2rem] bg-surface shadow-[0_22px_55px_rgba(31,45,42,0.16)] outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4"
+          className="group relative block aspect-[16/5] overflow-hidden rounded-[1.25rem] bg-surface shadow-[0_16px_40px_rgba(31,45,42,0.14)] outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 sm:rounded-[1.75rem]"
         >
           <Image
             src={activeBanner.imageUrl}
@@ -109,8 +110,8 @@ export function RegionalPaidBanners() {
           />
         </Link>
 
-        {banners.length > 1 && (
-          <div className="mt-4 flex justify-center gap-2" aria-label="Selecionar banner">
+        {banners.length > 1 ? (
+          <div className="mt-2.5 flex justify-center gap-1.5" aria-label="Selecionar banner">
             {banners.map((banner, index) => (
               <button
                 key={banner.campaignId}
@@ -118,11 +119,11 @@ export function RegionalPaidBanners() {
                 onClick={() => setActiveIndex(index)}
                 aria-label={`Exibir anúncio ${index + 1}`}
                 aria-current={index === activeIndex}
-                className={`h-2.5 rounded-full transition-all ${index === activeIndex ? "w-8 bg-brand" : "w-2.5 bg-line hover:bg-muted/50"}`}
+                className={`h-2 rounded-full transition-all ${index === activeIndex ? "w-7 bg-brand" : "w-2 bg-line hover:bg-muted/50"}`}
               />
             ))}
           </div>
-        )}
+        ) : null}
       </div>
     </section>
   );
