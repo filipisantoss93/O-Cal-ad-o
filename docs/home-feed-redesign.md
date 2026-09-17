@@ -72,6 +72,16 @@ Este documento é a fonte de verdade da implementação. A reformulação está 
   - descoberta orgânica da cidade;
   - trilho mobile e grid desktop;
   - CTA para o catálogo completo.
+- `src/components/home/home-section-skeleton.tsx`
+  - skeleton reutilizável para as seções do feed;
+  - variantes para cards normais e blocos compactos.
+- `src/components/home/use-home-section-visibility.ts`
+  - lazy loading com `IntersectionObserver`;
+  - inicia o carregamento aproximadamente 500 px antes da viewport;
+  - fallback seguro quando `IntersectionObserver` não estiver disponível.
+- `src/components/home/home-scroll-restoration.tsx`
+  - preserva a posição vertical da home ao abrir um destino interno;
+  - restaura a posição ao retornar durante a mesma sessão.
 - `src/app/api/descobrir/route.ts`
   - seleção limitada a 12 vitrines;
   - rotação estável por visitante + cidade + dia;
@@ -81,18 +91,16 @@ Este documento é a fonte de verdade da implementação. A reformulação está 
 ### Componentes adaptados
 
 - `src/app/page.tsx`
+- `src/components/business-card.tsx`
+- `src/components/promotion-card.tsx`
+- `src/components/featured-item-card.tsx`
 - `src/components/regional-paid-banners.tsx`
 - `src/components/featured-businesses.tsx`
 - `src/components/city-promotions.tsx`
 - `src/components/nearby-businesses.tsx`
 - `src/components/featured-catalog-items.tsx`
 
-### Ainda planejado
-
-- `src/components/home/home-section-skeleton.tsx`
-- helpers de lazy loading/viewport, se necessários.
-
-O `page.tsx` deve permanecer como compositor; regras de carregamento ficam encapsuladas nos componentes responsáveis.
+O `page.tsx` permanece como compositor; regras de carregamento ficam encapsuladas nos componentes responsáveis.
 
 ---
 
@@ -108,14 +116,14 @@ O `page.tsx` deve permanecer como compositor; regras de carregamento ficam encap
 
 ### Abaixo da dobra
 
-Planejado para etapa posterior:
+Implementado com `IntersectionObserver` e margem antecipada de aproximadamente 500 px:
 
 - promoções;
 - proximidade;
 - produtos/serviços em destaque;
 - descoberta orgânica.
 
-Esses blocos devem evoluir para lazy loading com `IntersectionObserver`, iniciando a consulta aproximadamente 400–600 px antes de entrar na viewport.
+Enquanto a seção ainda não concluiu a consulta, é exibido um skeleton padronizado. Uma falha isolada encerra o estado de carregamento daquela seção sem bloquear o restante do feed.
 
 ### Limites
 
@@ -166,7 +174,8 @@ Esses blocos devem evoluir para lazy loading com `IntersectionObserver`, inician
 - seção desaparece quando não houver promoções;
 - mobile usa trilho horizontal;
 - desktop usa grid;
-- limite visual da home: até 10 promoções.
+- limite visual da home: até 10 promoções;
+- consulta adiada até a seção se aproximar da viewport.
 
 ---
 
@@ -180,7 +189,8 @@ Esses blocos devem evoluir para lazy loading com `IntersectionObserver`, inician
 - com coordenadas, mantém ordenação por distância;
 - sem coordenadas, informa que são locais da cidade sem afirmar ordenação por distância;
 - estabelecimentos sem latitude/longitude continuam permitidos no sistema;
-- itens patrocinados continuam identificados e medidos.
+- itens patrocinados continuam identificados e medidos;
+- consulta adiada até a seção se aproximar da viewport.
 
 ---
 
@@ -189,7 +199,8 @@ Esses blocos devem evoluir para lazy loading com `IntersectionObserver`, inician
 - seção vazia desaparece;
 - mobile usa trilho horizontal;
 - desktop usa grid;
-- continua respeitando `useFeaturedLimit()`.
+- continua respeitando `useFeaturedLimit()`;
+- consulta adiada até a seção se aproximar da viewport.
 
 ---
 
@@ -208,7 +219,8 @@ Regras atuais:
 - primeira passagem prioriza categorias diferentes;
 - segunda passagem completa os espaços restantes;
 - conteúdo não recebe selo de patrocinado;
-- CTA leva para `/buscar`.
+- CTA leva para `/buscar`;
+- consulta adiada até a seção se aproximar da viewport.
 
 ---
 
@@ -218,20 +230,23 @@ Regras atuais:
 - seções vazias não devem criar grandes espaços;
 - falha de banner não pode bloquear os demais blocos;
 - falha de promoções não pode bloquear proximidade/destaques;
-- skeleton padronizado ainda será implementado.
+- skeleton padronizado implementado para blocos carregados sob demanda;
+- falhas de consulta abaixo da dobra encerram o loading local e não prendem o usuário em skeleton infinito.
 
 ---
 
 ## Performance
 
-- usar `next/image` com `sizes` adequados;
-- imagens abaixo da dobra não devem receber `priority`;
+- `next/image` usa `sizes` compatíveis com a largura real dos trilhos mobile/tablet e com os grids desktop;
+- `BusinessCard` permite `imageSizes` específico na home sem alterar o dimensionamento padrão das demais páginas;
+- imagens abaixo da dobra não recebem `priority`;
+- promoções, proximidade, produtos/serviços e descoberta orgânica são carregados apenas quando se aproximam da viewport;
 - limitar o DOM ao conteúdo realmente exibido;
 - filtros, limites e ordenação ficam no servidor/banco;
 - categorias podem usar cache mais longo;
 - campanhas precisam continuar compatíveis com rotação e métricas;
 - descoberta orgânica usa resposta privada sem cache compartilhado por depender do visitante;
-- restauração de scroll ao voltar de uma vitrine será tratada em P2.
+- a posição da home é preservada em `sessionStorage` ao navegar para destinos internos e restaurada ao retornar.
 
 ---
 
@@ -299,13 +314,23 @@ Métricas orgânicas e pagas devem permanecer separadas.
 
 ### P2 — Escala, métricas e performance
 
-- [ ] Implementar lazy loading por viewport.
-- [ ] Criar skeletons padronizados.
+- [x] Implementar lazy loading por viewport.
+- [x] Criar skeletons padronizados.
 - [ ] Refinar cache por tipo de conteúdo.
-- [ ] Preservar posição de scroll ao retornar da vitrine.
+- [x] Preservar posição de scroll ao retornar da vitrine.
 - [ ] Instrumentar métricas orgânicas.
 - [ ] Validar Core Web Vitals/performance mobile.
-- [ ] Revisar imagens e `sizes`.
+- [x] Revisar imagens e `sizes`.
+
+---
+
+## Validação técnica registrada
+
+- preview da Vercel para a branch respondeu `200 OK` após a reorganização do feed;
+- build com lazy loading e skeletons concluído com sucesso;
+- build com restauração de scroll concluído com sucesso;
+- build com revisão de `next/image sizes` concluído com sucesso;
+- validação visual real em mobile/tablet/desktop e validação de todas as regras comerciais ainda são obrigatórias antes de retirar a PR do modo draft.
 
 ---
 
