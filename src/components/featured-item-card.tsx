@@ -49,7 +49,7 @@ export function FeaturedItemCard({ item }: { item: FeaturedCatalogItem }) {
             src={item.imageUrl}
             alt={item.name}
             fill
-            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 20vw"
+            sizes="(max-width: 640px) 72vw, (max-width: 1024px) 42vw, (max-width: 1280px) 25vw, 20vw"
             className="object-cover"
           />
         </div>

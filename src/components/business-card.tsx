@@ -13,10 +13,20 @@ import type { Business } from "@/types/catalog";
 type BusinessCardProps = {
   business: Business;
   compact?: boolean;
+  imageSizes?: string;
 };
 
-export function BusinessCard({ business, compact = false }: BusinessCardProps) {
+export function BusinessCard({
+  business,
+  compact = false,
+  imageSizes,
+}: BusinessCardProps) {
   const isPublicPlace = business.listingType === "public_place";
+  const coverSizes =
+    imageSizes ??
+    (compact
+      ? "(max-width: 640px) 45vw, 25vw"
+      : "(max-width: 768px) 90vw, 25vw");
 
   return (
     <article
@@ -36,7 +46,7 @@ export function BusinessCard({ business, compact = false }: BusinessCardProps) {
               src={business.coverUrl}
               alt={`Capa de ${business.name}`}
               fill
-              sizes={compact ? "(max-width: 640px) 45vw, 25vw" : "(max-width: 768px) 90vw, 25vw"}
+              sizes={coverSizes}
               className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-ink/65 via-ink/10 to-ink/15" />

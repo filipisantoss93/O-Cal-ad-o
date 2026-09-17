@@ -111,7 +111,11 @@ export function FeaturedBusinesses() {
             key={business.id}
             className="w-[72vw] max-w-[17.5rem] shrink-0 snap-start sm:w-[42vw] sm:max-w-[19rem] lg:w-auto lg:max-w-none lg:snap-none"
           >
-            <BusinessCard business={business} compact />
+            <BusinessCard
+              business={business}
+              compact
+              imageSizes="(max-width: 640px) 72vw, (max-width: 1024px) 42vw, (max-width: 1280px) 25vw, 20vw"
+            />
           </div>
         ))}
       </div>
