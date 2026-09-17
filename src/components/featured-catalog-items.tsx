@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { FeaturedItemCard } from "@/components/featured-item-card";
+import { HomeFeedSection } from "@/components/home/home-feed-section";
 import { useFeaturedLimit } from "@/components/use-featured-limit";
 import {
   cityChangeEventName,
@@ -67,31 +68,28 @@ export function FeaturedCatalogItems() {
     return () => controller.abort();
   }, [cityId, limit]);
 
-  if (!city) {
-    return (
-      <div className="mt-7 rounded-3xl border border-dashed border-line bg-surface p-7 text-center">
-        <p className="font-black text-ink">Selecione sua cidade para ver produtos e serviços em destaque.</p>
-      </div>
-    );
-  }
+  if (!city || result?.cityId !== city.id || result.limit !== limit) return null;
 
-  const items = result?.cityId === city.id ? result.items.slice(0, limit) : [];
-  if (result?.cityId === city.id && result.limit === limit && items.length === 0) {
-    return (
-      <div className="mt-7 rounded-3xl border border-dashed border-line bg-surface p-7 text-center">
-        <p className="font-black text-ink">Nenhum produto ou serviço em destaque nesta cidade ainda.</p>
-        <p className="mt-1 text-sm font-semibold text-muted">
-          Os próprios comércios escolhem o item que querem promover neste espaço.
-        </p>
-      </div>
-    );
-  }
+  const items = result.items.slice(0, limit);
+  if (items.length === 0) return null;
 
   return (
-    <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      {items.map((item) => (
-        <FeaturedItemCard key={item.id} item={item} />
-      ))}
-    </div>
+    <HomeFeedSection
+      eyebrow="Escolhidos pelas lojas"
+      title="Produtos e serviços em destaque"
+      description="Itens que os próprios comércios escolheram para ganhar mais visibilidade."
+      tone="canvas"
+    >
+      <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 xl:grid-cols-5">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="w-[72vw] max-w-[17.5rem] shrink-0 snap-start sm:w-[42vw] sm:max-w-[19rem] lg:w-auto lg:max-w-none lg:snap-none"
+          >
+            <FeaturedItemCard item={item} />
+          </div>
+        ))}
+      </div>
+    </HomeFeedSection>
   );
 }
