@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FloatingNotice } from "@/components/floating-notice";
 import {
+  AlertTriangleIcon,
   ArrowRightIcon,
   EditIcon,
   PlusIcon,
@@ -76,6 +77,11 @@ export default async function MerchantDashboard({
   const firstBusiness = businesses[0] ?? null;
   const firstAvailableBusiness =
     businesses.find((business) => !business.billing_suspended) ?? firstBusiness;
+  const storeLimitSuspendedBusiness = businesses.find(
+    (business) =>
+      business.billing_suspended &&
+      business.billing_suspension_reason === "store_limit",
+  );
 
   let promotionsCount = 0;
   let activePromotions = 0;
@@ -112,6 +118,37 @@ export default async function MerchantDashboard({
         <FloatingNotice tone="success">
           Conta confirmada. Agora complete sua loja para começar.
         </FloatingNotice>
+      )}
+
+      {storeLimitSuspendedBusiness && (
+        <div className="mb-6 flex gap-3 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-brand-dark shadow-sm">
+          <AlertTriangleIcon className="mt-0.5 size-5 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-black">
+              Reivindicação aprovada, mas esta vitrine está suspensa porque sua
+              conta atingiu o limite de lojas.
+            </p>
+            <p className="mt-1 text-sm leading-6">
+              A vitrine <strong>{storeLimitSuspendedBusiness.name}</strong> já
+              pertence à sua conta e todos os dados foram preservados. Ela volta
+              ao ar automaticamente quando houver uma vaga disponível no plano.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <Link
+                href={`/painel/loja?loja=${storeLimitSuspendedBusiness.id}`}
+                className="text-sm font-black underline underline-offset-4"
+              >
+                Ver vitrine suspensa
+              </Link>
+              <Link
+                href="/painel/assinatura#lojas-adicionais"
+                className="text-sm font-black underline underline-offset-4"
+              >
+                Aumentar limite de lojas
+              </Link>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
