@@ -68,6 +68,15 @@ Este documento é a fonte de verdade da implementação. A reformulação está 
   - grid compacto em telas maiores.
 - `src/components/home/home-feed-section.tsx`
   - padrão de título, descrição, ação, espaçamento e fundo das seções.
+- `src/components/home/discovery-businesses.tsx`
+  - descoberta orgânica da cidade;
+  - trilho mobile e grid desktop;
+  - CTA para o catálogo completo.
+- `src/app/api/descobrir/route.ts`
+  - seleção limitada a 12 vitrines;
+  - rotação estável por visitante + cidade + dia;
+  - exclusão de negócios com campanha paga ativa;
+  - priorização de variedade de categorias.
 
 ### Componentes adaptados
 
@@ -78,13 +87,12 @@ Este documento é a fonte de verdade da implementação. A reformulação está 
 - `src/components/nearby-businesses.tsx`
 - `src/components/featured-catalog-items.tsx`
 
-### Componentes ainda planejados
+### Ainda planejado
 
-- `src/components/home/discovery-businesses.tsx`
 - `src/components/home/home-section-skeleton.tsx`
 - helpers de lazy loading/viewport, se necessários.
 
-O `page.tsx` deve permanecer como compositor; regras de carregamento devem ficar encapsuladas nos componentes responsáveis.
+O `page.tsx` deve permanecer como compositor; regras de carregamento ficam encapsuladas nos componentes responsáveis.
 
 ---
 
@@ -138,7 +146,7 @@ Esses blocos devem evoluir para lazy loading com `IntersectionObserver`, inician
 - desktop usa grid;
 - seção inteira desaparece quando não houver campanha elegível;
 - métricas existentes continuam sendo registradas;
-- descoberta orgânica futura não deve duplicar estabelecimentos já exibidos como patrocinados.
+- descoberta orgânica exclui negócios com campanha ativa de cidade/combo.
 
 ---
 
@@ -185,20 +193,22 @@ Esses blocos devem evoluir para lazy loading com `IntersectionObserver`, inician
 
 ---
 
-## Descoberta orgânica — pendente
+## Descoberta orgânica
 
-Criar endpoint/função pública para retornar aproximadamente 12 estabelecimentos elegíveis da cidade.
+Implementada por `DiscoveryBusinesses` + `/api/descobrir`.
 
-Critérios:
+Regras atuais:
 
-- somente vitrines públicas e ativas;
-- diversidade de categorias;
-- diversidade de estabelecimentos;
-- permitir pré-cadastrados publicados;
-- evitar repetição de negócios já exibidos em posições pagas;
-- rotação estável por visitante + cidade + dia;
-- nenhum selo de patrocinado;
-- não depender de carregar o catálogo completo no cliente.
+- somente resultados públicos retornados pela busca pública existente;
+- apenas `listingType = business`;
+- exclusão de negócios com campanha ativa em posições de cidade/combo;
+- até 12 vitrines;
+- busca no máximo algumas páginas candidatas, nunca o catálogo inteiro;
+- ordenação variável porém estável por visitante + cidade + dia;
+- primeira passagem prioriza categorias diferentes;
+- segunda passagem completa os espaços restantes;
+- conteúdo não recebe selo de patrocinado;
+- CTA leva para `/buscar`.
 
 ---
 
@@ -220,7 +230,7 @@ Critérios:
 - filtros, limites e ordenação ficam no servidor/banco;
 - categorias podem usar cache mais longo;
 - campanhas precisam continuar compatíveis com rotação e métricas;
-- descoberta orgânica poderá usar cache curto por cidade;
+- descoberta orgânica usa resposta privada sem cache compartilhado por depender do visitante;
 - restauração de scroll ao voltar de uma vitrine será tratada em P2.
 
 ---
@@ -256,7 +266,7 @@ Métricas orgânicas e pagas devem permanecer separadas.
 
 ### Desktop
 
-- grid de 4–5 cards conforme o bloco;
+- grid de 4–6 cards conforme o bloco;
 - maior densidade sem aumentar excessivamente a altura das seções.
 
 ---
@@ -282,10 +292,10 @@ Métricas orgânicas e pagas devem permanecer separadas.
 - [x] Transformar `NearbyBusinesses` em trilho horizontal.
 - [x] Adaptar promoções para trilho.
 - [x] Adaptar produtos/serviços destacados para trilho.
-- [ ] Criar `DiscoveryBusinesses`.
-- [ ] Criar `/api/descobrir` ou função equivalente.
-- [ ] Evitar duplicidade entre conteúdo pago e descoberta orgânica.
-- [ ] Criar CTA forte para catálogo completo.
+- [x] Criar `DiscoveryBusinesses`.
+- [x] Criar `/api/descobrir`.
+- [x] Evitar duplicidade entre campanhas pagas ativas e descoberta orgânica.
+- [x] Criar CTA forte para catálogo completo.
 
 ### P2 — Escala, métricas e performance
 
@@ -311,6 +321,7 @@ A reformulação só deve sair de draft quando:
 - distância continuar correta quando houver coordenadas;
 - cadastro sem coordenadas continuar permitido;
 - conteúdo patrocinado continuar identificado e mensurado;
+- descoberta orgânica não competir visualmente como conteúdo pago;
 - não houver overflow horizontal global;
 - localização permitida, negada e seleção manual funcionarem;
 - mobile, tablet e desktop forem validados visualmente;
