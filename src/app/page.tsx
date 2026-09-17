@@ -18,6 +18,7 @@ import { RegionalPaidBanners } from "@/components/regional-paid-banners";
 import { CompactCategories } from "@/components/home/compact-categories";
 import { DiscoveryBusinesses } from "@/components/home/discovery-businesses";
 import { HomeFeedSection } from "@/components/home/home-feed-section";
+import { HomeScrollRestoration } from "@/components/home/home-scroll-restoration";
 import { categories } from "@/data/catalog";
 
 const homeCategories = categories.slice(0, 7);
@@ -25,6 +26,7 @@ const homeCategories = categories.slice(0, 7);
 export default function Home() {
   return (
     <>
+      <HomeScrollRestoration />
       <a className="skip-link" href="#conteudo">
         Ir para o conteúdo
       </a>
