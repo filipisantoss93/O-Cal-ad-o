@@ -2,39 +2,38 @@
 
 ## Objetivo
 
-Transformar a tela inicial de O Calçadão em um feed de descoberta local escalável, orientado a mobile, capaz de trabalhar bem com centenas ou milhares de estabelecimentos por cidade sem carregar catálogos inteiros no cliente.
+Transformar a tela inicial de O Calçadão em um feed de descoberta local escalável, mobile-first e adequado para cidades com centenas ou milhares de estabelecimentos, sem carregar o catálogo inteiro no cliente.
 
-A home deve priorizar:
+A home deve priorizar, nesta ordem:
 
 1. busca rápida;
 2. categorias compactas;
 3. inventário comercial pago (banner, destaques e promoções);
 4. descoberta por proximidade;
 5. produtos e serviços em destaque;
-6. descoberta orgânica de novos estabelecimentos;
+6. descoberta orgânica;
 7. acesso ao catálogo completo em `/buscar`.
 
-Este documento é a fonte de verdade da implementação. Itens só devem ser marcados como concluídos depois de implementados e validados.
+Este documento é a fonte de verdade da implementação. A reformulação está sendo mantida na branch `feat/home-feed-redesign` e na PR consolidada #25.
 
 ---
 
-## Problemas atuais
+## Problemas que motivaram a mudança
 
-- O bloco `Perto de você` fica dentro do hero e pode exibir até 10 locais, criando uma primeira dobra excessivamente longa no mobile.
-- Categorias ocupam muito espaço vertical para uma função de navegação rápida.
-- Banner, destaques, promoções e produtos ficam separados por blocos grandes e acabam aparecendo tarde na navegação.
-- A home ainda possui seções institucionais extensas que competem com o conteúdo real da cidade.
-- Estados vazios comerciais ocupam espaço mesmo quando não há conteúdo disponível.
-- O crescimento do banco exige limites rígidos por seção; a home não pode tentar representar o catálogo completo.
+- `Perto de você` ficava dentro do hero e podia renderizar 10 locais antes do restante do feed.
+- Categorias ocupavam altura excessiva.
+- Banner, destaques e promoções apareciam tarde na rolagem.
+- Blocos institucionais grandes competiam com o conteúdo real da cidade.
+- Estados vazios comerciais ocupavam espaço sem entregar valor.
+- A home ainda se comportava como landing page, não como feed de descoberta.
+- O crescimento do banco exige limites rígidos por seção e consultas server-side.
 
 ---
 
-## Hierarquia final da Home
-
-Ordem alvo:
+## Hierarquia alvo
 
 1. `HomeHero`
-   - seletor de cidade;
+   - cidade;
    - título curto;
    - busca;
    - sinais de confiança compactos.
@@ -46,36 +45,31 @@ Ordem alvo:
 7. `FeaturedCatalogItems`
 8. `DiscoveryBusinesses`
 9. CTA `Explorar todos`
-10. `HomeMerchantCTA`
+10. CTA para comerciantes
 11. rodapé
 
-Regras:
+### Regras gerais
 
-- Se uma seção comercial não tiver conteúdo, ela deve desaparecer sem deixar espaço vazio.
-- A home mostra amostras; `/buscar` continua sendo o catálogo completo.
-- Conteúdo patrocinado deve permanecer identificado de forma explícita.
+- Se uma seção comercial não tiver conteúdo, ela deve desaparecer.
+- A home exibe amostras; `/buscar` é o catálogo completo.
+- Conteúdo pago deve permanecer identificado.
 - Conteúdo orgânico não deve parecer patrocinado.
+- Nenhuma seção pode carregar centenas de registros para filtrar no browser.
 
 ---
 
-## Arquitetura de Componentes
+## Arquitetura
 
-Novos componentes planejados em `src/components/home/`:
+### Componentes criados
 
-- `compact-categories.tsx`
-  - categorias rápidas da home;
+- `src/components/home/compact-categories.tsx`
+  - navegação compacta de categorias;
   - scroll horizontal no mobile;
-  - linha/grid compacto no desktop.
-- `home-feed-section.tsx`
-  - título, subtítulo opcional, link de ação e espaçamento padrão.
-- `discovery-businesses.tsx`
-  - descoberta orgânica da cidade.
-- `nearby-business-card.tsx` ou variante equivalente
-  - card compacto para trilho de proximidade.
-- `home-section-skeleton.tsx`
-  - skeleton reutilizável para carregamento tardio.
+  - grid compacto em telas maiores.
+- `src/components/home/home-feed-section.tsx`
+  - padrão de título, descrição, ação, espaçamento e fundo das seções.
 
-Componentes existentes a adaptar:
+### Componentes adaptados
 
 - `src/app/page.tsx`
 - `src/components/regional-paid-banners.tsx`
@@ -84,149 +78,156 @@ Componentes existentes a adaptar:
 - `src/components/nearby-businesses.tsx`
 - `src/components/featured-catalog-items.tsx`
 
-O `page.tsx` deve atuar principalmente como compositor de seções, sem concentrar regras de carregamento.
+### Componentes ainda planejados
+
+- `src/components/home/discovery-businesses.tsx`
+- `src/components/home/home-section-skeleton.tsx`
+- helpers de lazy loading/viewport, se necessários.
+
+O `page.tsx` deve permanecer como compositor; regras de carregamento devem ficar encapsuladas nos componentes responsáveis.
 
 ---
 
-## Regras de Carregamento
+## Regras de carregamento
 
-### Acima da dobra
-
-Carregar imediatamente:
+### Imediato
 
 - cidade selecionada;
 - busca;
 - categorias;
-- banner regional.
+- banner regional;
+- destaques pagos.
 
-### Conteúdo principal
+### Abaixo da dobra
 
-Carregar logo após a seleção de cidade:
-
-- destaques comerciais.
-
-### Conteúdo abaixo da dobra
-
-Planejar lazy loading por `IntersectionObserver`, iniciando o carregamento antes da entrada na viewport (aproximadamente 400–600 px).
-
-Aplicar a:
+Planejado para etapa posterior:
 
 - promoções;
 - proximidade;
 - produtos/serviços em destaque;
 - descoberta orgânica.
 
-### Limites da Home
+Esses blocos devem evoluir para lazy loading com `IntersectionObserver`, iniciando a consulta aproximadamente 400–600 px antes de entrar na viewport.
 
-- banner regional: 1 ativo visível por vez;
+### Limites
+
+- banner: 1 campanha visível por vez;
 - comércios em destaque: 10 mobile / 20 desktop;
-- promoções: 8–10;
+- promoções: até 10 na home;
 - perto de você: 10;
-- produtos/serviços em destaque: 10 mobile / 20 desktop;
+- produtos/serviços destacados: 10 mobile / 20 desktop;
 - descoberta orgânica: 12.
 
-Nenhuma seção da home deve buscar centenas de registros para filtrar no navegador.
+---
+
+## Banner regional
+
+- aparece imediatamente depois das categorias;
+- mantém o selo `Patrocinado`;
+- mantém rotação existente;
+- mantém métricas de impressão e abertura;
+- se não houver banner, retorna `null`;
+- usa espaçamento externo menor para se integrar ao feed.
 
 ---
 
-## Regras de Banner
+## Comércios em destaque
 
-- Deve aparecer logo após categorias.
-- Deve manter identificação `Patrocinado`.
-- Deve manter rotação de campanhas existente.
-- Se não houver banner para a cidade, retornar `null` sem reservar espaço.
-- Métricas existentes de impressão e abertura devem ser preservadas.
-- Evitar margens verticais excessivas para que pareça parte do feed.
-
----
-
-## Regras de Destaques
-
-- Manter regras comerciais atuais.
-- Mobile: trilho horizontal com scroll e snap.
-- Desktop: grid ou trilho amplo conforme melhor resultado visual.
-- Não misturar conteúdo pago com descoberta orgânica.
-- Preservar eventos de impressão e abertura.
-- Evitar repetir o mesmo estabelecimento em descoberta orgânica quando ele já foi exibido como destaque na mesma composição.
+- regras comerciais e endpoint existentes permanecem;
+- mobile usa trilho horizontal com snap;
+- desktop usa grid;
+- seção inteira desaparece quando não houver campanha elegível;
+- métricas existentes continuam sendo registradas;
+- descoberta orgânica futura não deve duplicar estabelecimentos já exibidos como patrocinados.
 
 ---
 
-## Regras de Categorias
+## Categorias
 
-- A home não deve usar os cards grandes de `CategoryGrid`.
-- Exibir inicialmente 6–8 categorias relevantes.
-- Incluir ação `Ver todas`.
-- Mobile: uma faixa horizontal compacta.
-- Desktop: linha ou grid de baixa altura.
-- `CategoryGrid` pode continuar sendo usado em páginas específicas onde cards grandes façam sentido.
-
----
-
-## Regras de Promoções e Itens em Destaque
-
-- Se o resultado carregado for vazio, esconder a seção inteira.
-- Não renderizar grandes placeholders vazios na home.
-- Mobile: trilho horizontal.
-- Desktop: grid/trilho de acordo com largura.
-- O estado vazio continua permitido em páginas administrativas ou páginas específicas de catálogo.
+- a home não utiliza mais os cards altos do `CategoryGrid`;
+- exibe 7 atalhos + `Ver todas`;
+- mobile usa scroll horizontal;
+- desktop usa linha/grid compacto;
+- `CategoryGrid` permanece disponível em outras páginas.
 
 ---
 
-## Regras de Proximidade
+## Promoções
 
-- `Perto de você` não deve permanecer dentro do hero.
-- Exibir até 10 locais.
-- Quando houver coordenadas, ordenar exclusivamente por distância, do mais próximo ao mais distante.
-- Sem coordenadas, exibir locais da cidade sem afirmar ordenação por distância.
-- Cadastro sem latitude/longitude continua permitido.
-- Estabelecimentos sem coordenadas não podem bloquear o restante do feed.
+- resultado vazio não gera placeholder na home;
+- seção desaparece quando não houver promoções;
+- mobile usa trilho horizontal;
+- desktop usa grid;
+- limite visual da home: até 10 promoções.
 
 ---
 
-## Descoberta Orgânica
+## Perto de você
 
-Criar endpoint ou função pública específica para retornar aproximadamente 12 estabelecimentos elegíveis da cidade.
+- foi removido do hero;
+- agora possui seção própria;
+- mobile usa trilho horizontal;
+- desktop usa grid;
+- continua limitado a 10 locais;
+- com coordenadas, mantém ordenação por distância;
+- sem coordenadas, informa que são locais da cidade sem afirmar ordenação por distância;
+- estabelecimentos sem latitude/longitude continuam permitidos no sistema;
+- itens patrocinados continuam identificados e medidos.
 
-Critérios desejados:
+---
 
-- somente vitrines publicadas/ativas;
+## Produtos e serviços destacados
+
+- seção vazia desaparece;
+- mobile usa trilho horizontal;
+- desktop usa grid;
+- continua respeitando `useFeaturedLimit()`.
+
+---
+
+## Descoberta orgânica — pendente
+
+Criar endpoint/função pública para retornar aproximadamente 12 estabelecimentos elegíveis da cidade.
+
+Critérios:
+
+- somente vitrines públicas e ativas;
 - diversidade de categorias;
 - diversidade de estabelecimentos;
-- mistura controlada entre perfis reivindicados e pré-cadastrados;
-- evitar itens já exibidos como patrocinados na mesma composição;
-- rotação estável por visitante + cidade + dia para não mudar a cada renderização;
-- identificação visual neutra, sem selo de patrocinado.
-
-A descoberta orgânica serve para distribuir visibilidade entre os centenas de cadastros sem transformar a home em uma listagem infinita.
+- permitir pré-cadastrados publicados;
+- evitar repetição de negócios já exibidos em posições pagas;
+- rotação estável por visitante + cidade + dia;
+- nenhum selo de patrocinado;
+- não depender de carregar o catálogo completo no cliente.
 
 ---
 
-## Estados e Resiliência
+## Estados e resiliência
 
-- Erro em uma seção não pode quebrar a home inteira.
-- Skeleton deve ter o mesmo tamanho aproximado do conteúdo final.
-- Seção comercial vazia deve desaparecer.
-- Falha de banner não pode bloquear busca, destaques ou proximidade.
-- Falha de promoções não pode bloquear as demais áreas.
+- erro de uma seção não pode quebrar a home;
+- seções vazias não devem criar grandes espaços;
+- falha de banner não pode bloquear os demais blocos;
+- falha de promoções não pode bloquear proximidade/destaques;
+- skeleton padronizado ainda será implementado.
 
 ---
 
 ## Performance
 
-- Usar `next/image` com `sizes` adequado.
-- Imagens abaixo da dobra não devem usar `priority`.
-- Limitar quantidade de elementos no DOM.
-- Filtragem, ordenação e limites devem ocorrer no servidor/banco.
-- Categorias podem usar cache mais longo.
-- Campanhas e banner devem manter cache compatível com rotação e métricas.
-- Descoberta orgânica pode usar cache curto por cidade.
-- Preservar scroll ao retornar de uma vitrine para a home será tratado em etapa posterior.
+- usar `next/image` com `sizes` adequados;
+- imagens abaixo da dobra não devem receber `priority`;
+- limitar o DOM ao conteúdo realmente exibido;
+- filtros, limites e ordenação ficam no servidor/banco;
+- categorias podem usar cache mais longo;
+- campanhas precisam continuar compatíveis com rotação e métricas;
+- descoberta orgânica poderá usar cache curto por cidade;
+- restauração de scroll ao voltar de uma vitrine será tratada em P2.
 
 ---
 
-## Métricas Planejadas
+## Métricas futuras
 
-Preservar métricas atuais de campanhas e adicionar, em fase posterior:
+Preservar as métricas pagas existentes e adicionar posteriormente:
 
 - `home_section_view`;
 - `business_card_click`;
@@ -235,7 +236,7 @@ Preservar métricas atuais de campanhas e adicionar, em fase posterior:
 - `search_submit`;
 - `view_all_click`.
 
-Métricas orgânicas e métricas pagas devem permanecer separadas.
+Métricas orgânicas e pagas devem permanecer separadas.
 
 ---
 
@@ -243,46 +244,47 @@ Métricas orgânicas e métricas pagas devem permanecer separadas.
 
 ### Mobile
 
-- prioridade máxima de UX;
+- prioridade máxima;
 - trilhos horizontais para conteúdo repetitivo;
 - categorias compactas;
 - sem overflow horizontal global;
-- somente o container do trilho pode rolar lateralmente.
+- apenas os trilhos podem rolar lateralmente.
 
 ### Tablet
 
-- 2–3 cards visíveis quando aplicável.
+- aproximadamente 2–3 cards visíveis quando aplicável.
 
 ### Desktop
 
-- 4–5 cards simultâneos ou grid equivalente;
-- maior densidade sem aumentar muito a altura das seções.
+- grid de 4–5 cards conforme o bloco;
+- maior densidade sem aumentar excessivamente a altura das seções.
 
 ---
 
-## Plano de Implementação
+## Checklist
 
 ### P0 — Estrutura principal
 
-- [x] Criar este documento de implementação.
-- [ ] Compactar Hero.
-- [ ] Remover `NearbyBusinesses` do Hero.
-- [ ] Criar `CompactCategories`.
-- [ ] Criar padrão de seção `HomeFeedSection`.
-- [ ] Reposicionar banner regional logo após categorias.
-- [ ] Transformar `FeaturedBusinesses` em trilho mobile.
-- [ ] Remover blocos institucionais grandes da home.
-- [ ] Ocultar seções comerciais vazias.
-- [ ] Validar que regras comerciais existentes continuam intactas.
+- [x] Criar documento mestre.
+- [x] Compactar Hero.
+- [x] Remover `NearbyBusinesses` do Hero.
+- [x] Criar `CompactCategories`.
+- [x] Criar `HomeFeedSection`.
+- [x] Reposicionar banner logo após categorias.
+- [x] Transformar `FeaturedBusinesses` em trilho mobile.
+- [x] Remover blocos institucionais grandes.
+- [x] Ocultar seções comerciais vazias.
+- [ ] Validar lint/build da PR.
+- [ ] Validar regras comerciais em preview.
 
 ### P1 — Feed de descoberta
 
-- [ ] Transformar `NearbyBusinesses` em trilho horizontal.
-- [ ] Adaptar promoções para trilho.
-- [ ] Adaptar produtos/serviços destacados para trilho.
+- [x] Transformar `NearbyBusinesses` em trilho horizontal.
+- [x] Adaptar promoções para trilho.
+- [x] Adaptar produtos/serviços destacados para trilho.
 - [ ] Criar `DiscoveryBusinesses`.
-- [ ] Criar endpoint `/api/descobrir` ou função pública equivalente.
-- [ ] Evitar duplicidade entre destaque pago e descoberta orgânica.
+- [ ] Criar `/api/descobrir` ou função equivalente.
+- [ ] Evitar duplicidade entre conteúdo pago e descoberta orgânica.
 - [ ] Criar CTA forte para catálogo completo.
 
 ### P2 — Escala, métricas e performance
@@ -297,31 +299,31 @@ Métricas orgânicas e métricas pagas devem permanecer separadas.
 
 ---
 
-## Critérios de Aceite
+## Critérios de aceite
 
-A nova home só pode ser considerada concluída quando:
+A reformulação só deve sair de draft quando:
 
-- o hero não contiver listas extensas;
-- categorias ocuparem uma única faixa compacta no mobile;
-- banner e destaques estiverem visíveis cedo no fluxo;
-- seções vazias não deixarem grandes espaços;
-- nenhuma consulta da home carregar centenas de estabelecimentos;
+- hero não contiver listas extensas;
+- categorias ocuparem uma faixa compacta;
+- banner e destaques aparecerem cedo;
+- seções vazias não deixarem buracos;
+- consultas da home tiverem limites explícitos;
 - distância continuar correta quando houver coordenadas;
 - cadastro sem coordenadas continuar permitido;
-- inventário pago continuar identificado e mensurado;
+- conteúdo patrocinado continuar identificado e mensurado;
 - não houver overflow horizontal global;
-- a home funcionar com localização permitida, negada e cidade manual;
-- a navegação estiver validada em mobile, tablet e desktop;
-- build e checks do projeto estiverem verdes antes do merge.
+- localização permitida, negada e seleção manual funcionarem;
+- mobile, tablet e desktop forem validados visualmente;
+- lint e build estiverem verdes.
 
 ---
 
-## Estratégia de Consolidação
+## Estratégia de consolidação
 
-- Trabalhar em uma única branch de feature enquanto este redesign estiver em andamento.
-- Evitar criar soluções paralelas para a mesma seção.
-- Reutilizar componentes existentes quando possível.
-- Cada mudança deve atualizar este checklist.
-- Abrir uma PR consolidada para revisão.
-- Preferir squash no merge para manter `main` limpa.
-- Não remover regras comerciais, métricas ou comportamentos existentes sem registrar a alteração neste documento.
+- Uma única branch para o redesign: `feat/home-feed-redesign`.
+- Uma única PR consolidada: #25.
+- Evitar componentes paralelos com a mesma responsabilidade.
+- Atualizar este checklist conforme cada etapa é implementada.
+- Manter a PR em draft enquanto houver itens estruturais pendentes.
+- Preferir squash ao concluir para manter `main` limpa.
+- Não remover regras comerciais, métricas ou comportamentos existentes sem registrar a mudança aqui.
