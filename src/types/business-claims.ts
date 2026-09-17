@@ -60,6 +60,7 @@ type BusinessClaimRequestsTable = {
     requester_name: string;
     requester_email: string;
     relationship: string;
+    whatsapp_e164: string;
     evidence: string;
     status: string;
     admin_note: string | null;
@@ -75,6 +76,7 @@ type BusinessClaimRequestsTable = {
     requester_name: string;
     requester_email: string;
     relationship: string;
+    whatsapp_e164: string;
     evidence: string;
     status?: string;
     admin_note?: string | null;
