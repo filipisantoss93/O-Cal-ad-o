@@ -284,7 +284,7 @@ Métricas orgânicas e pagas devem permanecer separadas.
 - [x] Transformar `FeaturedBusinesses` em trilho mobile.
 - [x] Remover blocos institucionais grandes.
 - [x] Ocultar seções comerciais vazias.
-- [ ] Validar lint/build da PR.
+- [x] Validar lint/build da PR (GitHub Actions `Qualidade`, execução #217).
 - [ ] Validar regras comerciais em preview.
 
 ### P1 — Feed de descoberta
