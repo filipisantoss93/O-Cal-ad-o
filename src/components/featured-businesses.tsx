@@ -5,6 +5,7 @@ import { BusinessCard } from "@/components/business-card";
 import { HomeFeedSection } from "@/components/home/home-feed-section";
 import { useFeaturedLimit } from "@/components/use-featured-limit";
 import { compareByDistanceRatingName } from "@/lib/business-order";
+import { loadGoogleRatings } from "@/lib/google-ratings-client";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
@@ -94,7 +95,7 @@ export function FeaturedBusinesses() {
         });
         if (!response.ok) return;
         const payload = (await response.json()) as { businesses?: Business[] };
-        let businesses = payload.businesses ?? [];
+        let businesses = await loadGoogleRatings(payload.businesses ?? [], controller.signal);
 
         if (coordinates && businesses.length > 0) {
           const businessIds = businesses

@@ -6,7 +6,9 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { HomeFeedSection } from "@/components/home/home-feed-section";
 import { HomeSectionSkeleton } from "@/components/home/home-section-skeleton";
 import { useHomeSectionVisibility } from "@/components/home/use-home-section-visibility";
+import { StarIcon } from "@/components/icons";
 import { compareByDistanceRatingName } from "@/lib/business-order";
+import { loadGoogleRatings } from "@/lib/google-ratings-client";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
@@ -28,6 +30,7 @@ type NearbyBusiness = {
   distanceKm: number | null;
   rating?: number | null;
   reviewCount?: number | null;
+  ratingSource?: "google" | null;
   isFeatured: boolean;
   highlightCampaignId: number | null;
   listingType: "business" | "public_place";
@@ -123,7 +126,10 @@ export function NearbyBusinesses() {
           throw new Error(payload.error || "Não foi possível carregar os locais próximos.");
         }
 
-        const loadedBusinesses = payload.businesses ?? [];
+        const loadedBusinesses = await loadGoogleRatings(
+          payload.businesses ?? [],
+          controller.signal,
+        );
         const distances = new Map(
           loadedBusinesses.map((business) => [business.slug, business.distanceKm]),
         );
@@ -190,51 +196,66 @@ export function NearbyBusinesses() {
         tone="surface"
       >
         <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-5 lg:overflow-visible lg:px-0">
-          {displayed.map((business) => (
-            <Link
-              key={business.id}
-              href={`/loja/${business.slug}`}
-              className="group flex w-[76vw] max-w-[20rem] shrink-0 snap-start flex-col rounded-2xl border border-line bg-canvas p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:border-ink/15 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-[42vw] lg:w-auto lg:max-w-none lg:snap-none"
-            >
-              <span className="flex min-w-0 items-center gap-3">
-                <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand to-accent-dark text-sm font-black text-white">
-                  {business.logoUrl ? (
-                    <Image
-                      src={business.logoUrl}
-                      alt={`Imagem de ${business.name}`}
-                      fill
-                      sizes="48px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    initials(business.name)
-                  )}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    <span className="truncate text-sm font-black text-ink">{business.name}</span>
-                    {business.isFeatured ? (
-                      <span className="shrink-0 rounded-full bg-accent/35 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-ink">
-                        Patrocinado
+          {displayed.map((business) => {
+            const hasGoogleRating =
+              business.ratingSource === "google" &&
+              Number(business.reviewCount ?? 0) > 0 &&
+              Number(business.rating ?? 0) > 0;
+            return (
+              <Link
+                key={business.id}
+                href={`/loja/${business.slug}`}
+                className="group flex w-[76vw] max-w-[20rem] shrink-0 snap-start flex-col rounded-2xl border border-line bg-canvas p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:border-ink/15 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-[42vw] lg:w-auto lg:max-w-none lg:snap-none"
+              >
+                <span className="flex min-w-0 items-center gap-3">
+                  <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand to-accent-dark text-sm font-black text-white">
+                    {business.logoUrl ? (
+                      <Image
+                        src={business.logoUrl}
+                        alt={`Imagem de ${business.name}`}
+                        fill
+                        sizes="48px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      initials(business.name)
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate text-sm font-black text-ink">{business.name}</span>
+                      {business.isFeatured ? (
+                        <span className="shrink-0 rounded-full bg-accent/35 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-ink">
+                          Patrocinado
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[11px] font-semibold text-muted">
+                      {business.listingType === "public_place" ? "Local público" : business.categoryName}
+                    </span>
+                    {hasGoogleRating ? (
+                      <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-black text-ink">
+                        <StarIcon className="size-3 fill-accent stroke-accent-dark" />
+                        {Number(business.rating).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                        <span className="font-bold text-muted">
+                          ({Number(business.reviewCount).toLocaleString("pt-BR")}) · Google Maps
+                        </span>
                       </span>
                     ) : null}
                   </span>
-                  <span className="mt-0.5 block truncate text-[11px] font-semibold text-muted">
-                    {business.listingType === "public_place" ? "Local público" : business.categoryName}
+                </span>
+
+                <span className="mt-3 flex items-end justify-between gap-3 border-t border-line/70 pt-2.5">
+                  <span className="min-w-0 truncate text-[11px] font-semibold text-muted">
+                    {business.neighborhood}
+                  </span>
+                  <span className="shrink-0 text-xs font-black text-brand-dark">
+                    {formatDistance(business.distanceKm)}
                   </span>
                 </span>
-              </span>
-
-              <span className="mt-3 flex items-end justify-between gap-3 border-t border-line/70 pt-2.5">
-                <span className="min-w-0 truncate text-[11px] font-semibold text-muted">
-                  {business.neighborhood}
-                </span>
-                <span className="shrink-0 text-xs font-black text-brand-dark">
-                  {formatDistance(business.distanceKm)}
-                </span>
-              </span>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </HomeFeedSection>
     </div>

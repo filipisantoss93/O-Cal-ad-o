@@ -70,6 +70,7 @@ export type Business = {
   distance: string;
   rating: number;
   reviewCount: number;
+  ratingSource?: "google" | null;
   isOpen: boolean;
   alwaysOpen?: boolean;
   hoursAvailable?: boolean;

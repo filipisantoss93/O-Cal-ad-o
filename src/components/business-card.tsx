@@ -22,6 +22,11 @@ export function BusinessCard({
   imageSizes,
 }: BusinessCardProps) {
   const isPublicPlace = business.listingType === "public_place";
+  const hasRating =
+    !isPublicPlace &&
+    Number.isFinite(business.rating) &&
+    business.rating > 0 &&
+    business.reviewCount > 0;
   const coverSizes =
     imageSizes ??
     (compact
@@ -99,13 +104,20 @@ export function BusinessCard({
               )}
             </h3>
           </div>
-          <span className={`items-center gap-1 font-black text-ink ${compact ? "hidden text-xs sm:inline-flex" : "inline-flex text-sm"}`}>
-            <StarIcon className="size-4 fill-accent stroke-accent-dark" />
-            {isPublicPlace
-              ? "Público"
-              : business.reviewCount > 0
-              ? business.rating.toLocaleString("pt-BR")
-              : "Novo"}
+          <span className={`flex shrink-0 flex-col items-end text-ink ${compact ? "max-w-[7.4rem]" : "max-w-[9rem]"}`}>
+            <span className={`inline-flex items-center gap-1 font-black ${compact ? "text-[10px] sm:text-xs" : "text-sm"}`}>
+              <StarIcon className="size-4 fill-accent stroke-accent-dark" />
+              {isPublicPlace
+                ? "Público"
+                : hasRating
+                  ? `${business.rating.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} (${business.reviewCount.toLocaleString("pt-BR")})`
+                  : "Novo"}
+            </span>
+            {hasRating && business.ratingSource === "google" ? (
+              <span className={`mt-0.5 text-right font-bold text-muted ${compact ? "text-[8px] sm:text-[9px]" : "text-[10px]"}`}>
+                Google Maps{business.reviewCount < 5 ? " · poucas avaliações" : ""}
+              </span>
+            ) : null}
           </span>
         </div>
 

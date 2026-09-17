@@ -6,6 +6,7 @@ import { HomeFeedSection } from "@/components/home/home-feed-section";
 import { HomeSectionSkeleton } from "@/components/home/home-section-skeleton";
 import { useHomeSectionVisibility } from "@/components/home/use-home-section-visibility";
 import { compareByDistanceRatingName } from "@/lib/business-order";
+import { loadGoogleRatings } from "@/lib/google-ratings-client";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
@@ -90,7 +91,7 @@ export function DiscoveryBusinesses() {
         });
         if (!response.ok) throw new Error("Não foi possível carregar novas vitrines.");
         const payload = (await response.json()) as { businesses?: Business[] };
-        let businesses = payload.businesses ?? [];
+        let businesses = await loadGoogleRatings(payload.businesses ?? [], controller.signal);
 
         if (coordinates && businesses.length > 0) {
           const businessIds = businesses

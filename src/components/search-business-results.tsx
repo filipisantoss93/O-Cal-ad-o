@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { BusinessCard } from "@/components/business-card";
 import { compareByDistanceRatingName } from "@/lib/business-order";
+import { loadGoogleRatings } from "@/lib/google-ratings-client";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
@@ -80,12 +81,20 @@ export function SearchBusinessResults({
       .filter((id) => Number.isSafeInteger(id) && id > 0),
     [businesses],
   );
+  const ratingsKey = useMemo(
+    () => businesses.map((business) => business.id).join(","),
+    [businesses],
+  );
   const locationKey = city && coordinates
     ? `${city.id}:${coordinates.latitude}:${coordinates.longitude}:${distanceBusinessIds.join(",")}`
     : null;
   const [distanceResult, setDistanceResult] = useState<{
     locationKey: string;
     distances: Map<string, number>;
+  } | null>(null);
+  const [ratingResult, setRatingResult] = useState<{
+    ratingsKey: string;
+    businesses: Business[];
   } | null>(null);
   const highlightKey = city
     ? `${city.id}:${categorySlug ?? "city"}`
@@ -96,12 +105,15 @@ export function SearchBusinessResults({
   } | null>(null);
 
   const displayedBusinesses = useMemo(() => {
+    const sourceBusinesses = ratingResult?.ratingsKey === ratingsKey
+      ? ratingResult.businesses
+      : businesses;
     const sponsoredBySlug =
       highlightKey && highlightResult?.highlightKey === highlightKey
         ? new Map(highlightResult.businesses.map((business) => [business.slug, business]))
         : new Map<string, Business>();
 
-    const decorated = businesses.map((business) => {
+    const decorated = sourceBusinesses.map((business) => {
       const sponsored = sponsoredBySlug.get(business.slug);
       return sponsored
         ? {
@@ -125,7 +137,20 @@ export function SearchBusinessResults({
       }
       return 0;
     });
-  }, [businesses, distanceResult, highlightKey, highlightResult, locationKey]);
+  }, [businesses, distanceResult, highlightKey, highlightResult, locationKey, ratingResult, ratingsKey]);
+
+  useEffect(() => {
+    if (businesses.length === 0) return;
+    const controller = new AbortController();
+    const loadRatings = async () => {
+      const ratedBusinesses = await loadGoogleRatings(businesses, controller.signal);
+      if (!controller.signal.aborted) {
+        setRatingResult({ ratingsKey, businesses: ratedBusinesses as Business[] });
+      }
+    };
+    void loadRatings();
+    return () => controller.abort();
+  }, [businesses, ratingsKey]);
 
   useEffect(() => {
     if (!city || !coordinates || !locationKey || distanceBusinessIds.length === 0) return;
