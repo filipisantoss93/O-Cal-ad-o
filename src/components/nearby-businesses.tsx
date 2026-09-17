@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { HomeFeedSection } from "@/components/home/home-feed-section";
+import { HomeSectionSkeleton } from "@/components/home/home-section-skeleton";
+import { useHomeSectionVisibility } from "@/components/home/use-home-section-visibility";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
@@ -45,6 +47,7 @@ function initials(name: string) {
 }
 
 export function NearbyBusinesses() {
+  const { sectionRef, shouldLoad } = useHomeSectionVisibility();
   const storedCity = useSyncExternalStore(
     (onChange) => {
       window.addEventListener(cityChangeEventName, onChange);
@@ -89,7 +92,7 @@ export function NearbyBusinesses() {
   const [loadedCityId, setLoadedCityId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!city) return;
+    if (!city || !shouldLoad) return;
 
     const controller = new AbortController();
     const loadBusinesses = async () => {
@@ -130,101 +133,98 @@ export function NearbyBusinesses() {
     void loadBusinesses();
 
     return () => controller.abort();
-  }, [city, coordinates]);
+  }, [city, coordinates, shouldLoad]);
 
   const displayed = businesses.slice(0, nearbyListLimit);
 
   useEffect(() => {
+    if (!shouldLoad) return;
     recordHighlightEvent(
       displayed.map((business) => business.highlightCampaignId),
       "impression",
     );
-  }, [displayed]);
+  }, [displayed, shouldLoad]);
 
   if (!city) return null;
 
-  if (loading && loadedCityId !== city.id) {
+  if (!shouldLoad || (loading && loadedCityId !== city.id) || loadedCityId !== city.id) {
     return (
-      <HomeFeedSection
-        eyebrow="Descubra ao redor"
-        title="Perto de você"
-        description="Buscando locais próximos na sua cidade."
-        tone="surface"
-      >
-        <div className="-mx-4 flex gap-3 overflow-hidden px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
-          {[0, 1, 2].map((item) => (
-            <div
-              key={item}
-              className="h-28 w-[76vw] max-w-[20rem] shrink-0 animate-pulse rounded-2xl bg-canvas sm:w-[42vw] lg:w-60"
-            />
-          ))}
-        </div>
-      </HomeFeedSection>
+      <div ref={sectionRef}>
+        <HomeSectionSkeleton
+          eyebrow="Descubra ao redor"
+          title="Perto de você"
+          description="Buscando locais próximos na sua cidade."
+          tone="surface"
+          variant="compact"
+        />
+      </div>
     );
   }
 
-  if (loadedCityId !== city.id || displayed.length === 0) return null;
+  if (displayed.length === 0) return null;
 
   return (
-    <HomeFeedSection
-      eyebrow="Descubra ao redor"
-      title="Perto de você"
-      description={
-        coordinates
-          ? `Ordenados pela distância em ${city.name}.`
-          : `Locais disponíveis em ${city.name}. Ative a localização para ordenar por distância.`
-      }
-      linkHref="/buscar"
-      linkLabel="Explorar todos"
-      tone="surface"
-    >
-      <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-5 lg:overflow-visible lg:px-0">
-        {displayed.map((business) => (
-          <Link
-            key={business.id}
-            href={`/loja/${business.slug}`}
-            className="group flex w-[76vw] max-w-[20rem] shrink-0 snap-start flex-col rounded-2xl border border-line bg-canvas p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:border-ink/15 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-[42vw] lg:w-auto lg:max-w-none lg:snap-none"
-          >
-            <span className="flex min-w-0 items-center gap-3">
-              <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand to-accent-dark text-sm font-black text-white">
-                {business.logoUrl ? (
-                  <Image
-                    src={business.logoUrl}
-                    alt={`Imagem de ${business.name}`}
-                    fill
-                    sizes="48px"
-                    className="object-cover"
-                  />
-                ) : (
-                  initials(business.name)
-                )}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="truncate text-sm font-black text-ink">{business.name}</span>
-                  {business.isFeatured ? (
-                    <span className="shrink-0 rounded-full bg-accent/35 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-ink">
-                      Patrocinado
-                    </span>
-                  ) : null}
+    <div ref={sectionRef}>
+      <HomeFeedSection
+        eyebrow="Descubra ao redor"
+        title="Perto de você"
+        description={
+          coordinates
+            ? `Ordenados pela distância em ${city.name}.`
+            : `Locais disponíveis em ${city.name}. Ative a localização para ordenar por distância.`
+        }
+        linkHref="/buscar"
+        linkLabel="Explorar todos"
+        tone="surface"
+      >
+        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-5 lg:overflow-visible lg:px-0">
+          {displayed.map((business) => (
+            <Link
+              key={business.id}
+              href={`/loja/${business.slug}`}
+              className="group flex w-[76vw] max-w-[20rem] shrink-0 snap-start flex-col rounded-2xl border border-line bg-canvas p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:border-ink/15 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-[42vw] lg:w-auto lg:max-w-none lg:snap-none"
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand to-accent-dark text-sm font-black text-white">
+                  {business.logoUrl ? (
+                    <Image
+                      src={business.logoUrl}
+                      alt={`Imagem de ${business.name}`}
+                      fill
+                      sizes="48px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    initials(business.name)
+                  )}
                 </span>
-                <span className="mt-0.5 block truncate text-[11px] font-semibold text-muted">
-                  {business.listingType === "public_place" ? "Local público" : business.categoryName}
+                <span className="min-w-0 flex-1">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate text-sm font-black text-ink">{business.name}</span>
+                    {business.isFeatured ? (
+                      <span className="shrink-0 rounded-full bg-accent/35 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-ink">
+                        Patrocinado
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[11px] font-semibold text-muted">
+                    {business.listingType === "public_place" ? "Local público" : business.categoryName}
+                  </span>
                 </span>
               </span>
-            </span>
 
-            <span className="mt-3 flex items-end justify-between gap-3 border-t border-line/70 pt-2.5">
-              <span className="min-w-0 truncate text-[11px] font-semibold text-muted">
-                {business.neighborhood}
+              <span className="mt-3 flex items-end justify-between gap-3 border-t border-line/70 pt-2.5">
+                <span className="min-w-0 truncate text-[11px] font-semibold text-muted">
+                  {business.neighborhood}
+                </span>
+                <span className="shrink-0 text-xs font-black text-brand-dark">
+                  {formatDistance(business.distanceKm)}
+                </span>
               </span>
-              <span className="shrink-0 text-xs font-black text-brand-dark">
-                {formatDistance(business.distanceKm)}
-              </span>
-            </span>
-          </Link>
-        ))}
-      </div>
-    </HomeFeedSection>
+            </Link>
+          ))}
+        </div>
+      </HomeFeedSection>
+    </div>
   );
 }
