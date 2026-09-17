@@ -14,15 +14,15 @@ export function CompactCategories({ categories }: CompactCategoriesProps) {
           <Link
             key={category.slug}
             href={`/buscar?categoria=${category.slug}`}
-            className="group flex min-w-[7.5rem] snap-start items-center gap-2.5 rounded-2xl border border-line bg-surface px-3 py-2.5 shadow-sm transition hover:-translate-y-0.5 hover:border-ink/15 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:min-w-0 sm:flex-col sm:justify-center sm:gap-2 sm:px-2.5 sm:py-3 sm:text-center"
+            className="group flex min-w-[9.25rem] snap-start flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-surface px-3 py-3 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-ink/15 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:min-w-0 sm:px-2.5"
           >
             <span
-              className={`grid size-9 shrink-0 place-items-center rounded-xl text-base sm:size-10 sm:text-lg ${category.accent}`}
+              className={`grid size-10 shrink-0 place-items-center rounded-xl text-lg ${category.accent}`}
               aria-hidden="true"
             >
               {category.icon}
             </span>
-            <span className="min-w-0 truncate text-xs font-extrabold text-ink sm:w-full">
+            <span className="flex min-h-[2.3em] w-full items-center justify-center whitespace-normal break-words text-xs font-extrabold leading-[1.15] text-ink">
               {category.name}
             </span>
           </Link>
@@ -30,12 +30,14 @@ export function CompactCategories({ categories }: CompactCategoriesProps) {
 
         <Link
           href="/buscar"
-          className="group flex min-w-[7.5rem] snap-start items-center justify-center gap-2 rounded-2xl border border-dashed border-ink/20 bg-canvas px-3 py-2.5 text-xs font-black text-ink transition hover:border-brand/50 hover:bg-brand/5 hover:text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:min-w-0 sm:flex-col sm:py-3"
+          className="group flex min-w-[9.25rem] snap-start flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-ink/20 bg-canvas px-3 py-3 text-center text-xs font-black text-ink transition hover:border-brand/50 hover:bg-brand/5 hover:text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:min-w-0 sm:px-2.5"
         >
-          <span className="grid size-9 place-items-center rounded-xl bg-ink text-white sm:size-10">
+          <span className="grid size-10 place-items-center rounded-xl bg-ink text-white">
             <ChevronRightIcon className="size-4" />
           </span>
-          <span>Ver todas</span>
+          <span className="flex min-h-[2.3em] items-center justify-center leading-[1.15]">
+            Ver todas
+          </span>
         </Link>
       </div>
     </nav>
