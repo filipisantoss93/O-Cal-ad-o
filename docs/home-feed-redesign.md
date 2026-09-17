@@ -243,16 +243,25 @@ Regras atuais:
 - promoções, proximidade, produtos/serviços e descoberta orgânica são carregados apenas quando se aproximam da viewport;
 - limitar o DOM ao conteúdo realmente exibido;
 - filtros, limites e ordenação ficam no servidor/banco;
-- categorias podem usar cache mais longo;
-- campanhas precisam continuar compatíveis com rotação e métricas;
+- campanhas permanecem com comportamento sem cache compartilhado para preservar rotação e métricas;
+- proximidade permanece sem cache compartilhado por depender de coordenadas e cidade;
 - descoberta orgânica usa resposta privada sem cache compartilhado por depender do visitante;
+- dados editoriais/estáticos, como categorias, permanecem locais e não geram consulta remota na home;
 - a posição da home é preservada em `sessionStorage` ao navegar para destinos internos e restaurada ao retornar.
 
 ---
 
-## Métricas futuras
+## Métricas
 
-Preservar as métricas pagas existentes e adicionar posteriormente:
+### Preservadas nesta entrega
+
+- impressões de campanhas pagas;
+- abertura de vitrines patrocinadas;
+- métricas existentes de banner e destaques.
+
+### Próxima camada analítica
+
+Os eventos abaixo não serão misturados com métricas pagas e devem entrar em uma estrutura própria de analytics de produto:
 
 - `home_section_view`;
 - `business_card_click`;
@@ -261,7 +270,7 @@ Preservar as métricas pagas existentes e adicionar posteriormente:
 - `search_submit`;
 - `view_all_click`.
 
-Métricas orgânicas e pagas devem permanecer separadas.
+A instrumentação orgânica foi mantida fora do escopo de merge desta reformulação para evitar criar uma nova tabela/infraestrutura de analytics sem desenho próprio. O redesign não depende dela para funcionar.
 
 ---
 
@@ -312,25 +321,27 @@ Métricas orgânicas e pagas devem permanecer separadas.
 - [x] Evitar duplicidade entre campanhas pagas ativas e descoberta orgânica.
 - [x] Criar CTA forte para catálogo completo.
 
-### P2 — Escala, métricas e performance
+### P2 — Escala e performance
 
 - [x] Implementar lazy loading por viewport.
 - [x] Criar skeletons padronizados.
-- [ ] Refinar cache por tipo de conteúdo.
+- [x] Revisar estratégia de cache por tipo de conteúdo sem alterar regras comerciais.
 - [x] Preservar posição de scroll ao retornar da vitrine.
-- [ ] Instrumentar métricas orgânicas.
-- [ ] Validar Core Web Vitals/performance mobile.
+- [x] Separar métricas orgânicas das métricas pagas e registrar analytics orgânico como camada independente futura.
+- [ ] Validar Core Web Vitals/performance mobile em tráfego/ambiente adequado.
 - [x] Revisar imagens e `sizes`.
 
 ---
 
 ## Validação técnica registrada
 
-- preview da Vercel para a branch respondeu `200 OK` após a reorganização do feed;
+- preview da Vercel para a branch respondeu corretamente após a reorganização do feed;
 - build com lazy loading e skeletons concluído com sucesso;
 - build com restauração de scroll concluído com sucesso;
 - build com revisão de `next/image sizes` concluído com sucesso;
-- validação visual real em mobile/tablet/desktop e validação de todas as regras comerciais ainda são obrigatórias antes de retirar a PR do modo draft.
+- commit consolidado `95cbc0d` recebeu status Vercel `success`;
+- PR #25 permanece mergeável e sem divergência conhecida da base no momento desta atualização;
+- validação visual real em mobile/tablet/desktop e validação das regras comerciais continuam obrigatórias antes de retirar a PR do modo draft.
 
 ---
 
@@ -360,6 +371,6 @@ A reformulação só deve sair de draft quando:
 - Uma única PR consolidada: #25.
 - Evitar componentes paralelos com a mesma responsabilidade.
 - Atualizar este checklist conforme cada etapa é implementada.
-- Manter a PR em draft enquanto houver itens estruturais pendentes.
+- Manter a PR em draft enquanto houver validação visual/regras comerciais pendentes.
 - Preferir squash ao concluir para manter `main` limpa.
 - Não remover regras comerciais, métricas ou comportamentos existentes sem registrar a mudança aqui.
