@@ -203,8 +203,16 @@ export default async function BusinessPage({ searchParams }: BusinessPageProps) 
                       Suspensa pelo plano
                     </span>
                   ) : (
-                    <span className={`mt-1 block text-xs font-black ${item.publication_status === "published" ? "text-positive" : "text-brand-dark"}`}>
-                      {item.publication_status === "published" ? "Publicada" : "Fora do ar"}
+                    <span
+                      className={`mt-1 block text-xs font-black ${
+                        item.publication_status === "published"
+                          ? "text-positive"
+                          : "text-brand-dark"
+                      }`}
+                    >
+                      {item.publication_status === "published"
+                        ? "Publicada"
+                        : "Fora do ar"}
                     </span>
                   )}
                 </Link>
@@ -218,17 +226,23 @@ export default async function BusinessPage({ searchParams }: BusinessPageProps) 
         <div className="mt-6 flex gap-3 rounded-2xl border border-brand/20 bg-brand/8 p-4 text-brand-dark">
           <AlertTriangleIcon className="mt-0.5 size-5 shrink-0" />
           <div>
-            <p className="text-sm font-black">Loja suspensa pelo limite do plano</p>
+            <p className="text-sm font-black">
+              {business.billing_suspension_reason === "store_limit"
+                ? "Reivindicação aprovada, mas esta vitrine está suspensa porque sua conta atingiu o limite de lojas."
+                : "Loja suspensa pelo limite do plano"}
+            </p>
             <p className="mt-1 text-sm leading-6">
-              Os dados foram preservados. Esta loja volta a ficar disponível
-              automaticamente assim que o plano Pro ou a vaga adicional for
-              regularizada.
+              {business.billing_suspension_reason === "store_limit"
+                ? "A vitrine já pertence à sua conta e todos os dados foram preservados. Ela volta ao ar automaticamente quando houver uma vaga disponível no seu plano."
+                : "Os dados foram preservados. Esta loja volta a ficar disponível automaticamente assim que o plano Pro ou a vaga adicional for regularizada."}
             </p>
             <Link
-              href="/painel/assinatura"
+              href="/painel/assinatura#lojas-adicionais"
               className="mt-2 inline-flex text-sm font-black underline underline-offset-4"
             >
-              Regularizar assinatura
+              {business.billing_suspension_reason === "store_limit"
+                ? "Aumentar limite de lojas"
+                : "Regularizar assinatura"}
             </Link>
           </div>
         </div>
@@ -272,7 +286,9 @@ export default async function BusinessPage({ searchParams }: BusinessPageProps) 
         <div className="mt-6 flex gap-3 rounded-2xl border border-accent-dark/15 bg-accent/20 p-4 text-ink">
           <StoreIcon className="mt-0.5 size-5 shrink-0 text-accent-dark" />
           <p className="text-sm font-bold leading-6">
-            Cadastre uma nova unidade. Ao salvar, a vitrine é publicada imediatamente e entra na fila de análise, sem bloquear a visualização pelos clientes.
+            Cadastre uma nova unidade. Ao salvar, a vitrine é publicada
+            imediatamente e entra na fila de análise, sem bloquear a visualização
+            pelos clientes.
           </p>
         </div>
       )}
