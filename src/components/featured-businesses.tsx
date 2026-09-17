@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { BusinessCard } from "@/components/business-card";
 import { HomeFeedSection } from "@/components/home/home-feed-section";
 import { useFeaturedLimit } from "@/components/use-featured-limit";
+import { compareByDistanceRatingName } from "@/lib/business-order";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
@@ -134,20 +135,7 @@ export function FeaturedBusinesses() {
                     ? business
                     : { ...business, distance: formatDistance(distanceKm) };
                 })
-                .sort((first, second) => {
-                  const firstDistance = distances.get(first.slug);
-                  const secondDistance = distances.get(second.slug);
-                  const firstHasDistance = typeof firstDistance === "number";
-                  const secondHasDistance = typeof secondDistance === "number";
-
-                  if (firstHasDistance && secondHasDistance && firstDistance !== secondDistance) {
-                    return firstDistance - secondDistance;
-                  }
-                  if (firstHasDistance !== secondHasDistance) {
-                    return firstHasDistance ? -1 : 1;
-                  }
-                  return first.name.localeCompare(second.name, "pt-BR");
-                });
+                .sort((first, second) => compareByDistanceRatingName(first, second, distances));
             }
           }
         }
