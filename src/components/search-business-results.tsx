@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { BusinessCard } from "@/components/business-card";
+import { compareByDistanceRatingName } from "@/lib/business-order";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
@@ -113,20 +114,9 @@ export function SearchBusinessResults({
     });
 
     if (locationKey && distanceResult?.locationKey === locationKey) {
-      return decorated.sort((first, second) => {
-        const firstDistance = distanceResult.distances.get(first.slug);
-        const secondDistance = distanceResult.distances.get(second.slug);
-        const firstHasDistance = typeof firstDistance === "number";
-        const secondHasDistance = typeof secondDistance === "number";
-
-        if (firstHasDistance && secondHasDistance && firstDistance !== secondDistance) {
-          return firstDistance - secondDistance;
-        }
-        if (firstHasDistance !== secondHasDistance) {
-          return firstHasDistance ? -1 : 1;
-        }
-        return first.name.localeCompare(second.name, "pt-BR");
-      });
+      return decorated.sort((first, second) =>
+        compareByDistanceRatingName(first, second, distanceResult.distances),
+      );
     }
 
     return decorated.sort((first, second) => {

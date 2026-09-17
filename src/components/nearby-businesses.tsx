@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { HomeFeedSection } from "@/components/home/home-feed-section";
 import { HomeSectionSkeleton } from "@/components/home/home-section-skeleton";
 import { useHomeSectionVisibility } from "@/components/home/use-home-section-visibility";
+import { compareByDistanceRatingName } from "@/lib/business-order";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
@@ -25,6 +26,8 @@ type NearbyBusiness = {
   categoryName: string;
   logoUrl: string | null;
   distanceKm: number | null;
+  rating?: number | null;
+  reviewCount?: number | null;
   isFeatured: boolean;
   highlightCampaignId: number | null;
   listingType: "business" | "public_place";
@@ -119,7 +122,16 @@ export function NearbyBusinesses() {
         if (!response.ok) {
           throw new Error(payload.error || "Não foi possível carregar os locais próximos.");
         }
-        setBusinesses(payload.businesses ?? []);
+
+        const loadedBusinesses = payload.businesses ?? [];
+        const distances = new Map(
+          loadedBusinesses.map((business) => [business.slug, business.distanceKm]),
+        );
+        setBusinesses(
+          [...loadedBusinesses].sort((first, second) =>
+            compareByDistanceRatingName(first, second, distances),
+          ),
+        );
         setLoadedCityId(city.id);
       } catch (reason: unknown) {
         if (controller.signal.aborted) return;
