@@ -345,6 +345,24 @@ A instrumentação orgânica foi mantida fora do escopo de merge desta reformula
 
 ---
 
+## Gate de merge
+
+O código está estruturalmente pronto para a etapa de validação. Antes do squash/merge, faltam apenas validações de comportamento e apresentação no preview:
+
+- selecionar cidade manualmente e conferir troca de conteúdo;
+- validar cidade com banner e cidade sem banner;
+- conferir que seções sem promoções/destaques somem sem deixar espaço;
+- validar `Perto de você` com coordenadas e sem coordenadas;
+- conferir trilhos horizontalmente em celular e ausência de overflow global;
+- conferir tablet e desktop;
+- abrir uma vitrine e retornar para validar restauração de scroll;
+- confirmar que conteúdos patrocinados continuam identificados;
+- confirmar que descoberta orgânica não repete campanha paga ativa.
+
+Nenhuma nova funcionalidade estrutural deve ser adicionada a esta PR depois desse gate, salvo correção encontrada durante a validação. Isso preserva a consolidação e evita escopo crescente antes do merge.
+
+---
+
 ## Critérios de aceite
 
 A reformulação só deve sair de draft quando:
