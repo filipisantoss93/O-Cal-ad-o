@@ -1,9 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { ArrowRightIcon, LocateIcon } from "@/components/icons";
+import { HomeFeedSection } from "@/components/home/home-feed-section";
+import { HomeSectionSkeleton } from "@/components/home/home-section-skeleton";
+import { useHomeSectionVisibility } from "@/components/home/use-home-section-visibility";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
@@ -29,7 +31,7 @@ type NearbyBusiness = {
 };
 
 function formatDistance(distanceKm: number | null) {
-  if (distanceKm === null) return "na sua cidade";
+  if (distanceKm === null) return "Na sua cidade";
   if (distanceKm < 1) return `${Math.max(1, Math.round(distanceKm * 1_000))} m`;
   return `${distanceKm.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km`;
 }
@@ -45,6 +47,7 @@ function initials(name: string) {
 }
 
 export function NearbyBusinesses() {
+  const { sectionRef, shouldLoad } = useHomeSectionVisibility();
   const storedCity = useSyncExternalStore(
     (onChange) => {
       window.addEventListener(cityChangeEventName, onChange);
@@ -86,15 +89,14 @@ export function NearbyBusinesses() {
   }, [storedCoordinates]);
   const [businesses, setBusinesses] = useState<NearbyBusiness[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [loadedCityId, setLoadedCityId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!city) return;
+    if (!city || !shouldLoad) return;
 
     const controller = new AbortController();
     const loadBusinesses = async () => {
       setLoading(true);
-      setError("");
       try {
         const response = await fetch("/api/comercios-proximos", {
           method: "POST",
@@ -111,20 +113,19 @@ export function NearbyBusinesses() {
             error?: string;
           };
         } catch {
-          if (!response.ok) {
-            throw new Error("Não foi possível carregar os locais próximos.");
-          }
+          if (!response.ok) throw new Error("Não foi possível carregar os locais próximos.");
         }
 
         if (!response.ok) {
           throw new Error(payload.error || "Não foi possível carregar os locais próximos.");
         }
         setBusinesses(payload.businesses ?? []);
+        setLoadedCityId(city.id);
       } catch (reason: unknown) {
         if (controller.signal.aborted) return;
         console.error("[nearby-businesses] load failed", reason);
         setBusinesses([]);
-        setError("Não foi possível carregar os locais próximos. Tente novamente.");
+        setLoadedCityId(city.id);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -132,97 +133,98 @@ export function NearbyBusinesses() {
     void loadBusinesses();
 
     return () => controller.abort();
-  }, [city, coordinates]);
+  }, [city, coordinates, shouldLoad]);
+
+  const displayed = businesses.slice(0, nearbyListLimit);
 
   useEffect(() => {
+    if (!shouldLoad) return;
     recordHighlightEvent(
-      businesses
-        .slice(0, nearbyListLimit)
-        .map((business) => business.highlightCampaignId),
+      displayed.map((business) => business.highlightCampaignId),
       "impression",
     );
-  }, [businesses]);
+  }, [displayed, shouldLoad]);
 
-  if (!city) {
+  if (!city) return null;
+
+  if (!shouldLoad || (loading && loadedCityId !== city.id) || loadedCityId !== city.id) {
     return (
-      <div className="mt-4 rounded-xl border border-dashed border-line bg-canvas p-4 text-center sm:mt-5 sm:rounded-2xl sm:p-5">
-        <LocateIcon className="mx-auto size-5 text-brand sm:size-6" />
-        <p className="mt-2 text-sm font-black text-ink sm:mt-3">Informe sua localização</p>
-        <p className="mt-1 text-xs font-semibold leading-5 text-muted">
-          Use o botão “Escolher cidade” para encontrar lojas, serviços e locais públicos próximos.
-        </p>
+      <div ref={sectionRef}>
+        <HomeSectionSkeleton
+          eyebrow="Descubra ao redor"
+          title="Perto de você"
+          description="Buscando locais próximos na sua cidade."
+          tone="surface"
+          variant="compact"
+        />
       </div>
     );
   }
 
-  if (loading) {
-    return (
-      <div className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3" aria-live="polite" aria-label="Carregando locais próximos">
-        {[0, 1, 2].map((item) => (
-          <div key={item} className="h-[68px] animate-pulse rounded-xl bg-canvas sm:h-[74px] sm:rounded-2xl" />
-        ))}
-      </div>
-    );
-  }
-
-  if (error) {
-    return <p role="alert" className="mt-4 rounded-xl bg-brand/8 p-3.5 text-sm font-bold text-brand-dark sm:mt-5 sm:rounded-2xl sm:p-4">{error}</p>;
-  }
-
-  if (businesses.length === 0) {
-    return (
-      <div className="mt-4 rounded-xl border border-dashed border-line bg-canvas p-4 text-center sm:mt-5 sm:rounded-2xl sm:p-5">
-        <p className="text-sm font-black text-ink">Nenhum local publicado em {city.name}</p>
-        <p className="mt-1 text-xs font-semibold leading-5 text-muted">
-          Novas vitrines e informações públicas aparecem assim que são cadastradas.
-        </p>
-      </div>
-    );
-  }
+  if (displayed.length === 0) return null;
 
   return (
-    <>
-      <p className="mt-3 text-[11px] font-bold text-muted sm:mt-4 sm:text-xs">
-        {coordinates ? `Ordenados pela distância em ${city.name}` : `Locais de ${city.name}`}
-      </p>
-      <div className="mt-2.5 space-y-2.5 sm:mt-3 sm:space-y-3">
-        {businesses.slice(0, nearbyListLimit).map((business) => (
-          <Link
-            key={business.id}
-            href={`/loja/${business.slug}`}
-            className="group flex min-w-0 max-w-full items-center gap-2.5 overflow-hidden rounded-xl border border-line/80 p-2.5 transition hover:border-ink/15 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:gap-3 sm:rounded-2xl sm:p-3"
-          >
-            <span className="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand to-accent-dark text-xs font-black text-white sm:size-12 sm:text-sm">
-              {business.logoUrl ? (
-                <Image src={business.logoUrl} alt={`Imagem de ${business.name}`} fill sizes="48px" className="object-cover" />
-              ) : initials(business.name)}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-2 truncate text-sm font-extrabold text-ink sm:text-base">
-                <span className="truncate">{business.name}</span>
-                {business.isFeatured && (
-                  <span className="shrink-0 rounded-full bg-accent/35 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-ink">
-                    Patrocinado
-                  </span>
-                )}
-              </span>
-              <span className="mt-0.5 block truncate text-[11px] font-semibold text-muted sm:text-xs">
-                {business.listingType === "public_place" ? "Local público" : business.categoryName} · {business.neighborhood}
-              </span>
-            </span>
-            <span className="max-w-[5.75rem] shrink-0 text-right text-[11px] font-black leading-tight text-brand-dark sm:max-w-none sm:text-xs">
-              {formatDistance(business.distanceKm)}
-            </span>
-          </Link>
-        ))}
-      </div>
-      <Link
-        href="/buscar"
-        className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-ink/10 text-sm font-black text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:mt-4"
+    <div ref={sectionRef}>
+      <HomeFeedSection
+        eyebrow="Descubra ao redor"
+        title="Perto de você"
+        description={
+          coordinates
+            ? `Ordenados pela distância em ${city.name}.`
+            : `Locais disponíveis em ${city.name}. Ative a localização para ordenar por distância.`
+        }
+        linkHref="/buscar"
+        linkLabel="Explorar todos"
+        tone="surface"
       >
-        Explorar todos
-        <ArrowRightIcon className="size-4" />
-      </Link>
-    </>
+        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-5 lg:overflow-visible lg:px-0">
+          {displayed.map((business) => (
+            <Link
+              key={business.id}
+              href={`/loja/${business.slug}`}
+              className="group flex w-[76vw] max-w-[20rem] shrink-0 snap-start flex-col rounded-2xl border border-line bg-canvas p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:border-ink/15 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-[42vw] lg:w-auto lg:max-w-none lg:snap-none"
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand to-accent-dark text-sm font-black text-white">
+                  {business.logoUrl ? (
+                    <Image
+                      src={business.logoUrl}
+                      alt={`Imagem de ${business.name}`}
+                      fill
+                      sizes="48px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    initials(business.name)
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate text-sm font-black text-ink">{business.name}</span>
+                    {business.isFeatured ? (
+                      <span className="shrink-0 rounded-full bg-accent/35 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-ink">
+                        Patrocinado
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[11px] font-semibold text-muted">
+                    {business.listingType === "public_place" ? "Local público" : business.categoryName}
+                  </span>
+                </span>
+              </span>
+
+              <span className="mt-3 flex items-end justify-between gap-3 border-t border-line/70 pt-2.5">
+                <span className="min-w-0 truncate text-[11px] font-semibold text-muted">
+                  {business.neighborhood}
+                </span>
+                <span className="shrink-0 text-xs font-black text-brand-dark">
+                  {formatDistance(business.distanceKm)}
+                </span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </HomeFeedSection>
+    </div>
   );
 }

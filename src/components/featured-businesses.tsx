@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { BusinessCard } from "@/components/business-card";
+import { HomeFeedSection } from "@/components/home/home-feed-section";
 import { useFeaturedLimit } from "@/components/use-featured-limit";
 import {
   cityChangeEventName,
@@ -88,33 +89,36 @@ export function FeaturedBusinesses() {
     }
   }
 
-  if (!city) {
-    return (
-      <div className="mt-7 rounded-3xl border border-dashed border-line bg-canvas p-7 text-center">
-        <p className="font-black text-ink">Selecione sua cidade para ver os destaques locais.</p>
-      </div>
-    );
-  }
-
-  if (result?.cityId === city.id && result.limit === limit && displayed.length === 0) {
-    return (
-      <div className="mt-7 rounded-3xl border border-dashed border-line bg-canvas p-7 text-center">
-        <p className="font-black text-ink">Nenhum comércio em destaque nesta cidade ainda.</p>
-        <p className="mt-1 text-sm font-semibold text-muted">
-          Este espaço aparecerá somente quando um comércio real contratar destaque.
-        </p>
-      </div>
-    );
+  if (!city || result?.cityId !== city.id || result.limit !== limit || displayed.length === 0) {
+    return null;
   }
 
   return (
-    <div
-      className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-      onClickCapture={trackStoreView}
+    <HomeFeedSection
+      eyebrow="Boas escolhas por perto"
+      title="Comércios em destaque"
+      description="Vitrines que ganharam mais visibilidade na sua cidade."
+      linkHref="/buscar"
+      linkLabel="Ver mais"
+      tone="surface"
     >
-      {displayed.map((business) => (
-        <BusinessCard key={business.id} business={business} compact />
-      ))}
-    </div>
+      <div
+        className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 xl:grid-cols-5"
+        onClickCapture={trackStoreView}
+      >
+        {displayed.map((business) => (
+          <div
+            key={business.id}
+            className="w-[72vw] max-w-[17.5rem] shrink-0 snap-start sm:w-[42vw] sm:max-w-[19rem] lg:w-auto lg:max-w-none lg:snap-none"
+          >
+            <BusinessCard
+              business={business}
+              compact
+              imageSizes="(max-width: 640px) 72vw, (max-width: 1024px) 42vw, (max-width: 1280px) 25vw, 20vw"
+            />
+          </div>
+        ))}
+      </div>
+    </HomeFeedSection>
   );
 }

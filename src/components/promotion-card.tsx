@@ -64,7 +64,7 @@ export function PromotionCard({ promotion }: PromotionCardProps) {
             src={promotion.imageUrl}
             alt={promotion.title}
             fill
-            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 25vw"
+            sizes="(max-width: 640px) 72vw, (max-width: 1024px) 42vw, 25vw"
             className="object-cover"
           />
         </div>
