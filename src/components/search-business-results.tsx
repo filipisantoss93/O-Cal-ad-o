@@ -95,31 +95,47 @@ export function SearchBusinessResults({
   } | null>(null);
 
   const displayedBusinesses = useMemo(() => {
-    if (!highlightKey || highlightResult?.highlightKey !== highlightKey) {
-      return businesses;
-    }
-    const sponsoredBySlug = new Map(
-      highlightResult.businesses.map((business) => [business.slug, business]),
-    );
-    return businesses
-      .map((business) => {
-        const sponsored = sponsoredBySlug.get(business.slug);
-        return sponsored
-          ? {
-              ...business,
-              isSponsored: true,
-              highlightCampaignId: sponsored.highlightCampaignId,
-              sponsoredPlacement: sponsored.sponsoredPlacement,
-            }
-          : business;
-      })
-      .sort((first, second) => {
-        if (Boolean(first.isSponsored) !== Boolean(second.isSponsored)) {
-          return first.isSponsored ? -1 : 1;
+    const sponsoredBySlug =
+      highlightKey && highlightResult?.highlightKey === highlightKey
+        ? new Map(highlightResult.businesses.map((business) => [business.slug, business]))
+        : new Map<string, Business>();
+
+    const decorated = businesses.map((business) => {
+      const sponsored = sponsoredBySlug.get(business.slug);
+      return sponsored
+        ? {
+            ...business,
+            isSponsored: true,
+            highlightCampaignId: sponsored.highlightCampaignId,
+            sponsoredPlacement: sponsored.sponsoredPlacement,
+          }
+        : business;
+    });
+
+    if (locationKey && distanceResult?.locationKey === locationKey) {
+      return decorated.sort((first, second) => {
+        const firstDistance = distanceResult.distances.get(first.slug);
+        const secondDistance = distanceResult.distances.get(second.slug);
+        const firstHasDistance = typeof firstDistance === "number";
+        const secondHasDistance = typeof secondDistance === "number";
+
+        if (firstHasDistance && secondHasDistance && firstDistance !== secondDistance) {
+          return firstDistance - secondDistance;
         }
-        return 0;
+        if (firstHasDistance !== secondHasDistance) {
+          return firstHasDistance ? -1 : 1;
+        }
+        return first.name.localeCompare(second.name, "pt-BR");
       });
-  }, [businesses, highlightKey, highlightResult]);
+    }
+
+    return decorated.sort((first, second) => {
+      if (Boolean(first.isSponsored) !== Boolean(second.isSponsored)) {
+        return first.isSponsored ? -1 : 1;
+      }
+      return 0;
+    });
+  }, [businesses, distanceResult, highlightKey, highlightResult, locationKey]);
 
   useEffect(() => {
     if (!city || !coordinates || !locationKey || distanceBusinessIds.length === 0) return;

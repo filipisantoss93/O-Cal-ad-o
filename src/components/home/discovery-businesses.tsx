@@ -8,9 +8,21 @@ import { useHomeSectionVisibility } from "@/components/home/use-home-section-vis
 import {
   cityChangeEventName,
   selectedCityStorageKey,
+  selectedCoordinatesStorageKey,
+  type CurrentCoordinates,
   type SelectedCity,
 } from "@/lib/location";
 import type { Business } from "@/types/catalog";
+
+type NearbyBusiness = {
+  slug: string;
+  distanceKm: number | null;
+};
+
+function formatDistance(distanceKm: number) {
+  if (distanceKm < 1) return `${Math.max(1, Math.round(distanceKm * 1_000))} m`;
+  return `${distanceKm.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km`;
+}
 
 export function DiscoveryBusinesses() {
   const { sectionRef, shouldLoad } = useHomeSectionVisibility();
@@ -26,6 +38,14 @@ export function DiscoveryBusinesses() {
     () => window.localStorage.getItem(selectedCityStorageKey),
     () => null,
   );
+  const storedCoordinates = useSyncExternalStore(
+    (onChange) => {
+      window.addEventListener(cityChangeEventName, onChange);
+      return () => window.removeEventListener(cityChangeEventName, onChange);
+    },
+    () => window.sessionStorage.getItem(selectedCoordinatesStorageKey),
+    () => null,
+  );
   const city = useMemo(() => {
     if (!storedCity) return null;
     try {
@@ -35,13 +55,27 @@ export function DiscoveryBusinesses() {
       return null;
     }
   }, [storedCity]);
+  const coordinates = useMemo(() => {
+    if (!storedCoordinates) return null;
+    try {
+      const value = JSON.parse(storedCoordinates) as CurrentCoordinates;
+      return Number.isFinite(value.latitude) && Number.isFinite(value.longitude)
+        ? value
+        : null;
+    } catch {
+      return null;
+    }
+  }, [storedCoordinates]);
+  const requestKey = city
+    ? `${city.id}:${coordinates ? `${coordinates.latitude}:${coordinates.longitude}` : "city"}`
+    : null;
   const [result, setResult] = useState<{
-    cityId: number;
+    requestKey: string;
     businesses: Business[];
   } | null>(null);
 
   useEffect(() => {
-    if (!city || !shouldLoad) return;
+    if (!city || !requestKey || !shouldLoad) return;
     const controller = new AbortController();
 
     const load = async () => {
@@ -55,28 +89,91 @@ export function DiscoveryBusinesses() {
         });
         if (!response.ok) throw new Error("Não foi possível carregar novas vitrines.");
         const payload = (await response.json()) as { businesses?: Business[] };
-        setResult({ cityId: city.id, businesses: payload.businesses ?? [] });
+        let businesses = payload.businesses ?? [];
+
+        if (coordinates && businesses.length > 0) {
+          const businessIds = businesses
+            .map((business) => Number(business.id))
+            .filter((id) => Number.isSafeInteger(id) && id > 0);
+
+          if (businessIds.length > 0) {
+            const distanceResponse = await fetch("/api/comercios-proximos", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                cityId: city.id,
+                latitude: coordinates.latitude,
+                longitude: coordinates.longitude,
+                businessIds,
+              }),
+              cache: "no-store",
+              signal: controller.signal,
+            });
+
+            if (distanceResponse.ok) {
+              const distancePayload = (await distanceResponse.json()) as {
+                businesses?: NearbyBusiness[];
+              };
+              const distances = new Map(
+                (distancePayload.businesses ?? [])
+                  .filter(
+                    (business): business is NearbyBusiness & { distanceKm: number } =>
+                      typeof business.distanceKm === "number",
+                  )
+                  .map((business) => [business.slug, business.distanceKm]),
+              );
+
+              businesses = businesses
+                .map((business) => {
+                  const distanceKm = distances.get(business.slug);
+                  return distanceKm === undefined
+                    ? business
+                    : { ...business, distance: formatDistance(distanceKm) };
+                })
+                .sort((first, second) => {
+                  const firstDistance = distances.get(first.slug);
+                  const secondDistance = distances.get(second.slug);
+                  const firstHasDistance = typeof firstDistance === "number";
+                  const secondHasDistance = typeof secondDistance === "number";
+
+                  if (firstHasDistance && secondHasDistance && firstDistance !== secondDistance) {
+                    return firstDistance - secondDistance;
+                  }
+                  if (firstHasDistance !== secondHasDistance) {
+                    return firstHasDistance ? -1 : 1;
+                  }
+                  return first.name.localeCompare(second.name, "pt-BR");
+                });
+            }
+          }
+        }
+
+        setResult({ requestKey, businesses });
       } catch (error) {
         if (!controller.signal.aborted) {
           console.error("[discovery-businesses] lookup failed", error);
-          setResult({ cityId: city.id, businesses: [] });
+          setResult({ requestKey, businesses: [] });
         }
       }
     };
 
     void load();
     return () => controller.abort();
-  }, [city, shouldLoad]);
+  }, [city, coordinates, requestKey, shouldLoad]);
 
-  if (!city) return null;
+  if (!city || !requestKey) return null;
 
-  if (!shouldLoad || result?.cityId !== city.id) {
+  if (!shouldLoad || result?.requestKey !== requestKey) {
     return (
       <div ref={sectionRef}>
         <HomeSectionSkeleton
           eyebrow="Descubra algo novo"
           title={`Mais vitrines em ${city.name}`}
-          description="Uma seleção variada de estabelecimentos da cidade para você conhecer."
+          description={
+            coordinates
+              ? "Estabelecimentos da cidade ordenados pela distância."
+              : "Uma seleção variada de estabelecimentos da cidade para você conhecer."
+          }
           tone="surface"
         />
       </div>
@@ -90,7 +187,11 @@ export function DiscoveryBusinesses() {
       <HomeFeedSection
         eyebrow="Descubra algo novo"
         title={`Mais vitrines em ${city.name}`}
-        description="Uma seleção variada de estabelecimentos da cidade para você conhecer."
+        description={
+          coordinates
+            ? "Estabelecimentos da cidade ordenados do mais próximo ao mais distante."
+            : "Uma seleção variada de estabelecimentos da cidade para você conhecer."
+        }
         linkHref="/buscar"
         linkLabel="Explorar toda a cidade"
         tone="surface"
