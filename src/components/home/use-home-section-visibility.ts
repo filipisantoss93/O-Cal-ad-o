@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export function useHomeSectionVisibility(rootMargin = "500px 0px") {
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const [node, setNode] = useState<HTMLDivElement | null>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
 
-  useEffect(() => {
-    if (shouldLoad) return;
+  const sectionRef = useCallback((element: HTMLDivElement | null) => {
+    setNode(element);
+  }, []);
 
-    const node = sectionRef.current;
-    if (!node) return;
+  useEffect(() => {
+    if (shouldLoad || !node) return;
 
     if (!("IntersectionObserver" in window)) {
       setShouldLoad(true);
@@ -29,7 +30,7 @@ export function useHomeSectionVisibility(rootMargin = "500px 0px") {
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [rootMargin, shouldLoad]);
+  }, [node, rootMargin, shouldLoad]);
 
   return { sectionRef, shouldLoad };
 }
