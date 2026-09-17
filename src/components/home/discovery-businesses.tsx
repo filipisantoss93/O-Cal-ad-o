@@ -5,6 +5,7 @@ import { BusinessCard } from "@/components/business-card";
 import { HomeFeedSection } from "@/components/home/home-feed-section";
 import { HomeSectionSkeleton } from "@/components/home/home-section-skeleton";
 import { useHomeSectionVisibility } from "@/components/home/use-home-section-visibility";
+import { compareByDistanceRatingName } from "@/lib/business-order";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
@@ -130,20 +131,7 @@ export function DiscoveryBusinesses() {
                     ? business
                     : { ...business, distance: formatDistance(distanceKm) };
                 })
-                .sort((first, second) => {
-                  const firstDistance = distances.get(first.slug);
-                  const secondDistance = distances.get(second.slug);
-                  const firstHasDistance = typeof firstDistance === "number";
-                  const secondHasDistance = typeof secondDistance === "number";
-
-                  if (firstHasDistance && secondHasDistance && firstDistance !== secondDistance) {
-                    return firstDistance - secondDistance;
-                  }
-                  if (firstHasDistance !== secondHasDistance) {
-                    return firstHasDistance ? -1 : 1;
-                  }
-                  return first.name.localeCompare(second.name, "pt-BR");
-                });
+                .sort((first, second) => compareByDistanceRatingName(first, second, distances));
             }
           }
         }
