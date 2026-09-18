@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { SearchIcon } from "@/components/icons";\nimport { CompactCategories } from "@/components/home/compact-categories";
+import { SearchIcon } from "@/components/icons";
+import { CompactCategories } from "@/components/home/compact-categories";
 import { SearchForm } from "@/components/search-form";
 import { SearchBusinessResults } from "@/components/search-business-results";
 import { SiteFooter } from "@/components/site-footer";
