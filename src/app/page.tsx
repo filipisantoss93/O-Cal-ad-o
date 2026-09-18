@@ -32,7 +32,7 @@ export default function Home() {
       </a>
       <SiteHeader />
 
-      <main id="conteudo" className="w-full min-w-0 max-w-full overflow-x-clip">
+      <main id="conteudo" className="w-full min-w-0 max-w-full overflow-x-hidden">
         <section className="relative overflow-hidden border-b border-line bg-canvas">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent" />
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-9 lg:px-8 lg:py-11">

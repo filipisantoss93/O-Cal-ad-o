@@ -3,7 +3,7 @@ import { Logo } from "@/components/logo";
 
 export function SiteFooter() {
   return (
-    <footer className="w-full max-w-full overflow-x-clip border-t border-line bg-surface">
+    <footer className="w-full max-w-full overflow-x-hidden border-t border-line bg-surface">
       <div className="mx-auto grid max-w-7xl gap-9 px-4 py-10 sm:px-6 md:grid-cols-[1.5fr_1fr_1fr] lg:px-8">
         <div className="max-w-sm">
           <Logo />
