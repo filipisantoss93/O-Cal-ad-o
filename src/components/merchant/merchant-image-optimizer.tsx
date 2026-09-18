@@ -14,7 +14,6 @@ const OPTIMIZED_PATHS = new Set([
   "/painel/catalogo",
   "/painel/promocoes",
   "/painel/loja",
-  "/painel/admin/pre-cadastros",
 ]);
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
 

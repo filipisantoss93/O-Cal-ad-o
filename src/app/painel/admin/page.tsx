@@ -2,16 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { moderateBusinessAction } from "@/app/painel/admin/actions";
 import { FloatingNotice } from "@/components/floating-notice";
-import { MapPinIcon, ShieldCheckIcon, StoreIcon } from "@/components/icons";
+import { MapPinIcon, StoreIcon } from "@/components/icons";
 import { requireAdmin } from "@/lib/admin/dal";
 
 export const metadata: Metadata = { title: "Moderação de lojas" };
 
 const allowedStatuses = ["pending", "approved", "rejected", "suspended"] as const;
 const statusLabels: Record<string, string> = {
-  pending: "Aguardando análise",
+  pending: "Aguardando",
   approved: "Aprovadas",
-  rejected: "Ajustes solicitados",
+  rejected: "Ajustes",
   suspended: "Suspensas",
 };
 
@@ -39,23 +39,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   return (
     <div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-positive">Administração</p>
-          <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-ink sm:text-4xl">Moderação de lojas</h1>
-          <p className="mt-2 max-w-2xl text-base leading-7 text-muted">
-            Novas vitrines são publicadas imediatamente e permanecem nesta fila até a revisão. A moderação pode aprovar, pedir ajustes ou retirar a publicação quando necessário.
-          </p>
-        </div>
-        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-positive-soft px-4 py-2 text-sm font-black text-positive">
-          <ShieldCheckIcon className="size-4" /> Acesso administrativo
-        </span>
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/painel/admin/dashboard" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink hover:border-brand/40">Ver dashboard administrativo</Link>
-        <Link href="/painel/admin/locais-publicos" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink hover:border-brand/40">Gerir locais públicos</Link>
-        <Link href="/painel/admin/pre-cadastros" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink hover:border-brand/40">Pré-cadastrar loja</Link>
-      </div>
+      <header>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-positive">Administração</p>
+        <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-ink sm:text-4xl">Moderação de lojas</h1>
+      </header>
 
       {params.sucesso && (
         <FloatingNotice tone="success">
@@ -68,12 +55,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         </FloatingNotice>
       )}
 
-      <nav aria-label="Filtrar moderação" className="mt-7 flex gap-2 overflow-x-auto pb-2">
+      <nav aria-label="Filtrar moderação" className="mt-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {allowedStatuses.map((status) => (
           <Link
             key={status}
             href={`/painel/admin?status=${status}`}
-            className={`shrink-0 rounded-full border px-4 py-2 text-sm font-extrabold ${selectedStatus === status ? "border-ink bg-ink text-white" : "border-line bg-surface text-muted"}`}
+            className={`rounded-xl border px-3 py-2.5 text-center text-sm font-extrabold sm:rounded-full sm:px-4 sm:py-2 ${selectedStatus === status ? "border-ink bg-ink text-white" : "border-line bg-surface text-muted"}`}
           >
             {statusLabels[status]}
           </Link>
@@ -81,12 +68,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </nav>
 
       {businesses.length === 0 ? (
-        <section className="mt-6 grid min-h-64 place-items-center rounded-3xl border border-dashed border-line bg-surface p-6 text-center">
-          <div>
-            <StoreIcon className="mx-auto size-8 text-muted" />
-            <h2 className="mt-4 text-xl font-black text-ink">Nenhuma loja nesta fila</h2>
-            <p className="mt-2 text-sm text-muted">As novas lojas entrarão aqui sem interromper a publicação inicial.</p>
-          </div>
+        <section className="mt-5 rounded-2xl border border-dashed border-line bg-surface p-6 text-center">
+          <StoreIcon className="mx-auto size-7 text-muted" />
+          <h2 className="mt-3 text-lg font-black text-ink">Nenhuma loja nesta fila</h2>
         </section>
       ) : (
         <div className="mt-6 space-y-5">
@@ -105,13 +89,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       </span>
                     </div>
                     <h2 className="mt-2 text-2xl font-black text-ink">{business.name}</h2>
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{business.description || "Sem descrição."}</p>
+                    {business.description && <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{business.description}</p>}
                     <p className="mt-4 flex items-start gap-2 text-sm font-bold text-ink">
                       <MapPinIcon className="mt-0.5 size-4 shrink-0 text-brand" />
                       {business.street}, {business.address_number} · {business.neighborhood} · {city?.name}/{city?.state_code}
-                    </p>
-                    <p className="mt-2 text-xs font-semibold text-muted">
-                      {business.latitude !== null && business.longitude !== null ? "Coordenadas cadastradas para ordenação por distância." : "Sem coordenadas: aparecerá apenas pelo filtro de cidade."}
                     </p>
                   </div>
 
@@ -152,9 +133,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                           <button name="intent" value="reopen" className="min-h-10 rounded-xl border border-line bg-white px-3 text-sm font-black text-ink sm:col-span-2">Reabrir análise e publicar</button>
                         )}
                       </div>
-                      <p className="mt-3 text-xs font-semibold leading-5 text-muted">
-                        “Solicitar ajustes” mantém a vitrine visível. Use “Ajustes + retirar do ar” quando o problema justificar interromper a publicação.
-                      </p>
                     </form>
                   </div>
                 </div>
