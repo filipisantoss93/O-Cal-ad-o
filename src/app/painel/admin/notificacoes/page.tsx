@@ -8,7 +8,7 @@ import { requireAdmin } from "@/lib/admin/dal";
 export const metadata: Metadata = { title: "Notificações administrativas" };
 export const dynamic = "force-dynamic";
 
-const labels: Record<string, string> = { new_user: "Cadastros", support: "Suporte", report: "Denúncias" };
+const labels: Record<string, string> = { new_user: "Cadastros", support: "Suporte", report: "Denúncias", business_claim: "Reivindicações", listing_request: "Correções e remoções", business_moderation: "Moderação", banner_review: "Banners" };
 const reasons: Record<string, string> = { inaccurate: "Informações incorretas", fraud: "Suspeita de fraude", inappropriate: "Conteúdo inadequado", other: "Outro motivo" };
 
 export default async function AdminNotifications({ searchParams }: { searchParams: Promise<{ tipo?: string; id?: string; erro?: string }> }) {
@@ -46,7 +46,7 @@ export default async function AdminNotifications({ searchParams }: { searchParam
     <div>
       <p className="text-xs font-black uppercase tracking-widest text-positive">Administração</p>
       <h1 className="mt-2 text-3xl font-black text-ink sm:text-4xl">Notificações</h1>
-      <p className="mt-2 text-sm text-muted">Acompanhe novos usuários, mensagens de suporte e denúncias de lojas.</p>
+      <p className="mt-2 text-sm text-muted">Acompanhe cadastros confirmados, reivindicações, solicitações sobre perfis, moderação, banners, suporte e denúncias.</p>
     </div>
     {params.erro && <FloatingNotice tone="error">Não foi possível salvar a alteração. Tente novamente.</FloatingNotice>}
     <AdminPushManager publicKey={publicKeyResult.data ?? null} />
