@@ -28,7 +28,7 @@ export function HomeFeedSection({
   return (
     <section
       id={id}
-      className={`scroll-mt-24 ${tone === "surface" ? "bg-surface" : "bg-canvas"} px-4 sm:px-6 lg:px-8 ${compact ? "py-5 sm:py-7" : "py-7 sm:py-10 lg:py-12"}`}
+      className={`scroll-mt-24 min-w-0 max-w-full overflow-x-clip ${tone === "surface" ? "bg-surface" : "bg-canvas"} px-4 sm:px-6 lg:px-8 ${compact ? "py-5 sm:py-7" : "py-7 sm:py-10 lg:py-12"}`}
     >
       <div className="mx-auto max-w-7xl">
         <div className="flex items-end justify-between gap-4">
