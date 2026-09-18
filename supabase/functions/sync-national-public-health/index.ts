@@ -235,7 +235,7 @@ Deno.serve(async(request)=>{
 
     const status=done?"completed":"partial";
     await supabase.from("public_place_import_jobs").update({
-      status,cursor_offset:cursor,
+      status,cursor_offset:cursor,attempts:0,
       total_found:job.total_found+found,total_created:job.total_created+created,total_matched:job.total_matched+matched,
       total_ignored:job.total_ignored+ignored,total_errors:job.total_errors+errors,
       completed_at:done?new Date().toISOString():null,
@@ -250,9 +250,15 @@ Deno.serve(async(request)=>{
     });
   }catch(e){
     const message=e instanceof Error?e.message:String(e);
+    const nextAttempts=job.attempts+1;
     await supabase.from("public_place_import_jobs").update({
-      status:job.attempts>=5?"paused":"failed",last_error:message.slice(0,2000),
-      next_run_at:new Date(Date.now()+15*60_000).toISOString(),updated_at:new Date().toISOString()
+      attempts:nextAttempts,
+      status:nextAttempts>=5?"paused":"failed",
+      last_error:message.slice(0,2000),
+      next_run_at:nextAttempts>=5
+        ? new Date("2100-01-01T00:00:00Z").toISOString()
+        : new Date(Date.now()+15*60_000).toISOString(),
+      updated_at:new Date().toISOString()
     }).eq("id",job.id);
     return json({processedCities:1,city:{id:cityRow.id,name:cityRow.name,state:cityRow.state_code},status:"failed",error:message},500);
   }
