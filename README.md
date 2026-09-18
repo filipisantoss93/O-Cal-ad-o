@@ -149,10 +149,13 @@ quantidade de assinaturas Pro ativas, sem inventar receita recorrente.
 ### Alertas administrativos no PWA
 
 O painel `/painel/admin/notificacoes` é restrito a administradores. Os alertas
-de novos cadastros, suporte e denúncias são destinados à conta
-`Filipi.01@live.com` desde que seu perfil tenha papel `admin`. A caixa usa RLS;
-o Web Push usa uma Edge Function com token de despacho, e não depende da página
-aberta. No iPhone, instale o site na Tela de Início antes de ativar a permissão.
+são entregues a todos os perfis com papel `admin` e cobrem cadastro confirmado,
+suporte, denúncia, reivindicação de estabelecimento, correção/atualização/remoção
+de perfil, loja de comerciante aguardando moderação e banner pago aguardando
+revisão. Importações em massa, geocodificação e pré-cadastros automáticos não
+geram push individual. A caixa usa RLS; o Web Push usa uma Edge Function com
+token de despacho e não depende da página aberta. No iPhone, instale o site na
+Tela de Início antes de ativar a permissão.
 
 Em um novo projeto Supabase, depois das migrations, gere **uma única** dupla
 VAPID e um token aleatório de 32 bytes. Salve em Supabase Vault com os nomes
