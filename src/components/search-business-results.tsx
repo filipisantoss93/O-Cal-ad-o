@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { BusinessCard } from "@/components/business-card";
+import { BusinessListCard } from "@/components/business-list-card";
 import { compareByDistanceRatingName } from "@/lib/business-order";
 import { loadGoogleRatings } from "@/lib/google-ratings-client";
 import {
@@ -242,7 +242,7 @@ export function SearchBusinessResults({
 
   return (
     <div
-      className="mt-7 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4"
+      className="mt-7 space-y-3 sm:space-y-4"
       onClickCapture={trackStoreView}
     >
       {displayedBusinesses.map((business) => {
@@ -251,9 +251,8 @@ export function SearchBusinessResults({
             ? distanceResult.distances.get(business.slug)
             : undefined;
         return (
-          <BusinessCard
+          <BusinessListCard
             key={business.id}
-            compact
             business={
               distanceKm === undefined
                 ? business
