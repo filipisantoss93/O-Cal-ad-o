@@ -123,19 +123,14 @@ Deno.serve(async(request)=>{
     .eq("code",SOURCE_CODE).eq("is_active",true).maybeSingle();
   if(sourceError||!source) return json({error:"Fonte CNES não configurada."},500);
 
-  let jobQuery=supabase.from("public_place_import_jobs").select("*").eq("source_id",source.id)
-    .in("status",["pending","partial","failed"]).lt("attempts",5).lte("next_run_at",new Date().toISOString());
-  if(Number.isSafeInteger(requestedCityId)&&requestedCityId>0) jobQuery=jobQuery.eq("city_id",requestedCityId);
-  const {data:jobs,error:jobError}=await jobQuery.order("priority",{ascending:false}).order("next_run_at",{ascending:true}).order("id",{ascending:true}).limit(1);
-  if(jobError) return json({error:jobError.message},500);
-  const job=(jobs?.[0] ?? null) as Job|null;
+  const claimCityId=Number.isSafeInteger(requestedCityId)&&requestedCityId>0 ? requestedCityId : null;
+  const {data:claimed,error:claimError}=await supabase.rpc("claim_public_place_import_job",{
+    p_source_code:SOURCE_CODE,
+    p_city_id:claimCityId
+  });
+  if(claimError) return json({error:claimError.message},500);
+  const job=(claimed ?? null) as Job|null;
   if(!job) return json({processedCities:0,message:"Nenhum município pendente neste momento."});
-
-  const now=new Date().toISOString();
-  const {data:claimed,error:claimError}=await supabase.from("public_place_import_jobs").update({
-    status:"processing",attempts:job.attempts+1,last_run_at:now,started_at:job.started_at ?? now,updated_at:now,last_error:null
-  }).eq("id",job.id).in("status",["pending","partial","failed"]).select("*").maybeSingle();
-  if(claimError||!claimed) return json({processedCities:0,message:"Job já processado por outro worker."});
 
   const {data:city,error:cityError}=await supabase.from("cities").select("id,name,state_code,ibge_code")
     .eq("id",job.city_id).eq("is_active",true).maybeSingle();
@@ -177,8 +172,8 @@ Deno.serve(async(request)=>{
           ignored++;continue;
         }
 
-        const latitude=Number(row.latitude_estabelecimento_decimo_grau);
-        const longitude=Number(row.longitude_estabelecimento_decimo_grau);
+        let latitude=Number(row.latitude_estabelecimento_decimo_grau);
+        let longitude=Number(row.longitude_estabelecimento_decimo_grau);
         let lat:number|null=Number.isFinite(latitude)?Number(latitude.toFixed(6)):null;
         let lon:number|null=Number.isFinite(longitude)?Number(longitude.toFixed(6)):null;
         if(lat!==null&&lon!==null&&!(await coordinatesInsideCity(supabase,cityRow.id,lat,lon))){lat=null;lon=null}
@@ -234,7 +229,7 @@ Deno.serve(async(request)=>{
         }
       }
 
-      cursor++;
+      cursor+=PAGE_SIZE;
       if(rows.length<PAGE_SIZE){done=true;break}
     }
 
@@ -256,7 +251,7 @@ Deno.serve(async(request)=>{
   }catch(e){
     const message=e instanceof Error?e.message:String(e);
     await supabase.from("public_place_import_jobs").update({
-      status:(job.attempts+1)>=5?"paused":"failed",last_error:message.slice(0,2000),
+      status:job.attempts>=5?"paused":"failed",last_error:message.slice(0,2000),
       next_run_at:new Date(Date.now()+15*60_000).toISOString(),updated_at:new Date().toISOString()
     }).eq("id",job.id);
     return json({processedCities:1,city:{id:cityRow.id,name:cityRow.name,state:cityRow.state_code},status:"failed",error:message},500);
