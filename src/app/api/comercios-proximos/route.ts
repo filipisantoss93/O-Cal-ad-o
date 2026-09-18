@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { publicMediaUrl } from "@/lib/merchant/media";
+import { publicMediaUrl } from "@/lib/merchant/media";\nimport { loadResolvedBusinessLogoPaths } from "@/lib/business-logo";
 
 type NearbyRequest = {
   cityId?: unknown;
@@ -87,9 +87,12 @@ export async function POST(request: Request) {
   // O RPC ordena por distância; buscamos os dados visuais em uma única consulta
   // para preservar essa ordem sem alterar a assinatura pública do RPC.
   const ids = (data ?? []).map((business) => business.id);
-  const { data: media, error: mediaError } = ids.length
-    ? await supabase.from("businesses").select("id, logo_path, listing_type").in("id", ids)
-    : { data: [], error: null };
+  const [{ data: media, error: mediaError }, resolvedLogoPaths] = await Promise.all([
+    ids.length
+      ? supabase.from("businesses").select("id, logo_path, listing_type").in("id", ids)
+      : Promise.resolve({ data: [], error: null }),
+    loadResolvedBusinessLogoPaths(supabase, ids),
+  ]);
   if (mediaError) console.error("[api/comercios-proximos] logo lookup failed", mediaError.message);
   const mediaById = new Map((media ?? []).map((row) => [row.id, row]));
 
@@ -98,7 +101,7 @@ export async function POST(request: Request) {
     slug: business.slug,
     name: business.name,
     neighborhood: business.neighborhood,
-    logoUrl: publicMediaUrl(supabase, mediaById.get(business.id)?.logo_path ?? null),
+    logoUrl: publicMediaUrl(supabase, resolvedLogoPaths.get(business.id) ?? mediaById.get(business.id)?.logo_path ?? null),
     listingType: mediaById.get(business.id)?.listing_type === "public_place"
       ? "public_place"
       : "business",
