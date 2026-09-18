@@ -20,7 +20,23 @@ type BusinessRow = {
   listing_type: string;
 };
 type CityRow = { id: number; name: string; state_code: string };
-type Candidate = { lat?: unknown; lon?: unknown };
+type CandidateAddress = {
+  house_number?: unknown;
+  road?: unknown;
+  pedestrian?: unknown;
+  residential?: unknown;
+  neighbourhood?: unknown;
+  suburb?: unknown;
+  postcode?: unknown;
+};
+type Candidate = {
+  lat?: unknown;
+  lon?: unknown;
+  display_name?: unknown;
+  type?: unknown;
+  addresstype?: unknown;
+  address?: CandidateAddress;
+};
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -33,7 +49,10 @@ function json(data: unknown, status = 200) {
 }
 
 async function sha256(value: string) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
   return [...new Uint8Array(digest)]
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
@@ -46,7 +65,7 @@ function adminKey() {
       const keys = JSON.parse(current) as Record<string, string>;
       if (keys.default) return keys.default;
     } catch {
-      // Fallback abaixo.
+      // Fall back while the project still exposes the legacy service-role key.
     }
   }
   return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -58,16 +77,76 @@ function cleanNeighborhood(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
-  return !normalized || normalized === "nao informado" ? "" : value.trim();
+  if (!normalized || normalized === "nao informado") return "";
+  return value.trim();
+}
+
+function normalizeAddressText(value: unknown) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function normalizedHouseNumber(value: unknown) {
+  const match = normalizeAddressText(value).match(/\b\d+[a-z]?\b/i);
+  return match?.[0] ?? "";
+}
+
+function streetTokens(value: unknown) {
+  const ignored = new Set([
+    "rua", "r", "avenida", "av", "rodovia", "rod", "travessa", "tv",
+    "alameda", "praca", "pca", "estrada", "est", "logradouro"
+  ]);
+  return normalizeAddressText(value)
+    .split(/\s+/)
+    .filter((token) => token.length >= 2 && !ignored.has(token));
+}
+
+function candidateRoad(candidate: Candidate) {
+  const address = candidate.address ?? {};
+  return address.road ?? address.pedestrian ?? address.residential ?? "";
+}
+
+function candidateMatchesAddress(candidate: Candidate, business: BusinessRow) {
+  const expectedNumber = normalizedHouseNumber(business.address_number);
+  if (!expectedNumber) return false;
+
+  const actualNumber = normalizedHouseNumber(candidate.address?.house_number);
+  if (!actualNumber || actualNumber !== expectedNumber) return false;
+
+  const expectedStreet = streetTokens(business.street);
+  const actualStreet = new Set(streetTokens(candidateRoad(candidate)));
+  if (!expectedStreet.length || !actualStreet.size) return false;
+
+  const matched = expectedStreet.filter((token) => actualStreet.has(token)).length;
+  const similarity = matched / expectedStreet.length;
+  if (similarity < 0.6) return false;
+
+  const expectedPostal = (business.postal_code ?? "").replace(/\D/g, "");
+  const actualPostal = normalizeAddressText(candidate.address?.postcode).replace(/\D/g, "");
+  if (
+    expectedPostal.length === 8 &&
+    actualPostal.length === 8 &&
+    expectedPostal.slice(0, 5) !== actualPostal.slice(0, 5)
+  ) return false;
+
+  return true;
 }
 
 function addressQueries(business: BusinessRow, city: CityRow) {
-  const number = /\d/.test(business.address_number) ? business.address_number.trim() : "";
-  const streetWithNumber = [business.street.trim(), number].filter(Boolean).join(", ");
+  const number = /\d/.test(business.address_number)
+    ? business.address_number.trim()
+    : "";
+  const streetWithNumber = [business.street.trim(), number]
+    .filter(Boolean)
+    .join(", ");
   const neighborhood = cleanNeighborhood(business.neighborhood);
   const postalCode = (business.postal_code ?? "").replace(/\D/g, "");
 
-  return [...new Set([
+  const queries = [
     [
       streetWithNumber,
       neighborhood,
@@ -75,9 +154,15 @@ function addressQueries(business: BusinessRow, city: CityRow) {
       city.state_code,
       postalCode.length === 8 ? postalCode : "",
       "Brasil",
-    ].filter(Boolean).join(", "),
-    [streetWithNumber, city.name, city.state_code, "Brasil"].filter(Boolean).join(", "),
-  ].filter(Boolean))];
+    ]
+      .filter(Boolean)
+      .join(", "),
+    [streetWithNumber, city.name, city.state_code, "Brasil"]
+      .filter(Boolean)
+      .join(", "),
+  ];
+
+  return [...new Set(queries.filter(Boolean))];
 }
 
 let lastRequestAt = 0;
@@ -91,7 +176,7 @@ async function geocode(query: string) {
   url.searchParams.set("countrycodes", "br");
   url.searchParams.set("format", "jsonv2");
   url.searchParams.set("limit", "5");
-  url.searchParams.set("addressdetails", "0");
+  url.searchParams.set("addressdetails", "1");
 
   const response = await fetch(url, {
     headers: {
@@ -102,11 +187,14 @@ async function geocode(query: string) {
     },
     signal: AbortSignal.timeout(12_000),
   });
+
   if (!response.ok) throw new Error(`GEOCODER_HTTP_${response.status}`);
 
   const payload: unknown = await response.json();
   return Array.isArray(payload)
-    ? payload.filter((item): item is Candidate => typeof item === "object" && item !== null)
+    ? payload.filter(
+        (item): item is Candidate => typeof item === "object" && item !== null,
+      )
     : [];
 }
 
@@ -159,7 +247,7 @@ Deno.serve(async (request) => {
 
   for (const queue of (queueRows ?? []) as QueueRow[]) {
     const claimUntil = new Date(Date.now() + 2 * 60_000).toISOString();
-    const { data: claimed } = await supabase
+    const { data: claimed, error: claimError } = await supabase
       .from("business_geocoding_queue")
       .update({ next_attempt_at: claimUntil, updated_at: new Date().toISOString() })
       .eq("business_id", queue.business_id)
@@ -168,7 +256,7 @@ Deno.serve(async (request) => {
       .select("business_id, attempts")
       .maybeSingle();
 
-    if (!claimed) continue;
+    if (claimError || !claimed) continue;
 
     const { data: businessData, error: businessError } = await supabase
       .from("businesses")
@@ -178,12 +266,17 @@ Deno.serve(async (request) => {
 
     if (businessError || !businessData) {
       await supabase.from("business_geocoding_queue").delete().eq("business_id", queue.business_id);
+      results.push({ id: queue.business_id, status: "removed_missing_business" });
       continue;
     }
 
     const business = businessData as BusinessRow;
-    if (business.listing_type !== "business" || (business.latitude !== null && business.longitude !== null)) {
+    if (
+      business.listing_type !== "business" ||
+      (business.latitude !== null && business.longitude !== null)
+    ) {
       await supabase.from("business_geocoding_queue").delete().eq("business_id", business.id);
+      results.push({ id: business.id, status: "removed_not_needed" });
       continue;
     }
 
@@ -195,12 +288,16 @@ Deno.serve(async (request) => {
       .maybeSingle();
 
     if (cityError || !cityData) {
-      await supabase.from("business_geocoding_queue").update({
-        status: "failed",
-        attempts: queue.attempts + 1,
-        last_error: "Cidade inválida ou inativa.",
-        updated_at: new Date().toISOString(),
-      }).eq("business_id", business.id);
+      await supabase
+        .from("business_geocoding_queue")
+        .update({
+          status: "failed",
+          attempts: queue.attempts + 1,
+          last_error: "Cidade inválida ou inativa.",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("business_id", business.id);
+      results.push({ id: business.id, status: "failed_invalid_city" });
       continue;
     }
 
@@ -220,12 +317,18 @@ Deno.serve(async (request) => {
       for (const candidate of candidates) {
         const latitude = Number(candidate.lat);
         const longitude = Number(candidate.lon);
-        if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) continue;
+        if (
+          !Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
+          !Number.isFinite(longitude) || longitude < -180 || longitude > 180
+        ) continue;
 
-        const { data: resolvedCities } = await supabase.rpc("resolve_city_by_coordinates", {
-          input_latitude: latitude,
-          input_longitude: longitude,
-        });
+        if (!candidateMatchesAddress(candidate, business)) continue;
+
+        const { data: resolvedCities, error: resolverError } = await supabase.rpc(
+          "resolve_city_by_coordinates",
+          { input_latitude: latitude, input_longitude: longitude },
+        );
+        if (resolverError) continue;
 
         if (resolvedCities?.[0]?.id === city.id) {
           found = {
@@ -235,22 +338,34 @@ Deno.serve(async (request) => {
           break;
         }
       }
+
       if (found) break;
     }
 
     if (found) {
-      const { data: applied, error: applyError } = await supabase.rpc("apply_business_geocoding", {
-        p_business_id: business.id,
-        p_latitude: found.latitude,
-        p_longitude: found.longitude,
-      });
+      const { data: applied, error: applyError } = await supabase.rpc(
+        "apply_business_geocoding",
+        {
+          p_business_id: business.id,
+          p_latitude: found.latitude,
+          p_longitude: found.longitude,
+        },
+      );
 
       if (!applyError && applied === true) {
         await supabase.from("business_geocoding_queue").delete().eq("business_id", business.id);
-        results.push({ id: business.id, status: "updated" });
+        results.push({
+          id: business.id,
+          status: "updated",
+          latitude: found.latitude,
+          longitude: found.longitude,
+        });
         continue;
       }
-      upstreamError = applyError ? `APPLY_FAILED:${applyError.message}` : "APPLY_REJECTED";
+
+      upstreamError = applyError
+        ? `APPLY_FAILED:${applyError.message}`
+        : "APPLY_REJECTED";
     }
 
     const attempts = queue.attempts + 1;
@@ -261,15 +376,22 @@ Deno.serve(async (request) => {
       ? `Falha temporária no geocodificador: ${upstreamError}`
       : "Endereço não localizado com segurança dentro do município cadastrado.";
 
-    await supabase.from("business_geocoding_queue").update({
-      status: isFailed ? "failed" : "pending",
-      attempts,
-      next_attempt_at: new Date(Date.now() + retryMinutes * 60_000).toISOString(),
-      last_error: errorMessage.slice(0, 1000),
-      updated_at: new Date().toISOString(),
-    }).eq("business_id", business.id);
+    await supabase
+      .from("business_geocoding_queue")
+      .update({
+        status: isFailed ? "failed" : "pending",
+        attempts,
+        next_attempt_at: new Date(Date.now() + retryMinutes * 60_000).toISOString(),
+        last_error: errorMessage.slice(0, 1000),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("business_id", business.id);
 
-    results.push({ id: business.id, status: isFailed ? "failed" : "retry_scheduled" });
+    results.push({
+      id: business.id,
+      status: isFailed ? "failed" : "retry_scheduled",
+      attempts,
+    });
   }
 
   return json({
