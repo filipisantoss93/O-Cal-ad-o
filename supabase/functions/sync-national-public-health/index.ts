@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -176,8 +177,8 @@ Deno.serve(async(request)=>{
           ignored++;continue;
         }
 
-        let latitude=Number(row.latitude_estabelecimento_decimo_grau);
-        let longitude=Number(row.longitude_estabelecimento_decimo_grau);
+        const latitude=Number(row.latitude_estabelecimento_decimo_grau);
+        const longitude=Number(row.longitude_estabelecimento_decimo_grau);
         let lat:number|null=Number.isFinite(latitude)?Number(latitude.toFixed(6)):null;
         let lon:number|null=Number.isFinite(longitude)?Number(longitude.toFixed(6)):null;
         if(lat!==null&&lon!==null&&!(await coordinatesInsideCity(supabase,cityRow.id,lat,lon))){lat=null;lon=null}
