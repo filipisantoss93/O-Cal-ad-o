@@ -30,7 +30,7 @@ export function CompactCategories({
 
   return (
     <nav aria-label="Categorias principais" className="min-w-0">
-      <div className="-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 lg:grid-cols-8">
+      <div className="-mx-4 flex snap-x snap-mandatory gap-2.5 overscroll-x-contain overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 lg:grid-cols-8">
         {showAllOption ? (
           <Link
             href={categoryHref(undefined, query)}
