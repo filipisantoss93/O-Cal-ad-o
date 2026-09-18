@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { SearchIcon } from "@/components/icons";
+import { SearchIcon } from "@/components/icons";\nimport { CompactCategories } from "@/components/home/compact-categories";
 import { SearchForm } from "@/components/search-form";
 import { SearchBusinessResults } from "@/components/search-business-results";
 import { SiteFooter } from "@/components/site-footer";
@@ -87,34 +87,15 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               />
             </div>
 
-            <nav
-              className="mt-5 flex gap-2 overflow-x-auto pb-2"
-              aria-label="Filtrar por categoria"
-            >
-              <Link
-                href={q ? `/buscar?q=${encodeURIComponent(q)}` : "/buscar"}
-                className={`shrink-0 rounded-full border px-4 py-2 text-sm font-extrabold transition ${
-                  !selectedCategory
-                    ? "border-ink bg-ink text-white"
-                    : "border-line bg-canvas text-muted hover:border-ink/20 hover:text-ink"
-                }`}
-              >
-                Todas
-              </Link>
-              {categories.map((category) => (
-                <Link
-                  key={category.slug}
-                  href={`/buscar?categoria=${category.slug}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-                  className={`shrink-0 rounded-full border px-4 py-2 text-sm font-extrabold transition ${
-                    selectedCategory?.slug === category.slug
-                      ? "border-ink bg-ink text-white"
-                      : "border-line bg-canvas text-muted hover:border-ink/20 hover:text-ink"
-                  }`}
-                >
-                  {category.icon} {category.name}
-                </Link>
-              ))}
-            </nav>
+            <div className="mt-5">
+              <CompactCategories
+                categories={categories}
+                selectedSlug={selectedCategory?.slug}
+                query={q}
+                showAllOption
+                showViewAll={false}
+              />
+            </div>
           </div>
         </section>
 
