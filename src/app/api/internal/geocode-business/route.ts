@@ -99,6 +99,7 @@ function placeMatches(place: GooglePlace, body: Required<Pick<RequestBody, "name
     expectedPostal.slice(0, 5) !== actualPostal.slice(0, 5)
   ) return false;
 
+  console.info("[google-geocode] matched", { name, city, placeId: place.id ?? null });
   const latitude = Number(place.location?.latitude);
   const longitude = Number(place.location?.longitude);
   return Number.isFinite(latitude) && Number.isFinite(longitude);
@@ -128,6 +129,7 @@ export async function POST(request: Request) {
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
   if (!apiKey) {
+    console.info("[google-geocode] disabled_missing_key");
     return Response.json({ enabled: false, found: false });
   }
 
@@ -167,7 +169,10 @@ export async function POST(request: Request) {
   const payload = (await response.json()) as { places?: GooglePlace[] };
   const normalizedBody = { ...body, name, street, addressNumber, city, stateCode };
   const place = (payload.places ?? []).find((candidate) => placeMatches(candidate, normalizedBody));
-  if (!place) return Response.json({ enabled: true, found: false });
+  if (!place) {
+    console.info("[google-geocode] no_match", { name, city, stateCode });
+    return Response.json({ enabled: true, found: false });
+  }
 
   const latitude = Number(place.location?.latitude);
   const longitude = Number(place.location?.longitude);
