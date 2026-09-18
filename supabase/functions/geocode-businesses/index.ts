@@ -5,6 +5,8 @@ const TOKEN_HASH = "caec7186d2264f46f018a6ee45ab34c9df2e897de9b3272dfaba744ad7cd
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
 const VIACEP_URL = "https://viacep.com.br/ws";
 const GOOGLE_FALLBACK_URL = "https://ocalcadao.com.br/api/internal/geocode-business";
+const PHOTON_URL = "https://photon.komoot.io/api/";
+const MIN_PHOTON_INTERVAL_MS = 1100;
 const MIN_INTERVAL_MS = 1100;
 const MAX_ATTEMPTS = 5;
 
@@ -193,25 +195,25 @@ function candidateMatchesAddress(candidate: Candidate, business: BusinessRow) {
 
 let lastViaCepRequestAt = 0;
 
-async function discoverPostalCode(business: BusinessRow, city: CityRow) {
+async function discoverAddressViaCep(business: BusinessRow, city: CityRow) {
   const existing = (business.postal_code ?? "").replace(/\D/g, "");
-  if (existing.length === 8) return existing;
-
   const street = business.street.trim();
-  if (street.length < 3) return "";
+  if (street.length < 3) return null;
 
   const waitMs = Math.max(0, 250 - (Date.now() - lastViaCepRequestAt));
   if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
   lastViaCepRequestAt = Date.now();
 
   try {
-    const url = [
-      VIACEP_URL,
-      encodeURIComponent(city.state_code),
-      encodeURIComponent(city.name),
-      encodeURIComponent(street),
-      "json",
-    ].join("/");
+    const url = existing.length === 8
+      ? `${VIACEP_URL}/${existing}/json/`
+      : [
+          VIACEP_URL,
+          encodeURIComponent(city.state_code),
+          encodeURIComponent(city.name),
+          encodeURIComponent(street),
+          "json",
+        ].join("/");
 
     const response = await fetch(url, {
       headers: {
@@ -221,32 +223,42 @@ async function discoverPostalCode(business: BusinessRow, city: CityRow) {
       },
       signal: AbortSignal.timeout(8_000),
     });
-    if (!response.ok) return "";
+    if (!response.ok) return null;
 
     const payload: unknown = await response.json();
-    if (!Array.isArray(payload)) return "";
+    const rows = Array.isArray(payload) ? payload : [payload];
 
-    let bestCep = "";
-    let bestScore = 0;
-    for (const item of payload) {
+    let best: { postalCode: string; street: string; neighborhood: string; score: number } | null = null;
+    for (const item of rows) {
       if (!item || typeof item !== "object") continue;
       const row = item as Record<string, unknown>;
+      if (row.erro === true) continue;
+
       const uf = String(row.uf ?? "").trim().toUpperCase();
       const locality = normalizeAddressText(row.localidade);
       if (uf !== city.state_code.toUpperCase()) continue;
       if (locality !== normalizeAddressText(city.name)) continue;
 
-      const score = roadSimilarity(business.street, row.logradouro);
-      if (score < 0.6 || score <= bestScore) continue;
+      const canonicalStreet = String(row.logradouro ?? "").trim();
+      const score = roadSimilarity(business.street, canonicalStreet);
+      if (!canonicalStreet || score < 0.45) continue;
 
       const cep = String(row.cep ?? "").replace(/\D/g, "");
       if (cep.length !== 8) continue;
-      bestCep = cep;
-      bestScore = score;
+
+      if (!best || score > best.score) {
+        best = {
+          postalCode: cep,
+          street: canonicalStreet,
+          neighborhood: String(row.bairro ?? "").trim(),
+          score,
+        };
+      }
     }
-    return bestCep;
+
+    return best;
   } catch {
-    return "";
+    return null;
   }
 }
 
@@ -365,11 +377,105 @@ async function geocodeStructured(
     : [];
 }
 
+type PhotonFeature = {
+  geometry?: { coordinates?: unknown[] };
+  properties?: {
+    name?: unknown;
+    street?: unknown;
+    housenumber?: unknown;
+    city?: unknown;
+    state?: unknown;
+    postcode?: unknown;
+    countrycode?: unknown;
+  };
+};
+
+let lastPhotonRequestAt = 0;
+
+async function geocodeWithPhoton(business: BusinessRow, city: CityRow) {
+  const waitMs = Math.max(0, MIN_PHOTON_INTERVAL_MS - (Date.now() - lastPhotonRequestAt));
+  if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
+  lastPhotonRequestAt = Date.now();
+
+  const query = [
+    business.name,
+    business.street,
+    business.address_number,
+    cleanNeighborhood(business.neighborhood),
+    city.name,
+    city.state_code,
+    "Brasil",
+  ].filter(Boolean).join(", ");
+
+  try {
+    const url = new URL(PHOTON_URL);
+    url.searchParams.set("q", query);
+    url.searchParams.set("limit", "5");
+    url.searchParams.set("lang", "pt");
+
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        Referer: "https://ocalcadao.com.br/",
+        "User-Agent": "O-Calcadao/1.0 (+https://ocalcadao.com.br/contato)",
+      },
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!response.ok) return null;
+
+    const payload = await response.json() as { features?: PhotonFeature[] };
+    for (const feature of payload.features ?? []) {
+      const props = feature.properties ?? {};
+      const coords = feature.geometry?.coordinates ?? [];
+      const longitude = Number(coords[0]);
+      const latitude = Number(coords[1]);
+      if (
+        !Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
+        !Number.isFinite(longitude) || longitude < -180 || longitude > 180
+      ) continue;
+
+      const roadScore = roadSimilarity(business.street, props.street);
+      if (roadScore < 0.6) continue;
+
+      const expectedNumber = normalizedHouseNumber(business.address_number);
+      const actualNumber = normalizedHouseNumber(props.housenumber);
+      if (actualNumber && expectedNumber && actualNumber !== expectedNumber) continue;
+
+      const nameScore = nameSimilarity(business.name, props.name);
+      const exactNumber = Boolean(expectedNumber && actualNumber && expectedNumber === actualNumber);
+      if (!exactNumber && nameScore < 0.7) continue;
+
+      const countryCode = normalizeAddressText(props.countrycode);
+      if (countryCode && countryCode !== "br") continue;
+
+      const expectedPostal = (business.postal_code ?? "").replace(/\D/g, "");
+      const actualPostal = normalizeAddressText(props.postcode).replace(/\D/g, "");
+      if (
+        expectedPostal.length === 8 &&
+        actualPostal.length === 8 &&
+        expectedPostal.slice(0, 5) !== actualPostal.slice(0, 5)
+      ) continue;
+
+      return {
+        latitude: Number(latitude.toFixed(6)),
+        longitude: Number(longitude.toFixed(6)),
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+let googleFallbackEnabled: boolean | null = null;
+
 async function geocodeWithGoogle(
   business: BusinessRow,
   city: CityRow,
   token: string,
 ) {
+  if (googleFallbackEnabled === false) return null;
   try {
     const response = await fetch(GOOGLE_FALLBACK_URL, {
       method: "POST",
@@ -397,7 +503,12 @@ async function geocodeWithGoogle(
       longitude?: unknown;
       placeId?: unknown;
     };
-    if (!payload.enabled || !payload.found) return null;
+    if (payload.enabled === false) {
+      googleFallbackEnabled = false;
+      return null;
+    }
+    googleFallbackEnabled = true;
+    if (!payload.found) return null;
 
     const latitude = Number(payload.latitude);
     const longitude = Number(payload.longitude);
@@ -523,9 +634,16 @@ Deno.serve(async (request) => {
     let found: { latitude: number; longitude: number } | null = null;
     let upstreamError = "";
 
-    const discoveredPostalCode = await discoverPostalCode(business, city);
-    const geocodeBusiness: BusinessRow = discoveredPostalCode
-      ? { ...business, postal_code: discoveredPostalCode }
+    const discoveredAddress = await discoverAddressViaCep(business, city);
+    const discoveredPostalCode = discoveredAddress?.postalCode ??
+      (business.postal_code ?? "").replace(/\D/g, "");
+    const geocodeBusiness: BusinessRow = discoveredAddress
+      ? {
+          ...business,
+          street: discoveredAddress.street || business.street,
+          neighborhood: discoveredAddress.neighborhood || business.neighborhood,
+          postal_code: discoveredAddress.postalCode,
+        }
       : business;
 
     const acceptCandidate = async (candidate: Candidate) => {
@@ -582,6 +700,19 @@ Deno.serve(async (request) => {
         }
       } catch (error) {
         upstreamError = error instanceof Error ? error.message : "GEOCODER_ERROR";
+      }
+    }
+
+    if (!found) {
+      const photon = await geocodeWithPhoton(geocodeBusiness, city);
+      if (photon) {
+        const { data: resolvedCities, error: resolverError } = await supabase.rpc(
+          "resolve_city_by_coordinates",
+          { input_latitude: photon.latitude, input_longitude: photon.longitude },
+        );
+        if (!resolverError && resolvedCities?.[0]?.id === city.id) {
+          found = photon;
+        }
       }
     }
 
