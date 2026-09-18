@@ -185,7 +185,7 @@ export function DiscoveryBusinesses() {
         linkLabel="Explorar toda a cidade"
         tone="surface"
       >
-        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overscroll-x-contain overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 xl:grid-cols-6">
+        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overscroll-x-none overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 xl:grid-cols-6">
           {result.businesses.map((business) => (
             <div
               key={business.id}
