@@ -91,7 +91,7 @@ export function AdminPushManager({ publicKey }: { publicKey: string | null }) {
 
   return <section className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-6">
     <h2 className="text-lg font-black text-ink">Notificações no dispositivo</h2>
-    <p className="mt-2 text-sm leading-6 text-muted">Receba avisos de cadastros, suporte e denúncias mesmo quando o aplicativo estiver fechado.</p>
+    <p className="mt-2 text-sm leading-6 text-muted">Receba avisos importantes de cadastros confirmados, reivindicações, moderação, banners, suporte e denúncias mesmo quando o aplicativo estiver fechado.</p>
     {supported === false ? <p className="mt-3 text-sm font-semibold text-muted">Para receber avisos no iPhone, abra este site pelo ícone adicionado à Tela de Início. Permita as notificações nas configurações do aparelho.</p> : null}
     {supported && <button type="button" disabled={busy} onClick={enabled ? disable : enable} className="mt-4 min-h-11 rounded-xl bg-ink px-4 text-sm font-black text-white disabled:opacity-50">
       {busy ? "Aguarde..." : enabled ? "Desativar neste dispositivo" : "Ativar notificações"}
