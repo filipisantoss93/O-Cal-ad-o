@@ -89,7 +89,7 @@ export function BusinessListCard({ business }: BusinessListCardProps) {
         </span>
       </Link>
 
-      <div className="p-3 pt-9 sm:p-4 sm:pt-10">
+      <div className="p-3 pt-3 sm:p-4 sm:pt-4">
         <div className="min-h-12 pl-16 sm:min-h-14 sm:pl-20">
           <p className="truncate text-[9px] font-extrabold uppercase tracking-[0.07em] text-brand-dark sm:text-[10px]">
             {isPublicPlace ? "Local público" : business.categoryName}
