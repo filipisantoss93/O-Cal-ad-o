@@ -14,8 +14,8 @@ export function useHomeSectionVisibility(rootMargin = "500px 0px") {
     if (shouldLoad || !node) return;
 
     if (!("IntersectionObserver" in window)) {
-      setShouldLoad(true);
-      return;
+      const timeoutId = window.setTimeout(() => setShouldLoad(true), 0);
+      return () => window.clearTimeout(timeoutId);
     }
 
     const observer = new IntersectionObserver(
