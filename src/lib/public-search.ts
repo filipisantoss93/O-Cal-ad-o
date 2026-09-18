@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";
+import { loadResolvedBusinessLogoPaths } from "@/lib/business-logo";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import { createPublicClient } from "@/lib/supabase/server";
 import type { Business } from "@/types/catalog";
@@ -120,12 +121,15 @@ export async function searchPublicBusinesses(
     };
   }
 
-  const { data: hours } = await supabase
-    .from("business_hours")
-    .select("business_id, weekday, opens_at, closes_at, is_closed")
-    .in("business_id", businessIds)
-    .order("weekday")
-    .order("display_order");
+  const [{ data: hours }, resolvedLogoPaths] = await Promise.all([
+    supabase
+      .from("business_hours")
+      .select("business_id, weekday, opens_at, closes_at, is_closed")
+      .in("business_id", businessIds)
+      .order("weekday")
+      .order("display_order"),
+    loadResolvedBusinessLogoPaths(supabase, businessIds),
+  ]);
 
   const hoursByBusiness = new Map<number, BusinessHour[]>();
   for (const item of hours ?? []) {
@@ -168,7 +172,7 @@ export async function searchPublicBusinesses(
       ...schedule,
       initials: initials(row.name),
       palette: palettes[row.id % palettes.length],
-      logoUrl: publicMediaUrl(supabase, row.logo_path),
+      logoUrl: publicMediaUrl(supabase, resolvedLogoPaths.get(row.id) ?? row.logo_path),
       coverUrl: publicMediaUrl(supabase, row.cover_path),
       verified: row.status === "approved",
       tags: [...(row.tags ?? []), category.name, row.neighborhood].slice(0, 12),

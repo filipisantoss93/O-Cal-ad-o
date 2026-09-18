@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { requireAdmin } from "@/lib/admin/dal";
 import { getBusinessSchedule } from "@/lib/business-hours";
+import { loadResolvedBusinessLogoPaths } from "@/lib/business-logo";
 import { normalizePublicContactAction } from "@/lib/contact-action";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import { createClient } from "@/lib/supabase/server";
@@ -95,7 +96,7 @@ async function loadBusiness(
   if (error || !business) return null;
 
   const now = new Date().toISOString();
-  const [categoryResult, cityResult, itemsResult, hoursResult, highlightResult] = await Promise.all([
+  const [categoryResult, cityResult, itemsResult, hoursResult, highlightResult, resolvedLogoPaths] = await Promise.all([
     supabase.from("categories").select("slug, name").eq("id", business.category_id).maybeSingle(),
     supabase.from("cities").select("name, state_code, timezone").eq("id", business.city_id).maybeSingle(),
     supabase
@@ -108,6 +109,7 @@ async function loadBusiness(
       .limit(24),
     supabase.from("business_hours").select("weekday, opens_at, closes_at, is_closed").eq("business_id", business.id).order("weekday").order("display_order"),
     supabase.from("highlight_campaigns").select("id, placement").eq("business_id", business.id).eq("status", "active").lte("starts_at", now).gt("ends_at", now).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    loadResolvedBusinessLogoPaths(supabase, [business.id]),
   ]);
 
   if (categoryResult.error || cityResult.error || itemsResult.error || hoursResult.error || highlightResult.error) return null;
@@ -136,7 +138,7 @@ async function loadBusiness(
     ...schedule,
     initials: initials(business.name),
     palette: palettes[business.id % palettes.length],
-    logoUrl: publicMediaUrl(supabase, business.logo_path),
+    logoUrl: publicMediaUrl(supabase, resolvedLogoPaths.get(business.id) ?? business.logo_path),
     coverUrl: publicMediaUrl(supabase, business.cover_path),
     verified: business.status === "approved" && !business.pre_registered,
     isSponsored: Boolean(highlightResult.data),
