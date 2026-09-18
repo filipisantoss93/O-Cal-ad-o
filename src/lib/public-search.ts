@@ -1,6 +1,7 @@
 import "server-only";
 
-import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";\nimport { loadResolvedBusinessLogoPaths } from "@/lib/business-logo";
+import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";
+import { loadResolvedBusinessLogoPaths } from "@/lib/business-logo";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import { createPublicClient } from "@/lib/supabase/server";
 import type { Business } from "@/types/catalog";
