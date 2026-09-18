@@ -1,7 +1,6 @@
 import "server-only";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database-runtime";
+import { getSupabaseEnv } from "@/lib/supabase/env";
 
 type ResolvedLogoRow = {
   business_id: number;
@@ -9,8 +8,11 @@ type ResolvedLogoRow = {
   logo_origin: "unit" | "network" | "business" | "missing";
 };
 
+type ResolvedLogoResponse = {
+  logos?: ResolvedLogoRow[];
+};
+
 export async function loadResolvedBusinessLogoPaths(
-  supabase: SupabaseClient<Database>,
   businessIds: number[],
 ): Promise<Map<number, string | null>> {
   const ids = [...new Set(
@@ -19,24 +21,40 @@ export async function loadResolvedBusinessLogoPaths(
 
   if (!ids.length) return new Map();
 
-  const rpc = supabase.rpc.bind(supabase) as unknown as (
-    fn: "get_public_business_logo_paths",
-    args: { p_business_ids: number[] },
-  ) => Promise<{
-    data: ResolvedLogoRow[] | null;
-    error: { message: string } | null;
-  }>;
+  const { url, publishableKey } = getSupabaseEnv();
 
-  const { data, error } = await rpc("get_public_business_logo_paths", {
-    p_business_ids: ids,
-  });
+  try {
+    const response = await fetch(
+      `${url}/functions/v1/resolve-business-logos`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: publishableKey,
+        },
+        body: JSON.stringify({ businessIds: ids }),
+        cache: "no-store",
+      },
+    );
 
-  if (error) {
-    console.error("[business-logo] logo resolution failed", error.message);
+    if (!response.ok) {
+      console.error(
+        "[business-logo] edge lookup failed",
+        response.status,
+        response.statusText,
+      );
+      return new Map();
+    }
+
+    const payload = (await response.json()) as ResolvedLogoResponse;
+    return new Map(
+      (payload.logos ?? []).map((row) => [
+        row.business_id,
+        row.resolved_logo_path,
+      ]),
+    );
+  } catch (error) {
+    console.error("[business-logo] edge lookup failed", error);
     return new Map();
   }
-
-  return new Map(
-    (data ?? []).map((row) => [row.business_id, row.resolved_logo_path]),
-  );
 }
