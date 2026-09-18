@@ -12,6 +12,7 @@ on:
     paths:
       - ".github/workflows/import-inep-public-schools.yml"
       - "scripts/import-inep-public-schools.py"
+      - "scripts/extract-inep-schools.py"
   schedule:
     - cron: "17 4 2 */3 *"
 
@@ -49,12 +50,7 @@ jobs:
             "https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2025_.zip" \
             --output "$ZIP_PATH"
 
-          test "$(stat -c%s "$ZIP_PATH")" -gt 10000000
-
-          ENTRY="$(unzip -Z1 "$ZIP_PATH" | grep -E '(^|/)Tabela_Escola_2025[.]csv$' | head -n 1)"
-          test -n "$ENTRY"
-          unzip -p "$ZIP_PATH" "$ENTRY" > "$CSV_PATH"
-          test -s "$CSV_PATH"
+          python3 scripts/extract-inep-schools.py "$ZIP_PATH" "$CSV_PATH"
 
           SHA256="$(sha256sum "$ZIP_PATH" | awk '{print $1}')"
           echo "ZIP oficial INEP SHA-256: $SHA256"
