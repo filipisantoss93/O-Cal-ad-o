@@ -1,0 +1,71 @@
+name: Importar escolas públicas INEP
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_rows:
+        description: "Limite de escolas para teste; 0 importa todas"
+        required: false
+        default: "0"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/import-inep-public-schools.yml"
+      - "scripts/import-inep-public-schools.py"
+  schedule:
+    - cron: "17 4 2 */3 *"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: inep-public-schools
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Baixar microdados oficiais INEP 2025
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP_PATH="$RUNNER_TEMP/microdados_censo_escolar_2025.zip"
+          CSV_PATH="$RUNNER_TEMP/Tabela_Escola_2025.csv"
+
+          curl --fail --location --retry 8 --retry-delay 5 --retry-all-errors \
+            --user-agent "O-Calcadao/1.0 (+https://ocalcadao.com.br/contato)" \
+            "https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2025_.zip" \
+            --output "$ZIP_PATH"
+
+          ENTRY="$(unzip -Z1 "$ZIP_PATH" | grep -E '(^|/)Tabela_Escola_2025[.]csv$' | head -n 1)"
+          test -n "$ENTRY"
+          unzip -p "$ZIP_PATH" "$ENTRY" > "$CSV_PATH"
+          test -s "$CSV_PATH"
+          echo "INEP_CSV_PATH=$CSV_PATH" >> "$GITHUB_ENV"
+
+      - name: Emitir token OIDC do GitHub
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESPONSE="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=ocalcadao-inep-import")"
+          TOKEN="$(printf '%s' "$RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')"
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Importar escolas públicas
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+          OCALCADAO_IMPORT_URL: "https://mieekhdagjlzdbeklrxp.supabase.co/functions/v1/import-inep-public-schools"
+          INEP_MAX_ROWS: ${{ github.event.inputs.max_rows || '0' }}
+        run: |
+          python3 scripts/import-inep-public-schools.py "$INEP_CSV_PATH" --batch-size 300
