@@ -99,7 +99,6 @@ function placeMatches(place: GooglePlace, body: Required<Pick<RequestBody, "name
     expectedPostal.slice(0, 5) !== actualPostal.slice(0, 5)
   ) return false;
 
-  console.info("[google-geocode] matched", { name, city, placeId: place.id ?? null });
   const latitude = Number(place.location?.latitude);
   const longitude = Number(place.location?.longitude);
   return Number.isFinite(latitude) && Number.isFinite(longitude);
@@ -174,6 +173,7 @@ export async function POST(request: Request) {
     return Response.json({ enabled: true, found: false });
   }
 
+  console.info("[google-geocode] matched", { name, city, placeId: place.id ?? null });
   const latitude = Number(place.location?.latitude);
   const longitude = Number(place.location?.longitude);
   return Response.json({
