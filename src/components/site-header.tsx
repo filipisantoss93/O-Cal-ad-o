@@ -5,7 +5,7 @@ import { CitySelector } from "@/components/city-selector";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-line/80 bg-canvas/92 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full max-w-full overflow-x-clip border-b border-line/80 bg-canvas/92 backdrop-blur-xl">
       <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-2.5 px-4 sm:min-h-18 sm:gap-4 sm:px-6 lg:px-8">
         <Logo />
 
