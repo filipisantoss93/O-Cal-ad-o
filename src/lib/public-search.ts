@@ -128,7 +128,7 @@ export async function searchPublicBusinesses(
       .in("business_id", businessIds)
       .order("weekday")
       .order("display_order"),
-    loadResolvedBusinessLogoPaths(supabase, businessIds),
+    loadResolvedBusinessLogoPaths(businessIds),
   ]);
 
   const hoursByBusiness = new Map<number, BusinessHour[]>();
