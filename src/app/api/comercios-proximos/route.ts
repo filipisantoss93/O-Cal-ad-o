@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     ids.length
       ? supabase.from("businesses").select("id, logo_path, listing_type").in("id", ids)
       : Promise.resolve({ data: [], error: null }),
-    loadResolvedBusinessLogoPaths(supabase, ids),
+    loadResolvedBusinessLogoPaths(ids),
   ]);
   if (mediaError) console.error("[api/comercios-proximos] logo lookup failed", mediaError.message);
   const mediaById = new Map((media ?? []).map((row) => [row.id, row]));
