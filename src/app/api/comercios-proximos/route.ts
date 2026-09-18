@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { publicMediaUrl } from "@/lib/merchant/media";\nimport { loadResolvedBusinessLogoPaths } from "@/lib/business-logo";
+import { publicMediaUrl } from "@/lib/merchant/media";
+import { loadResolvedBusinessLogoPaths } from "@/lib/business-logo";
 
 type NearbyRequest = {
   cityId?: unknown;
