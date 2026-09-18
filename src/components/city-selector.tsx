@@ -91,6 +91,17 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [open]);
 
+  function openCitySelector(initialError = "") {
+    setOpen(true);
+    setError(initialError);
+    void loadStates();
+
+    if (selectedCity) {
+      setStateCode(selectedCity.stateCode);
+      void loadCities(selectedCity.stateCode, String(selectedCity.id));
+    }
+  }
+
   function chooseManualCity() {
     const city = cities.find((option) => option.id === Number(cityId));
     if (!city) return;
@@ -99,7 +110,7 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
     router.refresh();
   }
 
-  async function useCurrentLocation() {
+  async function refreshCurrentLocation({ openSelectorOnFailure = false } = {}) {
     setDetecting(true);
     setError("");
     try {
@@ -111,7 +122,16 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
       setOpen(false);
       router.refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Não foi possível obter sua localização.");
+      const message =
+        reason instanceof Error
+          ? reason.message
+          : "Não foi possível obter sua localização.";
+
+      if (openSelectorOnFailure) {
+        openCitySelector(message);
+      } else {
+        setError(message);
+      }
     } finally {
       setDetecting(false);
     }
@@ -122,14 +142,15 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
       <button
         type="button"
         onClick={() => {
-          setOpen(true);
-          setError("");
-          void loadStates();
-          if (selectedCity) {
-            setStateCode(selectedCity.stateCode);
-            void loadCities(selectedCity.stateCode, String(selectedCity.id));
+          if (variant === "compact") {
+            void refreshCurrentLocation({ openSelectorOnFailure: true });
+            return;
           }
+
+          openCitySelector();
         }}
+        disabled={detecting}
+        aria-busy={detecting}
         className={
           variant === "hero"
             ? "inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-full border border-line bg-surface px-4 text-sm font-extrabold text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
@@ -139,8 +160,16 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
         aria-label={selectedCity ? `Cidade: ${selectedCity.name}, ${selectedCity.stateCode}` : "Escolher cidade"}
       >
         <MapPinIcon className="size-4 shrink-0 text-brand" />
-        <span className={variant === "compact" ? "hidden min-w-0 truncate sm:block" : "min-w-0 truncate"}>
-          {selectedCity ? `${selectedCity.name} - ${selectedCity.stateCode}` : "Escolher cidade"}
+        <span className="min-w-0 truncate">
+          {detecting
+            ? "Localizando..."
+            : selectedCity
+              ? variant === "compact"
+                ? selectedCity.name
+                : `${selectedCity.name} - ${selectedCity.stateCode}`
+              : variant === "compact"
+                ? "Cidade"
+                : "Escolher cidade"}
         </span>
       </button>
 
@@ -182,7 +211,7 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
 
             <button
               type="button"
-              onClick={useCurrentLocation}
+              onClick={() => void refreshCurrentLocation()}
               disabled={detecting}
               autoFocus
               className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-black text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-65"

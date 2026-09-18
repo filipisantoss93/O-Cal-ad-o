@@ -80,7 +80,12 @@ export function PreRegistrationLocationFields({ states, initialStateCode = "", i
 
   useEffect(() => {
     if (!initialStateCode) return;
-    void loadCities(initialStateCode, initialCityId ? String(initialCityId) : "");
+
+    const timeoutId = window.setTimeout(() => {
+      void loadCities(initialStateCode, initialCityId ? String(initialCityId) : "");
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [initialCityId, initialStateCode, loadCities]);
 
   const locateRegisteredAddress = useCallback(async (gpsError = "") => {
