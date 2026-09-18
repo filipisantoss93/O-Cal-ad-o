@@ -110,7 +110,7 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
     router.refresh();
   }
 
-  async function useCurrentLocation({ openSelectorOnFailure = false } = {}) {
+  async function refreshCurrentLocation({ openSelectorOnFailure = false } = {}) {
     setDetecting(true);
     setError("");
     try {
@@ -143,7 +143,7 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
         type="button"
         onClick={() => {
           if (variant === "compact") {
-            void useCurrentLocation({ openSelectorOnFailure: true });
+            void refreshCurrentLocation({ openSelectorOnFailure: true });
             return;
           }
 
@@ -211,7 +211,7 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
 
             <button
               type="button"
-              onClick={() => void useCurrentLocation()}
+              onClick={() => void refreshCurrentLocation()}
               disabled={detecting}
               autoFocus
               className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-black text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-65"
