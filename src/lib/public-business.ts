@@ -109,7 +109,7 @@ async function loadBusiness(
       .limit(24),
     supabase.from("business_hours").select("weekday, opens_at, closes_at, is_closed").eq("business_id", business.id).order("weekday").order("display_order"),
     supabase.from("highlight_campaigns").select("id, placement").eq("business_id", business.id).eq("status", "active").lte("starts_at", now).gt("ends_at", now).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    loadResolvedBusinessLogoPaths(supabase, [business.id]),
+    loadResolvedBusinessLogoPaths([business.id]),
   ]);
 
   if (categoryResult.error || cityResult.error || itemsResult.error || hoursResult.error || highlightResult.error) return null;
