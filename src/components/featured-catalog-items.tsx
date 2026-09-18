@@ -98,7 +98,7 @@ export function FeaturedCatalogItems() {
         description="Itens que os próprios comércios escolheram para ganhar mais visibilidade."
         tone="canvas"
       >
-        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overscroll-x-contain overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 xl:grid-cols-5">
+        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overscroll-x-none overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 xl:grid-cols-5">
           {items.map((item) => (
             <div
               key={item.id}
