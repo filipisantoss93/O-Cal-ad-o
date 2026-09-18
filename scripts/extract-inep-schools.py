@@ -59,7 +59,7 @@ def main():
         raise SystemExit(f"ZIP oficial inválido: {exc}") from exc
 
     with open(args.csv_path, "r", encoding="latin-1", newline="") as handle:
-        reader = csv.reader(handle, delimiter="|")
+        reader = csv.reader(handle, delimiter=";")
         try:
             header = set(next(reader))
         except StopIteration as exc:

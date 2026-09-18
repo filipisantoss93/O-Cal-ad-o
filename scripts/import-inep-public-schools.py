@@ -62,7 +62,7 @@ def main():
     batch = []
 
     with open(args.csv_path, "r", encoding="latin-1", newline="") as handle:
-        reader = csv.DictReader(handle, delimiter="|")
+        reader = csv.DictReader(handle, delimiter=";")
         missing = [field for field in FIELDS if field not in (reader.fieldnames or [])]
         if missing:
             raise SystemExit(f"Colunas INEP ausentes: {', '.join(missing)}")
