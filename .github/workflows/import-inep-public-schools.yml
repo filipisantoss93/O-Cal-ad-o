@@ -22,7 +22,7 @@ permissions:
 
 concurrency:
   group: inep-public-schools
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   import:
