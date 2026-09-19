@@ -48,3 +48,16 @@ export async function unsubscribeAdminPush(endpoint: string) {
   const { error } = await supabase.from("admin_push_subscriptions").delete().eq("endpoint", endpoint).eq("user_id", user.id);
   return { ok: !error };
 }
+
+
+export async function clearAdminNotifications() {
+  const { supabase, user } = await requireAdmin("/admin/notificacoes");
+  const { error } = await supabase
+    .from("admin_notifications")
+    .delete()
+    .eq("recipient_id", user.id);
+
+  if (error) redirect("/admin/notificacoes?erro=clear");
+  revalidatePath("/admin/notificacoes");
+  redirect("/admin/notificacoes?limpas=1");
+}
