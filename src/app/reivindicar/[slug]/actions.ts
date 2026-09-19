@@ -105,7 +105,7 @@ export async function requestBusinessClaimAction(formData: FormData) {
     }
 
     revalidatePath(`/reivindicar/${slug}`);
-    revalidatePath("/painel/admin/reivindicacoes");
+    revalidatePath("/admin/reivindicacoes");
     success = true;
   } catch (error) {
     errorMessage = messageFor(error);
