@@ -1019,6 +1019,18 @@ export type Database = {
         }
         Returns: number
       }
+      admin_create_complimentary_banner_campaign: {
+        Args: {
+          p_admin_note?: string
+          p_business_id: number
+          p_creative_description: string
+          p_creative_image_path: string
+          p_creative_title: string
+          p_package_code: string
+          p_requested_start?: string
+        }
+        Returns: number
+      }
       admin_manage_highlight_campaign: {
         Args: { p_action: string; p_bonus_days?: number; p_campaign_id: number }
         Returns: boolean
