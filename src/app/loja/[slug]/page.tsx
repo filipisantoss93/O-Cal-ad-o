@@ -36,7 +36,14 @@ type BusinessPageProps = {
 
 function seoField(value: string | null | undefined) {
   const text = (value ?? "").replace(/\s+/g, " ").trim();
-  return text && !/^(não informado|nao informado|outros?|n\/a)$/i.test(text) ? text : null;
+  return text && !/^(não informado|nao informado|outros?|n\/a|sem bairro|sem endere[cç]o|sem informação|sem informacao)$/i.test(text) ? text : null;
+}
+
+function seoAddressField(value: string | null | undefined) {
+  const address = seoField(value);
+  // O campo de endereço pode conter marcador de ausência seguido de "S/N".
+  if (!address || /^(sem endere[cç]o|não informado|nao informado|n\/a)(?:\s*,|$)/i.test(address)) return null;
+  return address;
 }
 
 function originalDescription(b: Business) {
@@ -50,8 +57,8 @@ function seoIntro(b: Business) {
   const state = seoField(b.stateCode);
   const category = seoField(b.categoryName);
   const neighborhood = seoField(b.neighborhood);
-  const address = seoField(b.address);
-  const intro = [b.name + (city ? " em " + city + (state ? ", " + state : "") : "") + "."];
+  const address = seoAddressField(b.address);
+  const intro = [seoTitle(b) + "."];
   if (category) intro.push(category + (neighborhood ? " no bairro " + neighborhood : "") + ".");
   else if (neighborhood) intro.push("Localizado no bairro " + neighborhood + ".");
   if (address) intro.push("Endereço: " + address + ".");
@@ -154,10 +161,11 @@ export default async function BusinessPage({
   const isPublicPlace = business.listingType === "public_place";
   const summary = seoIntro(business);
   const neighborhood = seoField(business.neighborhood);
-  const formattedAddress = [business.address, neighborhood, business.cityName, business.stateCode].filter(Boolean).join(", ");
+  const safeAddress = seoAddressField(business.address);
+  const formattedAddress = [safeAddress, neighborhood, business.cityName, business.stateCode].filter(Boolean).join(", ");
   const canonicalUrl = `https://ocalcadao.com.br/loja/${encodeURIComponent(business.slug)}`;
   // Usar apenas dados que aparecem publicamente na vitrine; sem geo/avaliações incertos.
-  const localBusinessData = !isAdminPreview && !isPublicPlace && business.address.trim() && business.cityName && business.stateCode
+  const localBusinessData = !isAdminPreview && !isPublicPlace && safeAddress && business.cityName && business.stateCode
     ? {
         "@context": "https://schema.org",
         "@type": "LocalBusiness",
@@ -167,7 +175,7 @@ export default async function BusinessPage({
         description: summary,
         address: {
           "@type": "PostalAddress",
-          streetAddress: business.address,
+          streetAddress: safeAddress,
           addressLocality: business.cityName,
           addressRegion: business.stateCode,
           addressCountry: "BR",
