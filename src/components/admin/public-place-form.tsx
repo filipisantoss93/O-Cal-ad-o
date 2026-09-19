@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { savePublicPlaceAction } from "@/app/painel/admin/actions";
+import { savePublicPlaceAction } from "@/app/admin/actions";
 import { FloatingNotice } from "@/components/floating-notice";
 import { LocateIcon } from "@/components/icons";
 import type { ActionState } from "@/lib/action-state";

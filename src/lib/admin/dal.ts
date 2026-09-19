@@ -3,7 +3,9 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function requireAdmin(returnTo = "/painel/admin") {
+const AUTHORIZED_ADMIN_EMAIL = "filipi.01@live.com";
+
+export async function requireAdmin(returnTo = "/admin") {
   const supabase = await createClient();
   const {
     data: { user },
@@ -20,8 +22,10 @@ export async function requireAdmin(returnTo = "/painel/admin") {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profileError || profile?.role !== "admin") {
-    redirect("/painel");
+  const authorizedEmail = user.email?.trim().toLowerCase() === AUTHORIZED_ADMIN_EMAIL;
+
+  if (profileError || profile?.role !== "admin" || !authorizedEmail) {
+    redirect("/");
   }
 
   return { supabase, user };

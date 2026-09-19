@@ -182,7 +182,7 @@ export default async function BusinessPage({
               </p>
             </div>
             <Link
-              href="/painel/admin"
+              href="/admin"
               className="inline-flex min-h-10 items-center rounded-xl border border-ink/15 bg-white px-4 text-sm font-black text-ink transition hover:border-ink/30"
             >
               Voltar para moderação
@@ -212,7 +212,7 @@ export default async function BusinessPage({
             <div className="relative mx-auto max-w-7xl px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-8">
               <div className="flex items-center justify-between gap-3">
                 <Link
-                  href={isAdminPreview ? "/painel/admin" : "/buscar"}
+                  href={isAdminPreview ? "/admin" : "/buscar"}
                   className="inline-flex min-w-0 items-center gap-2 rounded-lg text-sm font-bold text-white/80 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white"
                 >
                   <span aria-hidden="true">←</span>

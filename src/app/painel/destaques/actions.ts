@@ -194,6 +194,6 @@ export async function replaceBannerCreativeAction(formData: FormData) {
   }
   await removeMerchantImages(supabase, user.id, [campaign.creative_image_path]);
   revalidatePath("/painel/destaques");
-  revalidatePath("/painel/admin/destaques");
+  revalidatePath("/admin/destaques");
   redirect(`${returnUrl}&sucesso=banner_reenviado`);
 }

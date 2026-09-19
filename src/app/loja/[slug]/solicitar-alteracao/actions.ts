@@ -33,7 +33,7 @@ export async function requestBusinessListingChangeAction(formData: FormData) {
     const { error } = await client.from("business_listing_requests").insert({ business_id: business.id, requester_id: user?.id ?? null, requester_name: requesterName, requester_email: requesterEmail, request_type: requestType, details });
     if (error) throw new Error("Não foi possível registrar a solicitação.");
     revalidatePath(`/loja/${slug}`);
-    revalidatePath("/painel/admin/reivindicacoes");
+    revalidatePath("/admin/reivindicacoes");
     success = true;
   } catch (error) { errorMessage = messageFor(error); }
   if (success) redirect(`/loja/${slug}/solicitar-alteracao?sucesso=${encodeURIComponent("Solicitação recebida. O O Calçadão fará a análise e atualizará o perfil quando necessário.")}`);

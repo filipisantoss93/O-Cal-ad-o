@@ -22,7 +22,7 @@ export function AdminNotificationBadge({ userId }: { userId: string }) {
     return () => { mounted = false; void supabase.removeChannel(channel); };
   }, [userId]);
 
-  return <Link href="/painel/admin/notificacoes" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line bg-canvas px-3 text-sm font-black text-ink" aria-label={`Notificações administrativas: ${count} não lidas`}>
+  return <Link href="/admin/notificacoes" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line bg-canvas px-3 text-sm font-black text-ink" aria-label={`Notificações administrativas: ${count} não lidas`}>
     <span aria-hidden="true">🔔</span><span className="hidden sm:inline">Alertas</span>
     {count > 0 && <span className="rounded-full bg-brand px-1.5 py-0.5 text-[11px] leading-none text-white">{count > 99 ? "99+" : count}</span>}
   </Link>;
