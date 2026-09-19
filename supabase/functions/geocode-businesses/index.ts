@@ -3,7 +3,6 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const TOKEN_HASH = "caec7186d2264f46f018a6ee45ab34c9df2e897de9b3272dfaba744ad7cd419f";
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
-const GOOGLE_FALLBACK_URL = "https://ocalcadao.com.br/api/internal/geocode-business";
 const PHOTON_URL = "https://photon.komoot.io/api/";
 const MIN_PHOTON_INTERVAL_MS = 1100;
 const MIN_INTERVAL_MS = 1100;
@@ -355,65 +354,6 @@ async function geocodeWithPhoton(business: BusinessRow, city: CityRow) {
   return null;
 }
 
-let googleFallbackEnabled: boolean | null = null;
-
-async function geocodeWithGoogle(
-  business: BusinessRow,
-  city: CityRow,
-  token: string,
-) {
-  if (googleFallbackEnabled === false) return null;
-  try {
-    const response = await fetch(GOOGLE_FALLBACK_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Geocoding-Token": token,
-      },
-      body: JSON.stringify({
-        name: business.name,
-        street: business.street,
-        addressNumber: business.address_number,
-        neighborhood: business.neighborhood,
-        postalCode: business.postal_code,
-        city: city.name,
-        stateCode: city.state_code,
-      }),
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!response.ok) return null;
-
-    const payload = await response.json() as {
-      enabled?: boolean;
-      found?: boolean;
-      latitude?: unknown;
-      longitude?: unknown;
-      placeId?: unknown;
-    };
-    if (payload.enabled === false) {
-      googleFallbackEnabled = false;
-      return null;
-    }
-    googleFallbackEnabled = true;
-    if (!payload.found) return null;
-
-    const latitude = Number(payload.latitude);
-    const longitude = Number(payload.longitude);
-    if (
-      !Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
-      !Number.isFinite(longitude) || longitude < -180 || longitude > 180
-    ) return null;
-
-    return {
-      latitude: Number(latitude.toFixed(6)),
-      longitude: Number(longitude.toFixed(6)),
-      placeId: typeof payload.placeId === "string" ? payload.placeId : null,
-    };
-  } catch {
-    return null;
-  }
-}
-
 Deno.serve(async (request) => {
   if (request.method !== "POST") return json({ error: "Método não permitido." }, 405);
 
@@ -622,18 +562,9 @@ Deno.serve(async (request) => {
       }
     }
 
-    if (!found) {
-      const google = await geocodeWithGoogle(geocodeBusiness, city, providedToken);
-      if (google) {
-        const { data: resolvedCities, error: resolverError } = await supabase.rpc(
-          "resolve_city_by_coordinates",
-          { input_latitude: google.latitude, input_longitude: google.longitude },
-        );
-        if (!resolverError && resolvedCities?.[0]?.id === city.id) {
-          found = { latitude: google.latitude, longitude: google.longitude };
-        }
-      }
-    }
+    // Google Places is deliberately excluded from this permanent catalog backfill:
+    // Places coordinates may not be retained indefinitely in a shared Supabase catalog.
+    // Use separately licensed geocoding sources for persistent coordinates.
 
     if (found) {
       const { data: applied, error: applyError } = await supabase.rpc(
