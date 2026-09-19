@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Business } from "@/types/catalog";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -33,6 +34,46 @@ type BusinessPageProps = {
   searchParams: Promise<{ preview?: string; item?: string }>;
 };
 
+function seoField(value: string | null | undefined) {
+  const text = (value ?? "").replace(/\s+/g, " ").trim();
+  return text && !/^(não informado|nao informado|outros?|n\/a)$/i.test(text) ? text : null;
+}
+
+function originalDescription(b: Business) {
+  return seoField(b.description) &&
+    b.description !== "Conheça a " + b.name + " no O Calçadão." &&
+    b.description !== "Consulte as informações de " + b.name + ".";
+}
+
+function seoIntro(b: Business) {
+  const city = seoField(b.cityName);
+  const state = seoField(b.stateCode);
+  const category = seoField(b.categoryName);
+  const neighborhood = seoField(b.neighborhood);
+  const address = seoField(b.address);
+  const intro = [b.name + (city ? " em " + city + (state ? ", " + state : "") : "") + "."];
+  if (category) intro.push(category + (neighborhood ? " no bairro " + neighborhood : "") + ".");
+  else if (neighborhood) intro.push("Localizado no bairro " + neighborhood + ".");
+  if (address) intro.push("Endereço: " + address + ".");
+  intro.push("Consulte os dados e canais de contato disponíveis no O Calçadão.");
+  return intro.join(" ");
+}
+
+function seoTitle(b: Business) {
+  const city = seoField(b.cityName);
+  if (!city) return b.name;
+  const state = seoField(b.stateCode);
+  const lower = b.name.toLocaleLowerCase("pt-BR").trim();
+  const cityLower = city.toLocaleLowerCase("pt-BR");
+  const alreadyHasCity = lower === cityLower || lower.endsWith(" - " + cityLower) || lower.endsWith(", " + cityLower);
+  return b.name + (alreadyHasCity ? "" : " em " + city) + (state ? ", " + state : "");
+}
+
+function seoDescription(b: Business) {
+  const text = seoIntro(b) + (originalDescription(b) ? " " + b.description : "");
+  return text.length > 200 ? text.slice(0, 200).replace(/\s+\S*$/, "").trimEnd() + "…" : text;
+}
+
 function formatPhone(phone: string) {
   const digits = phone.replace(/\D/g, "");
   if (digits.startsWith("55") && digits.length === 12) {
@@ -62,13 +103,8 @@ export async function generateMetadata({
     return { title: "Local não encontrado", robots: { index: false } };
   }
 
-  const locality = [business.cityName, business.stateCode].filter(Boolean).join(" - ");
-  const pageTitle = [business.name, locality].filter(Boolean).join(" em ");
-  const description = [
-    business.name + (locality ? ` em ${locality}.` : "."),
-    business.categoryName + ".",
-    business.description,
-  ].join(" ").slice(0, 190);
+  const pageTitle = seoTitle(business);
+  const description = seoDescription(business);
   const canonical = `/loja/${encodeURIComponent(business.slug)}`;
   const socialImage = `/api/cartao-loja/${encodeURIComponent(business.slug)}`;
 
@@ -116,6 +152,9 @@ export default async function BusinessPage({
   }
 
   const isPublicPlace = business.listingType === "public_place";
+  const summary = seoIntro(business);
+  const neighborhood = seoField(business.neighborhood);
+  const formattedAddress = [business.address, neighborhood, business.cityName, business.stateCode].filter(Boolean).join(", ");
   const canonicalUrl = `https://ocalcadao.com.br/loja/${encodeURIComponent(business.slug)}`;
   // Usar apenas dados que aparecem publicamente na vitrine; sem geo/avaliações incertos.
   const localBusinessData = !isAdminPreview && !isPublicPlace && business.address.trim() && business.cityName && business.stateCode
@@ -125,7 +164,7 @@ export default async function BusinessPage({
         "@id": `${canonicalUrl}#business`,
         name: business.name,
         url: canonicalUrl,
-        description: business.description,
+        description: summary,
         address: {
           "@type": "PostalAddress",
           streetAddress: business.address,
@@ -301,7 +340,7 @@ export default async function BusinessPage({
                       ) : (
                         <span>{isPublicPlace ? "Local público" : "Nova no O Calçadão"}</span>
                       )}
-                      <span>{business.neighborhood}</span>
+                      <span>{neighborhood ?? [business.cityName, business.stateCode].filter(Boolean).join(" - ")}</span>
                     </p>
                   </div>
                 </div>
@@ -325,12 +364,15 @@ export default async function BusinessPage({
                   {isPublicPlace ? "Sobre o local" : "Sobre a loja"}
                 </p>
                 <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">
-                  {isPublicPlace ? business.name : `Bem-vindo à ${business.name}`}
+                  {isPublicPlace ? business.name : `Informações de ${business.name}`}
                 </h2>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-muted">
-                  {business.description}
+                  {summary}
                 </p>
-                <div className="mt-5 flex flex-wrap gap-2">
+                {originalDescription(business) && (
+                  <p className="mt-3 max-w-3xl text-base leading-7 text-muted">{business.description}</p>
+                )}
+                <div className="mt-5 flex flex-wrap gap-2" data-nosnippet>
                   {business.tags.map((tag) => (
                     <span
                       key={tag}
@@ -566,7 +608,7 @@ export default async function BusinessPage({
                   <div>
                     <dt className="font-black text-ink">Endereço</dt>
                     <dd className="mt-1 leading-6 text-muted">
-                      {business.address}, {business.neighborhood}
+                      {formattedAddress}
                     </dd>
                   </div>
                 </div>
