@@ -1,22 +1,15 @@
 import type { MetadataRoute } from "next";
-import { createClient } from "@supabase/supabase-js";
-import { getSupabaseEnv } from "@/lib/supabase/env";
-import type { Database } from "@/types/database-runtime";
+import { createPublicClient } from "@/lib/supabase/server";
 
 const SITE_URL = "https://ocalcadao.com.br";
+const PAGE_SIZE = 1000;
+// Antes de 50 mil URLs, dividir em índice e sub-sitemaps (ver plano de SEO).
+const MAX_BUSINESS_URLS = 49_000;
 
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { url, publishableKey } = getSupabaseEnv();
-
-  const supabase = createClient<Database>(url, publishableKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
+  const supabase = createPublicClient();
 
   const staticPages: MetadataRoute.Sitemap = [
     {
@@ -25,40 +18,45 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
     {
-      url: `${SITE_URL}/buscar`,
-      changeFrequency: "daily",
-      priority: 0.9,
-    },
-    {
       url: `${SITE_URL}/planos`,
       changeFrequency: "weekly",
       priority: 0.9,
     },
   ];
 
-  const { data: businesses, error } = await supabase
-    .from("businesses")
-    .select("slug, updated_at")
-    .eq("publication_status", "published")
-    .eq("is_active", true)
-    .eq("billing_suspended", false)
-    .order("updated_at", { ascending: false });
+  const businessPages: MetadataRoute.Sitemap = [];
+  for (let offset = 0; offset < MAX_BUSINESS_URLS; offset += PAGE_SIZE) {
+    const { data: businesses, error } = await supabase
+      .from("businesses")
+      .select("id, slug, updated_at")
+      .eq("publication_status", "published")
+      .eq("is_active", true)
+      .eq("billing_suspended", false)
+      .order("id", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
 
-  if (error) {
-    console.error("Erro ao gerar sitemap:", error);
-    return staticPages;
+    if (error) {
+      console.error(`[sitemap] erro ao buscar vitrines a partir de ${offset}:`, error);
+      break;
+    }
+
+    for (const business of businesses ?? []) {
+      if (!business.slug) continue;
+      businessPages.push({
+        url: `${SITE_URL}/loja/${encodeURIComponent(business.slug)}`,
+        lastModified: business.updated_at
+          ? new Date(business.updated_at)
+          : undefined,
+        changeFrequency: "weekly",
+        priority: 0.8,
+      });
+    }
+
+    if (!businesses || businesses.length < PAGE_SIZE) break;
+    if (offset + PAGE_SIZE >= MAX_BUSINESS_URLS) {
+      console.warn("[sitemap] limite proximo: particionar sitemap em indice e lotes.");
+    }
   }
-
-  const businessPages: MetadataRoute.Sitemap = (businesses ?? []).map(
-    (business) => ({
-      url: `${SITE_URL}/loja/${encodeURIComponent(business.slug)}`,
-      lastModified: business.updated_at
-        ? new Date(business.updated_at)
-        : undefined,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    }),
-  );
 
   return [...staticPages, ...businessPages];
 }

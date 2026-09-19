@@ -55,40 +55,45 @@ export async function generateMetadata({
       robots: { index: false, follow: false },
     };
   }
+
   const { slug } = await params;
   const business = await getPublicBusiness(slug);
-
   if (!business) {
-    return { title: "Local não encontrado" };
+    return { title: "Local não encontrado", robots: { index: false } };
   }
 
-  const socialTitle = `${business.name} está no O Calçadão`;
-  const socialDescription = `Agora você também encontra ${business.name} no O Calçadão. Conheça a vitrine e fale direto com o comércio local.`;
+  const locality = [business.cityName, business.stateCode].filter(Boolean).join(" - ");
+  const pageTitle = [business.name, locality].filter(Boolean).join(" em ");
+  const description = [
+    business.name + (locality ? ` em ${locality}.` : "."),
+    business.categoryName + ".",
+    business.description,
+  ].join(" ").slice(0, 190);
+  const canonical = `/loja/${encodeURIComponent(business.slug)}`;
   const socialImage = `/api/cartao-loja/${encodeURIComponent(business.slug)}`;
 
   return {
-    title: business.name,
-    description: business.description,
+    title: pageTitle,
+    description,
+    alternates: { canonical },
     openGraph: {
       type: "website",
       locale: "pt_BR",
       siteName: "O Calçadão",
-      title: socialTitle,
-      description: socialDescription,
-      url: `/loja/${business.slug}`,
-      images: [
-        {
-          url: socialImage,
-          width: 1080,
-          height: 1080,
-          alt: `${business.name} no O Calçadão`,
-        },
-      ],
+      title: `${pageTitle} | O Calçadão`,
+      description,
+      url: canonical,
+      images: [{
+        url: socialImage,
+        width: 1080,
+        height: 1080,
+        alt: `${business.name} no O Calçadão`,
+      }],
     },
     twitter: {
       card: "summary_large_image",
-      title: socialTitle,
-      description: socialDescription,
+      title: `${pageTitle} | O Calçadão`,
+      description,
       images: [socialImage],
     },
   };
@@ -111,6 +116,27 @@ export default async function BusinessPage({
   }
 
   const isPublicPlace = business.listingType === "public_place";
+  const canonicalUrl = `https://ocalcadao.com.br/loja/${encodeURIComponent(business.slug)}`;
+  // Usar apenas dados que aparecem publicamente na vitrine; sem geo/avaliações incertos.
+  const localBusinessData = !isAdminPreview && !isPublicPlace && business.address.trim() && business.cityName && business.stateCode
+    ? {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "@id": `${canonicalUrl}#business`,
+        name: business.name,
+        url: canonicalUrl,
+        description: business.description,
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: business.address,
+          addressLocality: business.cityName,
+          addressRegion: business.stateCode,
+          addressCountry: "BR",
+        },
+        ...(business.phone ? { telephone: business.phone } : {}),
+        ...(business.logoUrl ? { image: business.logoUrl } : {}),
+      }
+    : null;
 
   const whatsappMessage = encodeURIComponent(
     `Olá! Encontrei ${business.name} no O Calçadão e gostaria de mais informações.`,
@@ -172,6 +198,14 @@ export default async function BusinessPage({
   return (
     <>
       <SiteHeader />
+      {localBusinessData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(localBusinessData).replace(/</g, "\\u003c"),
+          }}
+        />
+      )}
       {isAdminPreview && (
         <div className="border-b border-accent-dark/20 bg-accent/25 px-4 py-3 text-ink">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
