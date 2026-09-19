@@ -432,6 +432,15 @@ Deno.serve(async (request) => {
     body = {};
   }
 
+  // Optional scoped pilot: city_id 1 is Assis/SP; default remains nationwide.
+  const scopedCityId = body.cityId === undefined ? null : Number(body.cityId);
+  const scopedBusinessId = body.businessId === undefined ? null : Number(body.businessId);
+  if ((scopedCityId !== null && (!Number.isSafeInteger(scopedCityId) || scopedCityId <= 0)) ||
+      (scopedBusinessId !== null && (!Number.isSafeInteger(scopedBusinessId) || scopedBusinessId <= 0)) ||
+      (scopedBusinessId !== null && scopedCityId === null)) {
+    return json({ error: "Escopo de geocodificação inválido." }, 400);
+  }
+
   const requestedLimit = Number(body.limit ?? 8);
   const limit = Number.isSafeInteger(requestedLimit)
     ? Math.max(1, Math.min(requestedLimit, 8))
@@ -448,11 +457,31 @@ Deno.serve(async (request) => {
   });
 
   const dueAt = new Date().toISOString();
-  const { data: queueRows, error: queueError } = await supabase
-    .from("business_geocoding_queue")
+  let scopedBusinessIds: number[] | null = null;
+  if (scopedCityId !== null) {
+    // Read IDs in the selected city only, rather than pulling unrelated queue items.
+    let cityQuery = supabase.from("businesses")
+      .select("id")
+      .eq("city_id", scopedCityId)
+      .eq("listing_type", "business")
+      .or("latitude.is.null,longitude.is.null")
+      .order("id", { ascending: true })
+      .limit(1000);
+    if (scopedBusinessId !== null) cityQuery = cityQuery.eq("id", scopedBusinessId);
+    const { data: scopedBusinesses, error: scopeError } = await cityQuery;
+    if (scopeError) return json({ error: scopeError.message }, 500);
+    scopedBusinessIds = (scopedBusinesses ?? []).map((row) => row.id);
+    if (!scopedBusinessIds.length) {
+      return json({ cityId: scopedCityId, processed: 0, updated: 0, retried: 0, failed: 0, results: [] });
+    }
+  }
+
+  let queueQuery = supabase.from("business_geocoding_queue")
     .select("business_id, attempts")
     .eq("status", "pending")
-    .lte("next_attempt_at", dueAt)
+    .lte("next_attempt_at", dueAt);
+  if (scopedBusinessIds !== null) queueQuery = queueQuery.in("business_id", scopedBusinessIds);
+  const { data: queueRows, error: queueError } = await queueQuery
     .order("next_attempt_at", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(limit);
@@ -659,6 +688,7 @@ Deno.serve(async (request) => {
   }
 
   return json({
+    cityId: scopedCityId,
     processed: results.length,
     updated: results.filter((item) => item.status === "updated").length,
     retried: results.filter((item) => item.status === "retry_scheduled").length,
