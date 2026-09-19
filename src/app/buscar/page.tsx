@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   title: "Explorar a cidade",
   description:
     "Pesquise lojas, produtos, serviços e locais públicos da sua cidade.",
+  // Resultados dependem da cidade no cookie; não indexar busca interna.
+  robots: { index: false, follow: true },
 };
 
 type SearchPageProps = {

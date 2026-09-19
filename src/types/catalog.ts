@@ -68,6 +68,9 @@ export type Business = {
   neighborhood: string;
   address: string;
   distance: string;
+  /** Localidade da vitrine para metadados e dados estruturados. */
+  cityName?: string;
+  stateCode?: string;
   rating: number;
   reviewCount: number;
   ratingSource?: "google" | null;

@@ -133,6 +133,8 @@ async function loadBusiness(
     neighborhood: business.neighborhood,
     address: [business.street, business.address_number, business.complement].filter(Boolean).join(", "),
     distance: `${city.name} - ${city.state_code}`,
+    cityName: city.name,
+    stateCode: city.state_code,
     rating: 0,
     reviewCount: 0,
     ...schedule,
