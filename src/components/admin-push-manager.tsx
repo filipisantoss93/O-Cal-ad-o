@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { subscribeAdminPush, unsubscribeAdminPush } from "@/app/painel/admin/notificacoes/actions";
+import { subscribeAdminPush, unsubscribeAdminPush } from "@/app/admin/notificacoes/actions";
 import { FloatingNotice } from "@/components/floating-notice";
 
 function decodeBase64Url(input: string) {
