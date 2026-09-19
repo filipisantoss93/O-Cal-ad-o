@@ -24,11 +24,11 @@ function Metric({ label, value, detail, href }: {
   label: string; value: string; detail: string; href?: string;
 }) {
   const content = <>
-    <dt className="text-sm font-bold text-muted">{label}</dt>
-    <dd className="mt-2 text-3xl font-black tracking-tight text-ink sm:text-4xl">{value}</dd>
-    <p className="mt-2 text-xs font-semibold leading-5 text-muted">{detail}</p>
+    <dt className="text-[11px] font-bold leading-4 text-muted sm:text-sm sm:leading-5">{label}</dt>
+    <dd className="mt-2 break-words text-[clamp(1.05rem,5vw,1.5rem)] font-black leading-tight tracking-tight text-ink sm:text-3xl xl:text-4xl">{value}</dd>
+    <p className="mt-2 text-[11px] font-semibold leading-4 text-muted sm:text-xs sm:leading-5">{detail}</p>
   </>;
-  return <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
+  return <div className="min-w-0 rounded-2xl border border-line bg-surface p-3 shadow-sm sm:p-5">
     {href ? <Link href={href} className="block rounded-lg outline-none hover:opacity-80 focus-visible:ring-2 focus-visible:ring-brand">{content}</Link> : content}
   </div>;
 }
@@ -65,11 +65,12 @@ export default async function AdminDashboard({ searchParams }: {
 
     <section aria-labelledby="alcance">
       <h2 id="alcance" className="text-xl font-black text-ink">Plataforma</h2>
-      <dl className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <Metric label="Contas cadastradas" value={number(m.accounts.total)} detail={`+${number(m.accounts.recent)} nos últimos ${days} dias`} />
+      <dl className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-6">
+        <Metric label="Total de locais" value={number(m.stores.total + m.public_places.total)} detail="Lojas e locais públicos cadastrados" />
         <Metric label="Lojas cadastradas" value={number(m.stores.total)} detail={`+${number(m.stores.recent)} nos últimos ${days} dias`} href="/admin" />
-        <Metric label="Lojas publicadas" value={number(m.stores.published)} detail={`${number(m.stores.approved)} aprovadas · ${number(m.stores.billing_suspended)} com cobrança suspensa`} href="/admin?status=approved" />
         <Metric label="Locais públicos" value={number(m.public_places.total)} detail={`${number(m.public_places.published)} visíveis na busca`} href="/admin/locais-publicos" />
+        <Metric label="Lojas publicadas" value={number(m.stores.published)} detail={`${number(m.stores.approved)} aprovadas · ${number(m.stores.billing_suspended)} com cobrança suspensa`} href="/admin?status=approved" />
+        <Metric label="Contas cadastradas" value={number(m.accounts.total)} detail={`+${number(m.accounts.recent)} nos últimos ${days} dias`} />
         <Metric label="Promoções cadastradas" value={number(m.offers.total)} detail={`${number(m.offers.visible)} visíveis agora · +${number(m.offers.recent)} no período`} />
       </dl>
     </section>
@@ -79,7 +80,7 @@ export default async function AdminDashboard({ searchParams }: {
         <h2 id="valores" className="text-xl font-black text-ink">Publicidade e valores</h2>
         <p className="mt-1 text-sm text-muted">Valores das campanhas de destaque e banner cobradas pela Efí. Cortesias e campanhas reembolsadas não entram nos valores confirmados.</p>
       </div>
-      <dl className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <dl className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-4 xl:grid-cols-4">
         <Metric label="Valor confirmado" value={money(m.ads.confirmed_cents)} detail="Campanhas pagas agendadas, ativas, pausadas ou concluídas" href="/admin/destaques" />
         <Metric label={`Confirmado · ${days} dias`} value={money(m.ads.recent_confirmed_cents)} detail="Campanhas criadas no período e com cobrança confirmada" />
         <Metric label="Campanhas pagas" value={number(m.ads.paid)} detail={`${number(m.ads.active)} campanhas ativas agora · ${number(m.ads.total)} no total`} href="/admin/destaques" />
@@ -90,7 +91,7 @@ export default async function AdminDashboard({ searchParams }: {
 
     <section aria-labelledby="pendencias">
       <h2 id="pendencias" className="text-xl font-black text-ink">Fila de trabalho</h2>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3 xl:grid-cols-3">
         {[
           { label: "Lojas para revisar", count: m.stores.pending, href: "/admin?status=pending" },
           { label: "Banners para revisar", count: m.ads.banners_to_review, href: "/admin/destaques" },
@@ -98,9 +99,9 @@ export default async function AdminDashboard({ searchParams }: {
           { label: "Denúncias de lojas", count: m.inbox.reports_open, href: "/admin/notificacoes?tipo=report" },
           { label: "Notificações não lidas", count: m.inbox.unread, href: "/admin/notificacoes" },
           { label: "Lojas suspensas", count: m.stores.suspended, href: "/admin?status=suspended" },
-        ].map((item) => <Link key={item.label} href={item.href} className="flex min-h-20 items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-5 shadow-sm hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
-          <span className="text-sm font-bold text-ink">{item.label}</span>
-          <strong className={`rounded-xl px-3 py-1.5 text-xl ${item.count ? "bg-brand/8 text-brand-dark" : "bg-positive-soft text-positive"}`}>{number(item.count)}</strong>
+        ].map((item) => <Link key={item.label} href={item.href} className="flex min-h-24 min-w-0 flex-col items-start justify-between gap-2 rounded-2xl border border-line bg-surface p-3 shadow-sm hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:min-h-20 sm:flex-row sm:items-center sm:gap-3 sm:p-5">
+          <span className="text-xs font-bold leading-4 text-ink sm:text-sm">{item.label}</span>
+          <strong className={`max-w-full break-words rounded-xl px-2 py-1 text-lg sm:px-3 sm:py-1.5 sm:text-xl ${item.count ? "bg-brand/8 text-brand-dark" : "bg-positive-soft text-positive"}`}>{number(item.count)}</strong>
         </Link>)}
       </div>
     </section>
