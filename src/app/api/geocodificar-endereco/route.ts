@@ -9,7 +9,42 @@ let upstreamQueue: Promise<void> = Promise.resolve();
 type GeocodingCandidate = {
   lat?: unknown;
   lon?: unknown;
+  address?: {
+    road?: unknown;
+    pedestrian?: unknown;
+    residential?: unknown;
+    house_number?: unknown;
+  };
 };
+
+function normalizedText(value: unknown) {
+  return String(value ?? "").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function houseNumber(value: unknown) {
+  return normalizedText(value).match(/\b\d+[a-z]?\b/)?.[0] ?? "";
+}
+
+const roadTypes = new Set(["rua", "r", "av", "avenida", "travessa", "alameda", "praca", "rodovia", "estrada"]);
+function roadTokens(value: unknown) {
+  return normalizedText(value).split(" ").filter((token) => token.length >= 2 && !roadTypes.has(token));
+}
+
+function addressMatches(candidate: GeocodingCandidate, street: string, addressNumber: string) {
+  const expectedNumber = houseNumber(addressNumber);
+  const actualNumber = houseNumber(candidate.address?.house_number);
+  // Never accept a street-level/centroid result in place of the establishment's door.
+  if (!expectedNumber || !actualNumber || expectedNumber !== actualNumber) return false;
+  const expected = roadTokens(street);
+  const actual = new Set(roadTokens(
+    candidate.address?.road ?? candidate.address?.pedestrian ?? candidate.address?.residential,
+  ));
+  return expected.length > 0 && expected.filter((part) => actual.has(part)).length / expected.length >= 0.6;
+}
 
 function bodyText(body: Record<string, unknown>, field: string) {
   const value = body[field];
@@ -162,7 +197,7 @@ export async function POST(request: Request) {
     url.searchParams.set("countrycodes", "br");
     url.searchParams.set("format", "jsonv2");
     url.searchParams.set("limit", "5");
-    url.searchParams.set("addressdetails", "0");
+    url.searchParams.set("addressdetails", "1");
 
     response = await queuedGeocodingRequest(url);
   } catch {
@@ -199,6 +234,7 @@ export async function POST(request: Request) {
   }
 
   for (const candidate of candidates) {
+    if (!addressMatches(candidate, street, addressNumber)) continue;
     const latitude = Number(candidate.lat);
     const longitude = Number(candidate.lon);
     if (
@@ -240,7 +276,7 @@ export async function POST(request: Request) {
   return Response.json(
     {
       error:
-        "Não encontramos esse endereço na cidade selecionada. Confira rua, número, bairro e CEP.",
+        "Não encontramos esse endereço na cidade selecionada. Confira rua, número, bairro e cidade.",
     },
     { status: 404 },
   );
