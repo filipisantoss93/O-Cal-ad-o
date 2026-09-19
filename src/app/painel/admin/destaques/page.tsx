@@ -347,7 +347,7 @@ export default async function AdminHighlightsPage({
             <p className="mt-2 text-sm leading-6 text-muted">Crie uma campanha sem cobrança, mantendo os mesmos limites de vagas e métricas.</p>
           </div>
         </div>
-        <form action={createComplimentaryHighlightAction} encType="multipart/form-data" className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <form action={createComplimentaryHighlightAction} className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <label className="text-sm font-black text-ink">
             Loja
             <select name="business_id" required className="mt-2 min-h-12 w-full rounded-xl border border-line bg-white px-3 font-bold">
