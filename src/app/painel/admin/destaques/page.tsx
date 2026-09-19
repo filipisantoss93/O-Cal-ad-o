@@ -115,6 +115,11 @@ const errorMessages: Record<string, string> = {
   campanha_aberta: "A loja já possui uma campanha aberta.",
   loja_inelegivel: "A loja não está apta a receber destaque.",
   cortesia: "Não foi possível criar a cortesia.",
+  cortesia_banner: "Não foi possível criar o banner de cortesia.",
+  banner_titulo_invalido: "O título do banner deve ter entre 3 e 90 caracteres.",
+  banner_descricao_invalida: "A descrição do banner deve ter entre 3 e 180 caracteres.",
+  banner_imagem_invalida: "Envie uma imagem JPG, PNG, WebP ou AVIF de até 5 MB.",
+  banner_imagem_obrigatoria: "Selecione uma imagem para o banner de cortesia.",
   acao_invalida: "Ação administrativa inválida.",
   acao_campanha: "Não foi possível alterar essa campanha.",
   revisao_banner_invalida: "Informe uma decisão válida e o motivo ao solicitar ajustes.",
@@ -342,7 +347,7 @@ export default async function AdminHighlightsPage({
             <p className="mt-2 text-sm leading-6 text-muted">Crie uma campanha sem cobrança, mantendo os mesmos limites de vagas e métricas.</p>
           </div>
         </div>
-        <form action={createComplimentaryHighlightAction} className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <form action={createComplimentaryHighlightAction} encType="multipart/form-data" className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <label className="text-sm font-black text-ink">
             Loja
             <select name="business_id" required className="mt-2 min-h-12 w-full rounded-xl border border-line bg-white px-3 font-bold">
@@ -354,7 +359,7 @@ export default async function AdminHighlightsPage({
             Pacote
             <select name="package_code" required className="mt-2 min-h-12 w-full rounded-xl border border-line bg-white px-3 font-bold">
               <option value="">Selecione</option>
-              {data.packages.filter((item) => item.is_active && item.placement !== "banner").map((item) => <option key={item.code} value={item.code}>{placementLabels[item.placement]} · {item.duration_days} dias</option>)}
+              {data.packages.filter((item) => item.is_active).map((item) => <option key={item.code} value={item.code}>{placementLabels[item.placement]} · {item.duration_days} dias</option>)}
             </select>
           </label>
           <label className="text-sm font-black text-ink">
@@ -365,6 +370,24 @@ export default async function AdminHighlightsPage({
             Motivo
             <input name="admin_note" maxLength={1000} placeholder="Ex.: lançamento" className="mt-2 min-h-12 w-full rounded-xl border border-line bg-white px-3 font-bold" />
           </label>
+          <div className="rounded-2xl border border-line bg-white/70 p-4 md:col-span-2 lg:col-span-4">
+            <p className="text-sm font-black text-ink">Criativo do banner</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-muted">Preencha estes campos somente quando o pacote selecionado for Banner regional. O banner de cortesia será criado sem cobrança e já aprovado pelo admin.</p>
+            <div className="mt-4 grid gap-4 lg:grid-cols-3">
+              <label className="text-sm font-black text-ink">
+                Título
+                <input name="banner_title" minLength={3} maxLength={90} placeholder="Ex.: Sua loja em destaque" className="mt-2 min-h-12 w-full rounded-xl border border-line bg-white px-3 font-bold" />
+              </label>
+              <label className="text-sm font-black text-ink">
+                Descrição
+                <input name="banner_description" minLength={3} maxLength={180} placeholder="Mensagem curta do anúncio" className="mt-2 min-h-12 w-full rounded-xl border border-line bg-white px-3 font-bold" />
+              </label>
+              <label className="text-sm font-black text-ink">
+                Imagem
+                <input name="banner_image" type="file" accept="image/jpeg,image/png,image/webp,image/avif" className="mt-2 block min-h-12 w-full rounded-xl border border-line bg-white px-3 py-2 text-sm font-bold text-ink" />
+              </label>
+            </div>
+          </div>
           <button type="submit" className="min-h-12 rounded-xl bg-brand px-5 text-sm font-black text-white md:col-span-2 lg:col-span-4">Criar campanha de cortesia</button>
         </form>
       </section>
