@@ -3,7 +3,6 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const TOKEN_HASH = "caec7186d2264f46f018a6ee45ab34c9df2e897de9b3272dfaba744ad7cd419f";
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
-const VIACEP_URL = "https://viacep.com.br/ws";
 const GOOGLE_FALLBACK_URL = "https://ocalcadao.com.br/api/internal/geocode-business";
 const PHOTON_URL = "https://photon.komoot.io/api/";
 const MIN_PHOTON_INTERVAL_MS = 1100;
@@ -116,22 +115,6 @@ function candidateRoad(candidate: Candidate) {
   return address.road ?? address.pedestrian ?? address.residential ?? "";
 }
 
-function businessNameTokens(value: unknown) {
-  const ignored = new Set([
-    "assis", "sp", "ltda", "eireli", "me", "mei", "comercio", "comercial",
-    "loja", "lojas", "de", "da", "do", "das", "dos", "e"
-  ]);
-  return normalizeAddressText(value)
-    .split(/\s+/)
-    .filter((token) => token.length >= 3 && !ignored.has(token));
-}
-
-function candidateName(candidate: Candidate) {
-  const named = candidate.namedetails ?? {};
-  return candidate.name ?? named.name ?? named["name:pt"] ??
-    (typeof candidate.display_name === "string" ? candidate.display_name.split(",")[0] : "");
-}
-
 function roadSimilarity(expected: unknown, actual: unknown) {
   const expectedTokens = streetTokens(expected);
   const actualTokens = new Set(streetTokens(actual));
@@ -146,25 +129,6 @@ function nameSimilarity(expected: unknown, actual: unknown) {
   if (!expectedTokens.length || !actualTokens.size) return 0;
   const matched = expectedTokens.filter((token) => actualTokens.has(token)).length;
   return matched / expectedTokens.length;
-}
-
-function candidateMatchesNamedPoi(candidate: Candidate, business: BusinessRow) {
-  if (nameSimilarity(business.name, candidateName(candidate)) < 0.7) return false;
-  if (roadSimilarity(business.street, candidateRoad(candidate)) < 0.6) return false;
-
-  const expectedNumber = normalizedHouseNumber(business.address_number);
-  const actualNumber = normalizedHouseNumber(candidate.address?.house_number);
-  if (actualNumber && expectedNumber && actualNumber !== expectedNumber) return false;
-
-  const expectedPostal = (business.postal_code ?? "").replace(/\D/g, "");
-  const actualPostal = normalizeAddressText(candidate.address?.postcode).replace(/\D/g, "");
-  if (
-    expectedPostal.length === 8 &&
-    actualPostal.length === 8 &&
-    expectedPostal.slice(0, 5) !== actualPostal.slice(0, 5)
-  ) return false;
-
-  return true;
 }
 
 function candidateMatchesAddress(candidate: Candidate, business: BusinessRow) {
@@ -191,75 +155,6 @@ function candidateMatchesAddress(candidate: Candidate, business: BusinessRow) {
   ) return false;
 
   return true;
-}
-
-let lastViaCepRequestAt = 0;
-
-async function discoverAddressViaCep(business: BusinessRow, city: CityRow) {
-  const existing = (business.postal_code ?? "").replace(/\D/g, "");
-  const street = business.street.trim();
-  if (street.length < 3) return null;
-
-  const waitMs = Math.max(0, 250 - (Date.now() - lastViaCepRequestAt));
-  if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
-  lastViaCepRequestAt = Date.now();
-
-  try {
-    const url = existing.length === 8
-      ? `${VIACEP_URL}/${existing}/json/`
-      : [
-          VIACEP_URL,
-          encodeURIComponent(city.state_code),
-          encodeURIComponent(city.name),
-          encodeURIComponent(street),
-          "json",
-        ].join("/");
-
-    const response = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        Referer: "https://ocalcadao.com.br/",
-        "User-Agent": "O-Calcadao/1.0 (+https://ocalcadao.com.br/contato)",
-      },
-      signal: AbortSignal.timeout(8_000),
-    });
-    if (!response.ok) return null;
-
-    const payload: unknown = await response.json();
-    const rows = Array.isArray(payload) ? payload : [payload];
-
-    let best: { postalCode: string; street: string; neighborhood: string; score: number } | null = null;
-    for (const item of rows) {
-      if (!item || typeof item !== "object") continue;
-      const row = item as Record<string, unknown>;
-      if (row.erro === true) continue;
-
-      const uf = String(row.uf ?? "").trim().toUpperCase();
-      const locality = normalizeAddressText(row.localidade);
-      if (uf !== city.state_code.toUpperCase()) continue;
-      if (locality !== normalizeAddressText(city.name)) continue;
-
-      const canonicalStreet = String(row.logradouro ?? "").trim();
-      const score = roadSimilarity(business.street, canonicalStreet);
-      if (!canonicalStreet || score < 0.45) continue;
-
-      const cep = String(row.cep ?? "").replace(/\D/g, "");
-      if (cep.length !== 8) continue;
-
-      if (!best || score > best.score) {
-        best = {
-          postalCode: cep,
-          street: canonicalStreet,
-          neighborhood: String(row.bairro ?? "").trim(),
-          score,
-        };
-      }
-    }
-
-    return best;
-  } catch {
-    return null;
-  }
 }
 
 function addressQueries(business: BusinessRow, city: CityRow) {
@@ -441,9 +336,9 @@ async function geocodeWithPhoton(business: BusinessRow, city: CityRow) {
       const actualNumber = normalizedHouseNumber(props.housenumber);
       if (actualNumber && expectedNumber && actualNumber !== expectedNumber) continue;
 
-      const nameScore = nameSimilarity(business.name, props.name);
       const exactNumber = Boolean(expectedNumber && actualNumber && expectedNumber === actualNumber);
-      if (!exactNumber && nameScore < 0.7) continue;
+      // No street-centroid or name-only match is sufficient for a numbered address.
+      if (!exactNumber) continue;
 
       const countryCode = normalizeAddressText(props.countrycode);
       if (countryCode && countryCode !== "br") continue;
@@ -634,17 +529,10 @@ Deno.serve(async (request) => {
     let found: { latitude: number; longitude: number } | null = null;
     let upstreamError = "";
 
-    const discoveredAddress = await discoverAddressViaCep(business, city);
-    const discoveredPostalCode = discoveredAddress?.postalCode ??
-      (business.postal_code ?? "").replace(/\D/g, "");
-    const geocodeBusiness: BusinessRow = discoveredAddress
-      ? {
-          ...business,
-          street: discoveredAddress.street || business.street,
-          neighborhood: discoveredAddress.neighborhood || business.neighborhood,
-          postal_code: discoveredAddress.postalCode,
-        }
-      : business;
+    // CEP is an optional hint: never require an additional postal-code lookup or
+    // silently replace the merchant's street and neighborhood with a guessed match.
+    const discoveredPostalCode = (business.postal_code ?? "").replace(/\D/g, "");
+    const geocodeBusiness: BusinessRow = business;
 
     const acceptCandidate = async (candidate: Candidate) => {
       const latitude = Number(candidate.lat);
@@ -654,10 +542,7 @@ Deno.serve(async (request) => {
         !Number.isFinite(longitude) || longitude < -180 || longitude > 180
       ) return null;
 
-      if (
-        !candidateMatchesAddress(candidate, geocodeBusiness) &&
-        !candidateMatchesNamedPoi(candidate, geocodeBusiness)
-      ) return null;
+      if (!candidateMatchesAddress(candidate, geocodeBusiness)) return null;
 
       const { data: resolvedCities, error: resolverError } = await supabase.rpc(
         "resolve_city_by_coordinates",
