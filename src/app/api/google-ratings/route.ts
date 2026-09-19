@@ -77,8 +77,10 @@ export async function POST(request: Request) {
     return Response.json({ error: "Lista de estabelecimentos inválida." }, { status: 400 });
   }
 
+  // Google Place Details ratings use the Enterprise SKU. Keep public requests disabled
+  // until billing limits and application-level rate controls are explicitly configured.
   const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
-  if (!apiKey) {
+  if (process.env.GOOGLE_RATINGS_ENABLED !== "true" || !apiKey) {
     return Response.json(
       { enabled: false, ratings: [] },
       { headers: { "Cache-Control": "private, no-store" } },
