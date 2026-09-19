@@ -167,7 +167,7 @@ export async function saveBusinessHoursAction(
     }
 
     revalidatePath("/painel/loja");
-    revalidatePath("/painel/admin");
+    revalidatePath("/admin");
     revalidatePath(`/loja/${business.slug}`);
     return { status: "success", message: "Horários salvos com sucesso." };
   } catch (error) {
