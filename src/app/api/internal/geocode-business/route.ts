@@ -67,7 +67,6 @@ function component(place: GooglePlace, type: string, short = false) {
 }
 
 const streetIgnored = new Set(["rua", "r", "avenida", "av", "rodovia", "rod", "travessa", "tv", "alameda", "praca", "pca", "estrada", "est"]);
-const nameIgnored = new Set(["sp", "ltda", "eireli", "me", "mei", "comercio", "comercial", "loja", "lojas", "de", "da", "do", "das", "dos", "e"]);
 
 function placeMatches(place: GooglePlace, body: Required<Pick<RequestBody, "name" | "street" | "addressNumber" | "city" | "stateCode">> & RequestBody) {
   const expectedState = text(body.stateCode).toUpperCase();
@@ -88,11 +87,7 @@ function placeMatches(place: GooglePlace, body: Required<Pick<RequestBody, "name
   // A matching business name is not proof that a street-centre coordinate identifies the correct door.
   if (!expectedNumber || !actualNumber || expectedNumber !== actualNumber) return false;
 
-  const cityTokens = normalize(body.city).split(" ").filter(Boolean);
-  const ignoredNameTokens = new Set([...nameIgnored, ...cityTokens, normalize(body.stateCode)]);
-  const nameScore = similarity(body.name, place.displayName?.text ?? "", ignoredNameTokens);
-  // The exact address is sufficient; different shop names at the same door are allowed.
-  void nameScore;
+  // An exact street and number is sufficient, even if the business's display name differs.
 
   const expectedPostal = text(body.postalCode).replace(/\D/g, "");
   const actualPostal = text(component(place, "postal_code")).replace(/\D/g, "");
