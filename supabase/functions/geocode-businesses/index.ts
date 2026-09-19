@@ -123,14 +123,6 @@ function roadSimilarity(expected: unknown, actual: unknown) {
   return matched / expectedTokens.length;
 }
 
-function nameSimilarity(expected: unknown, actual: unknown) {
-  const expectedTokens = businessNameTokens(expected);
-  const actualTokens = new Set(businessNameTokens(actual));
-  if (!expectedTokens.length || !actualTokens.size) return 0;
-  const matched = expectedTokens.filter((token) => actualTokens.has(token)).length;
-  return matched / expectedTokens.length;
-}
-
 function candidateMatchesAddress(candidate: Candidate, business: BusinessRow) {
   const expectedNumber = normalizedHouseNumber(business.address_number);
   if (!expectedNumber) return false;
