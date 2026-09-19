@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { markAdminNotificationRead, resolveAdminMessage } from "@/app/admin/notificacoes/actions";
+import { clearAdminNotifications, markAdminNotificationRead, resolveAdminMessage } from "@/app/admin/notificacoes/actions";
 import { AdminPushManager } from "@/components/admin-push-manager";
 import { FloatingNotice } from "@/components/floating-notice";
 import { requireAdmin } from "@/lib/admin/dal";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 const labels: Record<string, string> = { new_user: "Cadastros", support: "Suporte", report: "Denúncias", business_claim: "Reivindicações", listing_request: "Correções e remoções", business_moderation: "Moderação", banner_review: "Banners" };
 const reasons: Record<string, string> = { inaccurate: "Informações incorretas", fraud: "Suspeita de fraude", inappropriate: "Conteúdo inadequado", other: "Outro motivo" };
 
-export default async function AdminNotifications({ searchParams }: { searchParams: Promise<{ tipo?: string; id?: string; erro?: string }> }) {
+export default async function AdminNotifications({ searchParams }: { searchParams: Promise<{ tipo?: string; id?: string; erro?: string; limpas?: string }> }) {
   const params = await searchParams;
   const kind = labels[params.tipo ?? ""] ? params.tipo! : null;
   const sourceId = Number(params.id);
@@ -43,12 +43,20 @@ export default async function AdminNotifications({ searchParams }: { searchParam
   if (support?.error || report?.error || business?.error) throw new Error("Não foi possível carregar os detalhes da notificação.");
 
   return <div className="space-y-6">
-    <div>
-      <p className="text-xs font-black uppercase tracking-widest text-positive">Administração</p>
-      <h1 className="mt-2 text-3xl font-black text-ink sm:text-4xl">Notificações</h1>
-      <p className="mt-2 text-sm text-muted">Acompanhe cadastros confirmados, reivindicações, solicitações sobre perfis, moderação, banners, suporte e denúncias.</p>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p className="text-xs font-black uppercase tracking-widest text-positive">Administração</p>
+        <h1 className="mt-2 text-3xl font-black text-ink sm:text-4xl">Notificações</h1>
+        <p className="mt-2 text-sm text-muted">Acompanhe cadastros confirmados, reivindicações, solicitações sobre perfis, moderação, banners, suporte e denúncias.</p>
+      </div>
+      <form action={clearAdminNotifications}>
+        <button type="submit" className="min-h-11 rounded-xl border border-brand/25 bg-brand/8 px-4 text-sm font-black text-brand-dark transition hover:bg-brand/15">
+          Limpar notificações
+        </button>
+      </form>
     </div>
     {params.erro && <FloatingNotice tone="error">Não foi possível salvar a alteração. Tente novamente.</FloatingNotice>}
+    {params.limpas && <FloatingNotice tone="success">Notificações limpas com sucesso.</FloatingNotice>}
     <AdminPushManager publicKey={publicKeyResult.data ?? null} />
 
     <nav aria-label="Filtrar notificações" className="flex gap-2 overflow-x-auto pb-1">
