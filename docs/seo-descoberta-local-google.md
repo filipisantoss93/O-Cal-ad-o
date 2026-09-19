@@ -16,13 +16,15 @@
 
 ## Fase 1 — fundação técnica (iniciada)
 
-- [ ] Paginar a leitura de lojas publicadas, ativas e não suspensas no sitemap; não incluir prévias, contas ou páginas administrativas.
+- [x] Paginar a leitura de lojas publicadas, ativas e não suspensas no sitemap; não incluir prévias, contas ou páginas administrativas.
 - [ ] Respeitar o limite de 50.000 URLs/50 MB por sitemap; particionar em índice + arquivos por lote **antes** que o site alcance esse limite. Para grandes importações nacionais, definir estratégia de atualização e paginação estável por ID.
-- [ ] Gerar título, descrição e canonical por vitrine com nome do estabelecimento, município e UF. Manter prévias administrativas com `noindex`.
-- [ ] Gerar JSON-LD `LocalBusiness` para comércio físico, somente com dados reais que aparecem na página: nome, URL, endereço e campos opcionais confirmados. Para locais públicos, avaliar o tipo de esquema apropriado; nunca apresentar um órgão público como estabelecimento comercial.
-- [ ] Proibir indexação de resultados de busca internos dependentes de cookie ou parâmetros; não listar `/buscar` como destino de SEO no sitemap.
+- [x] Gerar título, descrição e canonical por vitrine com nome do estabelecimento, município e UF. Manter prévias administrativas com `noindex`.
+- [x] Gerar JSON-LD `LocalBusiness` para comércio físico, somente com dados reais que aparecem na página: nome, URL, endereço e campos opcionais confirmados. Para locais públicos, avaliar o tipo de esquema apropriado; nunca apresentar um órgão público como estabelecimento comercial.
+- [x] Proibir indexação de resultados de busca internos dependentes de cookie ou parâmetros; não listar `/buscar` como destino de SEO no sitemap.
 - [ ] Revisar `robots.txt` e proteção do painel isolado; **robots não substitui autenticação**.
 - [ ] Testar sitemap, canonical e JSON-LD em ambiente de homologação e após deploy.
+
+**Implementação inicial:** branch `feat/seo-descoberta-local-20260919`. Os itens marcados acima representam mudanças no código; o comportamento em produção e a indexação ainda exigem testes e publicação. O sitemap atual para em 49 mil vitrines: **antes do próximo patamar, substituir o limite pela partição em múltiplos sitemaps**, com verificação do limite de tamanho de 50 MB.
 
 ## Fase 2 — páginas locais permanentes
 
