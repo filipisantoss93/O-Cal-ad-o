@@ -26,7 +26,7 @@ export default async function MerchantLayout({
     <MerchantShell
       name={displayName}
       email={user.email ?? ""}
-      isAdmin={profile?.role === "admin"}
+      isAdmin={false}
       adminUserId={user.id}
       proActive={billing.proActive}
       monthlyPriceCents={monthlyPrice}
