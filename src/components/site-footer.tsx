@@ -16,8 +16,8 @@ export function SiteFooter() {
           <p className="text-sm font-black text-ink">Descobrir</p>
           <ul className="mt-3 space-y-2 text-sm text-muted">
             <li>
-              <Link className="hover:text-ink" href="/buscar">
-                Buscar comércios
+              <Link className="hover:text-ink" href="/descobrir">
+                Descobrir comércios pelo Brasil
               </Link>
             </li>
             <li>

@@ -79,6 +79,15 @@ export default function Home() {
           <CompactCategories categories={homeCategories} />
         </HomeFeedSection>
 
+        <section className="border-b border-line bg-surface px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-muted">Quer explorar estabelecimentos de outras cidades?</p>
+            <Link href="/descobrir" className="text-sm font-black text-brand-dark underline underline-offset-4 hover:text-ink">
+              Descobrir pelo Brasil →
+            </Link>
+          </div>
+        </section>
+
         <RegionalPaidBanners />
         <FeaturedBusinesses />
         <CityPromotions />

@@ -13,8 +13,8 @@ export function SiteHeader() {
           className="hidden items-center gap-7 text-sm font-semibold text-muted md:flex"
           aria-label="Navegação principal"
         >
-          <Link className="transition-colors hover:text-ink" href="/buscar">
-            Explorar
+          <Link className="transition-colors hover:text-ink" href="/descobrir">
+            Descobrir
           </Link>
           <Link
             className="transition-colors hover:text-ink"
