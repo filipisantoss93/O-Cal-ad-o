@@ -5,8 +5,8 @@ self.addEventListener("push", (event) => {
   try { payload = event.data.json(); } catch { return; }
   const title = typeof payload.title === "string" ? payload.title : "O Calçadão";
   const body = typeof payload.body === "string" ? payload.body : "Há uma nova notificação.";
-  const url = typeof payload.url === "string" && payload.url.startsWith("/painel/admin/")
-    ? payload.url : "/painel/admin/notificacoes";
+  const url = typeof payload.url === "string" && payload.url.startsWith("/admin")
+    ? payload.url : "/admin/notificacoes";
   event.waitUntil(self.registration.showNotification(title, {
     body,
     icon: "/pwa-192.png",
@@ -18,8 +18,8 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = new URL(event.notification.data?.url || "/painel/admin/notificacoes", self.location.origin);
-  if (url.origin !== self.location.origin || !url.pathname.startsWith("/painel/admin/")) return;
+  const url = new URL(event.notification.data?.url || "/admin/notificacoes", self.location.origin);
+  if (url.origin !== self.location.origin || !url.pathname.startsWith("/admin")) return;
   event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (windows) => {
     const open = windows.find((client) => client.url.startsWith(self.location.origin) && "focus" in client);
     if (open) {
