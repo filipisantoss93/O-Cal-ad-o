@@ -51,7 +51,7 @@ declare
   v_postal text;
   v_source_url text;
 begin
-  if auth.role() <> 'service_role' then
+  if current_user::text not in ('service_role','postgres','supabase_admin') then
     raise exception 'Importação reservada ao serviço' using errcode='42501';
   end if;
   if p_rows is null or jsonb_typeof(p_rows)<>'array'
@@ -95,7 +95,8 @@ begin
       when left(v_cnae,4) in ('4721','4722','4723','4724','4729') then 1
       when left(v_cnae,2)='56' then 1 -- restaurantes
       when left(v_cnae,4) in ('4520','4530','4541') then 2
-      when left(v_cnae,4) in ('4771','4772') then 6 -- farmácias / perfumaria a revisar
+      when left(v_cnae,4)='4771' then 6 -- farmácias
+      when left(v_cnae,4)='4772' then 5 -- cosméticos
       when left(v_cnae,2)='86' then 6
       when left(v_cnae,4) in ('4781','4782','4783') then 4
       when left(v_cnae,4) in ('4751','4752') then 8
