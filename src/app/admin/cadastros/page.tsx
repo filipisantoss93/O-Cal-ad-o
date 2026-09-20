@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/dal";
-import { saveAdminBusinessAction, saveAdminUserAction } from "./actions";
+import { linkAdminUnclaimedBusinessAction, saveAdminBusinessAction, saveAdminUserAction } from "./actions";
+import type { DatabaseWithAdminOwnerLink } from "@/types/admin-owner-link";
+import type { DatabaseWithBusinessClaims } from "@/types/business-claims";
 import { PreRegistrationLocationFields } from "@/components/admin/pre-registration-location-fields";
 import { FloatingNotice } from "@/components/floating-notice";
 
 export const metadata: Metadata = { title: "Cadastros | Administração", robots: { index: false, follow: false } };
 
-type Search = { q?: string; tipo?: string; id?: string; salvo?: string; erro?: string };
+type Search = { q?: string; tipo?: string; id?: string; salvo?: string; vinculado?: string; owner_q?: string; erro?: string };
 type Props = { searchParams: Promise<Search> };
 
 const field = "mt-1.5 min-h-11 w-full rounded-xl border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand focus:ring-4 focus:ring-brand/10";
@@ -23,6 +26,7 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
   const params = await searchParams;
   const { supabase } = await requireAdmin("/admin/cadastros");
   const q = (params.q ?? "").trim().slice(0, 80);
+  const ownerQ = (params.owner_q ?? "").trim().slice(0, 80);
   const type = params.tipo === "usuario" || params.tipo === "empresa" ? params.tipo : null;
   const id = (params.id ?? "").trim();
   const editUserId = type === "usuario" && uuid.test(id) ? id : null;
@@ -65,6 +69,23 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
   const businesses = businessesResult.data ?? [];
   const selectedUser = selectedUserResult.data;
   const business = selectedBusinessResult.data;
+  const canLinkBusiness = Boolean(business && business.pre_registered && !business.owner_id);
+  // Pesquisa de usuários somente quando uma empresa não reivindicada está aberta.
+  // A RPC protegida também encontra pelo e-mail de login, sem expor auth.users no cliente.
+  const { data: ownerCandidates, error: ownerSearchError } = canLinkBusiness && ownerQ.length >= 2
+    ? await (supabase as unknown as SupabaseClient<DatabaseWithAdminOwnerLink>)
+        .rpc("admin_search_business_owner_candidates", { p_query: ownerQ, p_limit: 10 })
+    : { data: [], error: null };
+  if (ownerSearchError) throw new Error("Não foi possível pesquisar os usuários. Tente novamente.");
+
+  const pendingClaimsResult = canLinkBusiness
+    ? await (supabase as unknown as SupabaseClient<DatabaseWithBusinessClaims>)
+        .from("business_claim_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", business!.id).eq("status", "pending")
+    : { count: 0, error: null };
+  if (pendingClaimsResult.error) throw new Error("Não foi possível consultar as reivindicações pendentes.");
+
   const currentCity = business && (Array.isArray(business.cities) ? business.cities[0] : business.cities);
 
   const relatedBusinessesResult = selectedUser
@@ -79,12 +100,13 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
         <p className="text-xs font-black uppercase tracking-widest text-brand-dark">Administração</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-ink sm:text-4xl">Usuários e empresas</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-          Encontre um cadastro e corrija seus dados sem abrir o SQL Editor. O vínculo com o proprietário,
-          as permissões, a senha, os pagamentos e o endereço público da vitrine não são alterados nesta página.
+          Encontre um cadastro, corrija seus dados ou vincule uma empresa ainda não reivindicada a um usuário.
+          As permissões, a senha, os pagamentos e o endereço público da vitrine não são alterados nesta página.
         </p>
       </header>
 
       {params.salvo === "1" && <FloatingNotice tone="success">Alterações salvas com sucesso.</FloatingNotice>}
+      {params.vinculado === "1" && <FloatingNotice tone="success">Empresa vinculada ao usuário. O limite de lojas da conta foi respeitado.</FloatingNotice>}
       {params.erro && <FloatingNotice tone="error">{params.erro}</FloatingNotice>}
 
       <form method="get" action="/admin/cadastros" className={box}>
@@ -146,7 +168,67 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
           {type === "empresa" && (!business ? (
             <p className="text-sm text-muted">Empresa não encontrada.</p>
           ) : (
-            <form action={saveAdminBusinessAction} className="space-y-6">
+            <div className="space-y-6">
+              {canLinkBusiness && (
+                <section className="rounded-2xl border border-brand/30 bg-canvas p-4 sm:p-5">
+                  <h3 className="text-lg font-black text-ink">Vincular empresa a um usuário</h3>
+                  <p className="mt-1 text-sm leading-6 text-muted">
+                    Esta empresa ainda não foi reivindicada. Pesquise pelo nome, e-mail de login,
+                    telefone ou ID do usuário. São exibidos no máximo 10 resultados; nenhuma lista completa é carregada.
+                  </p>
+                  {(pendingClaimsResult.count ?? 0) > 0 && (
+                    <p role="status" className="mt-3 rounded-xl border border-line bg-surface p-3 text-sm font-semibold text-ink">
+                      Atenção: existem {pendingClaimsResult.count} reivindicações pendentes.
+                      Ao confirmar o vínculo, as solicitações do usuário escolhido serão aprovadas
+                      e as demais, rejeitadas.
+                    </p>
+                  )}
+                  <form action="/admin/cadastros" method="get" className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <input type="hidden" name="tipo" value="empresa" />
+                    <input type="hidden" name="id" value={business.id} />
+                    <label className="min-w-0 flex-1 text-sm font-bold text-ink">
+                      Pesquisar usuário
+                      <input className={field} name="owner_q" type="search" defaultValue={ownerQ}
+                        minLength={2} maxLength={80} required placeholder="Nome, e-mail, telefone ou UUID" />
+                    </label>
+                    <button className="min-h-11 self-end rounded-xl bg-ink px-5 text-sm font-black text-white" type="submit">Buscar usuário</button>
+                  </form>
+                  {ownerQ.length >= 2 && (
+                    <div className="mt-4 space-y-2">
+                      {(ownerCandidates ?? []).length === 0 ? (
+                        <p className="text-sm text-muted">Nenhum usuário encontrado. Refine a pesquisa.</p>
+                      ) : (ownerCandidates ?? []).map((candidate) => {
+                        const full = candidate.used_businesses >= candidate.allowed_businesses;
+                        return (
+                          <div key={candidate.user_id} className="rounded-xl border border-line bg-surface p-3">
+                            <p className="text-sm font-black text-ink">{candidate.full_name || "Sem nome informado"}</p>
+                            <p className="mt-1 break-all text-xs text-muted">{candidate.email || "Sem e-mail"} · {candidate.phone_e164 || "Sem telefone"}</p>
+                            <p className="mt-1 break-all text-xs text-muted">ID: {candidate.user_id}</p>
+                            <p className={"mt-2 text-sm font-bold " + (full ? "text-brand-dark" : "text-ink")}>
+                              {candidate.used_businesses} de {candidate.allowed_businesses} lojas utilizadas
+                              {full ? " · Limite atingido" : " · Vaga disponível"}
+                            </p>
+                            <form action={linkAdminUnclaimedBusinessAction} className="mt-3">
+                              <input type="hidden" name="business_id" value={business.id} />
+                              <input type="hidden" name="user_id" value={candidate.user_id} />
+                              <button type="submit" disabled={full}
+                                className="min-h-11 rounded-xl bg-brand px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">
+                                {full ? "Sem vagas disponíveis" : "Vincular esta empresa a este usuário"}
+                              </button>
+                            </form>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              )}
+              {business.owner_id && (
+                <p className="rounded-xl border border-line bg-canvas p-4 text-sm text-muted">
+                  Esta empresa já possui responsável. A transferência entre usuários não é permitida nesta função.
+                </p>
+              )}
+              <form action={saveAdminBusinessAction} className="space-y-6">
               <input type="hidden" name="business_id" value={business.id} />
               <div className="flex flex-wrap gap-2 text-xs font-bold text-muted">
                 <span>ID #{business.id}</span><span>· {business.status}</span>
@@ -226,7 +308,8 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
                 <button type="submit" className="min-h-11 rounded-xl bg-brand px-6 text-sm font-black text-white">Salvar dados da empresa</button>
                 <Link href="/admin" className="inline-flex min-h-11 items-center rounded-xl border border-line px-4 text-sm font-bold text-ink">Abrir moderação</Link>
               </div>
-            </form>
+              </form>
+            </div>
           ))}
         </section>
       )}
