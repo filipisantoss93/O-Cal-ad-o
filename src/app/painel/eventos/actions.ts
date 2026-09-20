@@ -161,7 +161,7 @@ export async function requestEventHighlightAction(formData: FormData) {
     redirect(errorPath("O evento precisa estar ativo e ainda não ter terminado.", businessId));
   }
   const { data: openRequest } = await supabase.from("event_highlights")
-    .select("id").eq("event_id", eventId).in("status", ["pending", "active"]).limit(1);
+    .select("id").eq("event_id", eventId).eq("status", "pending").limit(1);
   if (openRequest?.length) {
     redirect(errorPath("Este evento já possui uma solicitação de destaque em andamento.", businessId));
   }
