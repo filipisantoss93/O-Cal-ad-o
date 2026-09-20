@@ -21,8 +21,10 @@ async function assertNoSameBusinessUnit(
   const { data, error } = await client.from("businesses")
     .select("id,name,street,address_number,complement")
     .eq("city_id", values.cityId)
-    .ilike("name", values.name.replace(/[\\%_]/g, "\\function optionalCoordinate("))
-    .limit(250);
+    .eq("name", values.name)
+    .eq("street", values.street)
+    .eq("address_number", values.addressNumber)
+    .limit(1000);
   if (error) throw new Error("Não foi possível verificar os cadastros no mesmo endereço.");
   const requestedComplement = normalizeUnitPart(values.complement);
   for (const existing of data ?? []) {
