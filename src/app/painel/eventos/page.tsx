@@ -104,6 +104,7 @@ export default async function MerchantEvents({ searchParams }: Params) {
   const address = [business.street, business.address_number, business.neighborhood,
     cityResult.data?.name, cityResult.data?.state_code].filter(Boolean).join(", ");
   const ready = business.is_active && !business.billing_suspended;
+  const requestCutoff = new Date().getTime();
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -154,7 +155,7 @@ export default async function MerchantEvents({ searchParams }: Params) {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Link href={"/eventos/" + event.id} className="rounded-lg border border-line px-3 py-2 text-xs font-black">Abrir link público</Link>
                   {!highlightByEvent.has(event.id) && event.is_active &&
-                    Date.parse(event.ends_at ?? event.starts_at) > Date.now() && ready &&
+                    Date.parse(event.ends_at ?? event.starts_at) > requestCutoff && ready &&
                     <form action={requestEventHighlightAction}>
                       <input type="hidden" name="business_id" value={business.id} />
                       <input type="hidden" name="event_id" value={event.id} />
