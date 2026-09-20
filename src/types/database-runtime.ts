@@ -24,6 +24,15 @@ type AdminNotification = {
   title: string; body: string; destination: string; read_at: string | null;
   pushed_at: string | null; push_attempts: number; created_at: string;
 };
+type EventRow = {
+  id: number; business_id: number; city_id: number; title: string;
+  description: string; category: string; banner_path: string; venue_name: string;
+  venue_address: string; starts_at: string; ends_at: string | null;
+  utc_offset: string; free_entry: boolean; ticket_price_cents: number | null;
+  ticket_url: string | null; is_active: boolean; created_at: string; updated_at: string;
+};
+type EventInsert = Omit<EventRow, "id" | "created_at" | "updated_at">;
+
 type PushSubscriptionRow = {
   endpoint: string; user_id: string; p256dh: string; auth: string; created_at: string;
 };
@@ -38,6 +47,7 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       admin_vapid_public_key: { Args: Record<PropertyKey, never>; Returns: string | null };
     };
     Tables: Omit<GeneratedPublicSchema["Tables"], "businesses"> & {
+      events: AdministrativeTable<EventRow, EventInsert>;
       support_messages: AdministrativeTable<SupportMessage, Pick<SupportMessage, "name" | "email" | "subject" | "message"> & Partial<Pick<SupportMessage, "status" | "sender_id">>>;
       business_reports: AdministrativeTable<BusinessReport, Pick<BusinessReport, "business_id" | "name" | "email" | "reason" | "details"> & Partial<Pick<BusinessReport, "status" | "sender_id">>>;
       admin_notifications: AdministrativeTable<AdminNotification, Pick<AdminNotification, "recipient_id" | "event_type" | "source_id" | "title" | "body" | "destination"> & Partial<Pick<AdminNotification, "read_at" | "pushed_at" | "push_attempts">>>;
