@@ -67,11 +67,21 @@ export default async function PublicPlacesAdminPage({
   }
 
   const places = placesResult.data ?? [];
+  // A listagem exibe so os 200 primeiros locais. Permitir editar diretamente
+  // qualquer registro apontado pela fila SEO, sem depender da posicao na lista.
+  const requestedPlaceResult = params.novo !== "1" && Number.isSafeInteger(requestedId) && requestedId > 0
+    ? await supabase.from("businesses")
+        .select("id, city_id, public_place_kind, name, slug, description, tags, whatsapp_e164, phone_e164, public_email, website_url, instagram_url, facebook_url, official_source_url, street, address_number, complement, neighborhood, postal_code, latitude, longitude, is_active, publication_status, created_at, cities(name, state_code)")
+        .eq("id", requestedId)
+        .eq("listing_type", "public_place")
+        .maybeSingle()
+    : { data: null, error: null };
+  if (requestedPlaceResult.error) throw new Error("Não foi possível localizar o local público solicitado.");
   const editing = params.novo === "1"
     ? null
-    : places.find(
-        (place) => Number.isSafeInteger(requestedId) && place.id === requestedId,
-      ) ?? null;
+    : places.find((place) => Number.isSafeInteger(requestedId) && place.id === requestedId)
+      ?? requestedPlaceResult.data
+      ?? null;
   const [editingCityResult, hoursResult] = await Promise.all([
     editing && editing.city_id !== assisResult.data.id
       ? supabase
