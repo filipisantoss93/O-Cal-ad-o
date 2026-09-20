@@ -1,6 +1,10 @@
 name: Piloto de importação CNPJ - Receita Federal
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/import-receita-cnpj.yml"
   workflow_dispatch:
     inputs:
       snapshot:
@@ -48,9 +52,9 @@ jobs:
       - name: Validar parâmetros da fonte oficial
         shell: bash
         env:
-          SNAPSHOT: ${{ inputs.snapshot }}
-          UF: ${{ inputs.uf }}
-          CITY: ${{ inputs.city }}
+          SNAPSHOT: ${{ inputs.snapshot || '2026-08' }}
+          UF: ${{ inputs.uf || 'SP' }}
+          CITY: ${{ inputs.city || 'Assis' }}
         run: |
           set -euo pipefail
           [[ "$SNAPSHOT" =~ ^20[0-9]{2}-(0[1-9]|1[0-2])$ ]] || exit 1
@@ -75,11 +79,11 @@ jobs:
         env:
           GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
           OCALCADAO_IMPORT_URL: "https://mieekhdagjlzdbeklrxp.supabase.co/functions/v1/import-receita-cnpj"
-          SNAPSHOT: ${{ inputs.snapshot }}
-          ESTABLISHMENT_INDEX: ${{ inputs.establishment_index }}
-          MAX_CANDIDATES: ${{ inputs.max_candidates }}
-          CITY: ${{ inputs.city }}
-          UF: ${{ inputs.uf }}
+          SNAPSHOT: ${{ inputs.snapshot || '2026-08' }}
+          ESTABLISHMENT_INDEX: ${{ inputs.establishment_index || '0' }}
+          MAX_CANDIDATES: ${{ inputs.max_candidates || '20' }}
+          CITY: ${{ inputs.city || 'Assis' }}
+          UF: ${{ inputs.uf || 'SP' }}
         run: |
           python3 scripts/import-receita-cnpj.py \
             --snapshot "$SNAPSHOT" --index "$ESTABLISHMENT_INDEX" \

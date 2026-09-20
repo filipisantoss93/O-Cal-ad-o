@@ -1,21 +1,5 @@
--- CNPJ aberto RFB: importação de pré-cadastros privados com revisão pré-publicação.
--- NÃO armazenar/publicar sócios, CPF, telefone, email, CNPJ ou endereços residenciais
--- no perfil público. Somente naturezas empresariais 2xxx exceto empresário individual.
-insert into public.business_data_sources (
-  code,name,source_type,domain,base_url,priority,is_active,
-  is_official,reliability,allows_import,terms_url,notes,last_verified_at
-) values (
-  'rfb_cnpj_open_data','Receita Federal - dados públicos CNPJ (estabelecimentos)',
-  'government','arquivos.receitafederal.gov.br',
-  'https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/',
-  90,true,true,95,true,
-  'https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/dados-abertos/cadastros',
-  'Pré-cadastro privado não publicado: atividade cadastral 02; natureza empresarial 2xxx exceto empresário individual; nome fantasia, endereço comercial e CNAE. Sem sócios, CPF, telefone ou email. Fonte cadastral não comprova operação ou visitação presencial.',
-  now()
-) on conflict (code) do update set
-  name=excluded.name,base_url=excluded.base_url,
-  notes=excluded.notes,last_verified_at=now();
-
+-- Atualiza no banco já implantado o link de proveniência e o slug opaco;
+-- a migration original no repositório foi alinhada para novas instalações.
 create or replace function public.import_rfb_cnpj_batch(p_rows jsonb, p_snapshot text)
 returns jsonb
 language plpgsql
