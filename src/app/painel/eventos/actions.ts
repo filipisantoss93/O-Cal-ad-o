@@ -132,3 +132,46 @@ export async function deleteEventAction(formData: FormData) {
   refreshEventPages(id);
   redirect("/painel/eventos?loja=" + businessId + "&sucesso=excluido");
 }
+
+
+/**
+ * O comerciante apenas solicita a contratação. O status 'active' exige
+ * comprovação de pagamento registrada pela administração (RLS).
+ * Não acionar checkout de destaque de vitrine para eventos.
+ */
+export async function requestEventHighlightAction(formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/entrar?next=%2Fpainel%2Feventos");
+  const businessId = Number(formString(formData, "business_id"));
+  const eventId = Number(formString(formData, "event_id"));
+  if (!Number.isSafeInteger(businessId) || businessId <= 0
+    || !Number.isSafeInteger(eventId) || eventId <= 0) {
+    redirect("/painel/eventos?erro=" + encodeURIComponent("Selecione um evento válido."));
+  }
+  const { data: business } = await supabase.from("businesses")
+    .select("id, city_id").eq("id", businessId).eq("owner_id", user.id)
+    .eq("listing_type", "business").maybeSingle();
+  if (!business) redirect(errorPath("Vitrine não encontrada.", businessId));
+  const { data: event } = await supabase.from("events")
+    .select("id, city_id, ends_at, starts_at, is_active")
+    .eq("id", eventId).eq("business_id", businessId).maybeSingle();
+  if (!event || !event.is_active || event.city_id !== business.city_id
+    || Date.parse(event.ends_at ?? event.starts_at) <= Date.now()) {
+    redirect(errorPath("O evento precisa estar ativo e ainda não ter terminado.", businessId));
+  }
+  const { data: openRequest } = await supabase.from("event_highlights")
+    .select("id").eq("event_id", eventId).eq("status", "pending").limit(1);
+  if (openRequest?.length) {
+    redirect(errorPath("Este evento já possui uma solicitação de destaque em andamento.", businessId));
+  }
+  const { error } = await supabase.from("event_highlights")
+    .insert({ event_id: eventId, requester_id: user.id });
+  if (error) {
+    redirect(errorPath(error.code === "23505"
+      ? "Este evento já possui uma solicitação de destaque."
+      : "Não foi possível solicitar o destaque.", businessId));
+  }
+  revalidatePath("/painel/eventos");
+  redirect("/painel/eventos?loja=" + businessId + "&sucesso=destaque_solicitado");
+}

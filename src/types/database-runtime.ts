@@ -33,6 +33,16 @@ type EventRow = {
 };
 type EventInsert = Omit<EventRow, "id" | "created_at" | "updated_at">;
 
+type EventHighlightRow = {
+  id: number; event_id: number; requester_id: string;
+  status: "pending" | "active" | "cancelled" | "expired";
+  amount_paid_cents: number | null; payment_reference: string | null;
+  paid_at: string | null; starts_at: string | null; ends_at: string | null;
+  created_at: string; updated_at: string;
+};
+type EventHighlightInsert = Pick<EventHighlightRow, "event_id" | "requester_id"> &
+  Partial<Pick<EventHighlightRow, "status" | "amount_paid_cents" | "payment_reference" | "paid_at" | "starts_at" | "ends_at" | "updated_at">>;;
+
 type PushSubscriptionRow = {
   endpoint: string; user_id: string; p256dh: string; auth: string; created_at: string;
 };
@@ -48,6 +58,7 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
     };
     Tables: Omit<GeneratedPublicSchema["Tables"], "businesses"> & {
       events: AdministrativeTable<EventRow, EventInsert>;
+      event_highlights: AdministrativeTable<EventHighlightRow, EventHighlightInsert>;
       support_messages: AdministrativeTable<SupportMessage, Pick<SupportMessage, "name" | "email" | "subject" | "message"> & Partial<Pick<SupportMessage, "status" | "sender_id">>>;
       business_reports: AdministrativeTable<BusinessReport, Pick<BusinessReport, "business_id" | "name" | "email" | "reason" | "details"> & Partial<Pick<BusinessReport, "status" | "sender_id">>>;
       admin_notifications: AdministrativeTable<AdminNotification, Pick<AdminNotification, "recipient_id" | "event_type" | "source_id" | "title" | "body" | "destination"> & Partial<Pick<AdminNotification, "read_at" | "pushed_at" | "push_attempts">>>;
