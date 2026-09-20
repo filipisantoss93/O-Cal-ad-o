@@ -26,13 +26,13 @@ jobs:
           )
           for url in "${URLS[@]}"; do
             echo "Consultando endpoint público oficial da RFB; 3 bytes somente."
+            result=0
             code="$(curl --silent --show-error --location --http1.1 --connect-timeout 8 \
               --max-time 25 --retry 2 --retry-delay 2 --retry-all-errors \
               --range 0-2 --output /tmp/rfb-probe.bin \
               --write-out '%{http_code}' \
               -H 'Accept: application/zip' \
-              -A 'O-Calcadao/1.0 (+https://ocalcadao.com.br/contato)' "$url")"
-            result=$?
+              -A 'O-Calcadao/1.0 (+https://ocalcadao.com.br/contato)' "$url")" || result=$?
             echo "curl_exit=$result HTTP=$code response_bytes=$(wc -c < /tmp/rfb-probe.bin 2>/dev/null || echo 0)"
             if [ "$result" -eq 0 ] && [ "$code" = "206" ] && [ "$(wc -c < /tmp/rfb-probe.bin)" -eq 3 ]; then
               echo "OFICIAL_RANGE_ZIP_OK=1"
