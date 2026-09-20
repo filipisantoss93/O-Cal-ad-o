@@ -32,6 +32,7 @@ export function AdminPwaInstall() {
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
+    let active = true;
     const updateStandalone = () => setStandalone(isStandalone());
     const onInstallAvailable = (event: Event) => {
       event.preventDefault();
@@ -42,9 +43,12 @@ export function AdminPwaInstall() {
       setPromptEvent(null);
       setNotice("O aplicativo foi instalado. Abra-o pelo ícone Calçadão Admin.");
     };
-    updateStandalone();
-    setInstructions(installInstructions());
-    setReady(true);
+    queueMicrotask(() => {
+      if (!active) return;
+      updateStandalone();
+      setInstructions(installInstructions());
+      setReady(true);
+    });
     if ("serviceWorker" in navigator && window.isSecureContext) {
       // O worker sem cache de páginas mantém o push administrativo existente.
       void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {
@@ -56,6 +60,7 @@ export function AdminPwaInstall() {
     const media = window.matchMedia("(display-mode: standalone)");
     media.addEventListener("change", updateStandalone);
     return () => {
+      active = false;
       window.removeEventListener("beforeinstallprompt", onInstallAvailable);
       window.removeEventListener("appinstalled", onInstalled);
       media.removeEventListener("change", updateStandalone);
