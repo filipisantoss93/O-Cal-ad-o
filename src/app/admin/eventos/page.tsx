@@ -11,7 +11,7 @@ export default async function AdminEvents({ searchParams }: Params) {
   const params = await searchParams;
   const { supabase } = await requireAdmin("/admin/eventos");
   const { data, error } = await supabase.from("event_highlights")
-    .select("id,event_id,status,starts_at,ends_at")
+    .select("id,event_id,status,starts_at,ends_at,product_code")
     .in("status", ["pending", "active"]).order("created_at", { ascending: true }).limit(100);
   if (error) throw new Error("Não foi possível carregar as solicitações de eventos.");
   const requests = data ?? [];
@@ -54,7 +54,12 @@ export default async function AdminEvents({ searchParams }: Params) {
             <h3 className="mt-2 text-lg font-black text-ink">{event.title}</h3>
             <p className="mt-1 text-xs text-muted">{city ? city.name + " – " + city.state_code : "Cidade indisponível"} · {eventDate(event.starts_at,event.utc_offset)}</p>
             <Link href={"/eventos/" + event.id} className="mt-2 inline-block text-xs font-bold text-brand-dark underline">Ver evento</Link>
-            <form action={activateEventHighlightAction} className="mt-4 grid gap-3 border-t border-line pt-4">
+            {request.product_code
+              ? <p className="mt-4 rounded-xl bg-accent/15 p-3 text-xs font-bold text-ink">
+                  Pagamento online Efí pendente ({request.product_code.replace("event_","")} dias).
+                  O pagamento aprovado ativa o destaque automaticamente. Esta cobrança não pode ser aprovada manualmente.
+                </p>
+              : <form action={activateEventHighlightAction} className="mt-4 grid gap-3 border-t border-line pt-4">
               <input type="hidden" name="highlight_id" value={request.id} />
               <label className="text-xs font-bold text-ink">Referência de pagamento verificado
                 <input className={field} name="payment_reference" required minLength={4} maxLength={160}
@@ -74,11 +79,11 @@ export default async function AdminEvents({ searchParams }: Params) {
                 Conferi no provedor que o pagamento informado foi realmente aprovado.
               </label>
               <button type="submit" className="min-h-11 rounded-xl bg-brand px-4 text-sm font-black text-white">Ativar após confirmação</button>
-            </form>
-            <form action={cancelEventHighlightRequestAction} className="mt-3">
+                </form>}
+            {!request.product_code && <form action={cancelEventHighlightRequestAction} className="mt-3">
               <input type="hidden" name="highlight_id" value={request.id} />
               <button type="submit" className="min-h-10 w-full rounded-xl border border-line text-xs font-bold text-muted">Cancelar solicitação</button>
-            </form>
+            </form>}
           </article>;
         })}
       </div>

@@ -147,6 +147,20 @@ Deno.serve(async (request: Request) => {
         p_payload: event,
       });
       if (error) throw new Error(`PROCESS_EVENT:${eventId}:${error.message}`);
+      // Cobranças de eventos são associadas exclusivamente pelo ID real da Efí.
+      // O processador SQL é transacional/idempotente e não admite ativação pelo usuário.
+      if (chargeId) {
+        const { error: eventHighlightError } = await admin.rpc(
+          "process_efi_event_highlight_payment", {
+            p_charge_id: chargeId,
+            p_status: status,
+            p_custom_id: event.custom_id ?? null,
+          },
+        );
+        if (eventHighlightError) {
+          throw new Error("PROCESS_EVENT_HIGHLIGHT:" + eventId + ":" + eventHighlightError.message);
+        }
+      }
     }
 
     return json({ ok: true });

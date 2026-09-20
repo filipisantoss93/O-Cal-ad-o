@@ -14,11 +14,13 @@ type CheckoutAction =
   | "extra_store"
   | "promotion_pack"
   | "highlight_campaign"
-  | "banner_campaign";
+  | "banner_campaign"
+  | "event_highlight";
 type CheckoutBody = {
   action?: CheckoutAction;
   billing_cycle?: string;
   business_id?: number;
+  event_id?: number;
   product_code?: string;
   starts_on?: string;
   creative_image_path?: string;
@@ -299,6 +301,7 @@ async function logCheckoutError(
         action: body.action ?? null,
         billing_cycle: body.billing_cycle ?? null,
         business_id: body.business_id ?? null,
+        event_id: body.event_id ?? null,
         product_code: body.product_code ?? null,
         starts_on: body.starts_on ?? null,
         creative_image_path: body.creative_image_path ?? null,
@@ -489,6 +492,116 @@ Deno.serve(async (req: Request) => {
         status: "pending",
       });
       if (error) throw error;
+      return json({ ok: true, payment_url: checkout.paymentUrl });
+    }
+
+
+    if (body.action === "event_highlight") {
+      const eventId = Number(body.event_id);
+      const packageCode = String(body.product_code ?? "");
+      if (!Number.isSafeInteger(eventId) || eventId <= 0) {
+        return json({ ok: false, error: "evento_invalido" }, 400);
+      }
+      if (!/^event_(7|15|30)$/.test(packageCode)) {
+        return json({ ok: false, error: "pacote_evento_invalido" }, 400);
+      }
+      const [eventResult, packageResult] = await Promise.all([
+        admin.from("events").select("id,business_id,city_id,is_active,starts_at,ends_at")
+          .eq("id", eventId).maybeSingle(),
+        admin.from("event_highlight_packages")
+          .select("code,duration_days,price_cents")
+          .eq("code", packageCode).eq("is_active", true).maybeSingle(),
+      ]);
+      if (eventResult.error) throw eventResult.error;
+      if (packageResult.error) throw packageResult.error;
+      const event = eventResult.data;
+      const product = packageResult.data;
+      if (!event || !product) {
+        return json({ ok: false, error: !event ? "evento_invalido" : "pacote_evento_invalido" }, 404);
+      }
+      const { data: business, error: businessError } = await admin.from("businesses")
+        .select("id,city_id,owner_id,listing_type,is_active,billing_suspended,publication_status")
+        .eq("id", event.business_id).eq("owner_id", user.id).maybeSingle();
+      if (businessError) throw businessError;
+      if (!business || business.listing_type !== "business"
+        || business.city_id !== event.city_id || !business.is_active
+        || business.billing_suspended || business.publication_status !== "published"
+        || !event.is_active || !event.ends_at || Date.parse(event.ends_at) <= Date.now()) {
+        return json({ ok: false, error: "evento_destaque_indisponivel" }, 403);
+      }
+      const { data: active, error: activeError } = await admin.from("event_highlights")
+        .select("id,ends_at").eq("event_id", eventId).eq("status", "active")
+        .gt("ends_at", new Date().toISOString()).limit(1);
+      if (activeError) throw activeError;
+      if (active?.length) {
+        return json({ ok: false, error: "destaque_evento_ativo" }, 409);
+      }
+      const { data: pending, error: pendingError } = await admin.from("event_highlights")
+        .select("id,product_code,provider_charge_id,provider_payment_url,payment_expires_at")
+        .eq("event_id", eventId).eq("status", "pending").maybeSingle();
+      if (pendingError) throw pendingError;
+      if (pending) {
+        if (pending.provider_payment_url && pending.provider_charge_id
+          && pending.payment_expires_at && Date.parse(pending.payment_expires_at) > Date.now()) {
+          if (pending.product_code !== packageCode) {
+            return json({ ok: false, error: "pedido_evento_em_aberto" }, 409);
+          }
+          return json({ ok: true, payment_url: pending.provider_payment_url });
+        }
+        if (!pending.provider_charge_id && !pending.provider_payment_url) {
+          return json({ ok: false, error: "pedido_evento_em_aberto" }, 409);
+        }
+        if (!pending.payment_expires_at || Date.parse(pending.payment_expires_at) > Date.now()) {
+          return json({ ok: false, error: "pedido_evento_em_aberto" }, 409);
+        }
+        // Após o prazo de pagamento da Efí, liberar uma nova contratação.
+        const { error: expiredError } = await admin.from("event_highlights")
+          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .eq("id", pending.id).eq("status", "pending");
+        if (expiredError) throw expiredError;
+      }
+      const { data: reservation, error: reservationError } = await admin.from("event_highlights")
+        .insert({
+          event_id: event.id,
+          city_id: event.city_id,
+          requester_id: user.id,
+          status: "pending",
+          product_code: product.code,
+          quoted_price_cents: product.price_cents,
+        }).select("id").single();
+      if (reservationError || !reservation) {
+        if (reservationError?.code === "23505") {
+          return json({ ok: false, error: "pedido_evento_em_aberto" }, 409);
+        }
+        throw reservationError ?? new Error("EVENT_RESERVATION_FAILED");
+      }
+      let checkout: Awaited<ReturnType<typeof createOneTimeLink>>;
+      try {
+        checkout = await createOneTimeLink({
+          userId: user.id,
+          productCode: product.code,
+          itemName: "O Calçadão - Evento em destaque por " + product.duration_days + " dias",
+          priceCents: product.price_cents,
+          customId: safeCustomId(["ocalcadao", "event", reservation.id]),
+        });
+      } catch (error) {
+        await admin.from("event_highlights")
+          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .eq("id", reservation.id).eq("status", "pending")
+          .is("provider_charge_id", null);
+        throw error;
+      }
+      const { data: attached, error: attachError } = await admin.from("event_highlights")
+        .update({
+          provider_charge_id: checkout.chargeId,
+          provider_payment_url: checkout.paymentUrl,
+          payment_expires_at: new Date(Date.now() + 4 * 86400000).toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq("id", reservation.id).eq("requester_id", user.id)
+        .eq("status", "pending").select("id").maybeSingle();
+      if (attachError || !attached) {
+        throw attachError ?? new Error("EVENT_PAYMENT_LINK_ATTACH_FAILED");
+      }
       return json({ ok: true, payment_url: checkout.paymentUrl });
     }
 
