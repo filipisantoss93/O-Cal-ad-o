@@ -52,8 +52,9 @@ Deno.serve(async (request) => {
       },
       signal: AbortSignal.timeout(45000)
     });
-  } catch {
-    return fail("Arquivo oficial temporariamente indisponível", 502);
+  } catch (error) {
+    console.error("RFB relay upstream fetch failed",error instanceof Error?error.name:"unknown");
+    return fail("Falha na conexão upstream da Edge Function", 502);
   }
   const contentRange = response.headers.get("content-range") ?? "";
   const match = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(contentRange);
@@ -61,7 +62,8 @@ Deno.serve(async (request) => {
       Number(match[2]) > end || Number(match[3]) <= Number(match[2]) ||
       Number(match[2]) - start >= MAX_RANGE) {
     try { await response.body?.cancel(); } catch {}
-    return fail("Resposta de intervalo da Receita inválida", 502);
+    console.error("RFB upstream invalid range", {status:response.status, contentRange:contentRange.slice(0,90), contentType:response.headers.get("content-type")});
+    return fail("Intervalo inválido: HTTP "+response.status+"; Range="+contentRange.slice(0,70), 502);
   }
   return new Response(response.body, {
     status: 206,
