@@ -85,7 +85,9 @@ for select to anon,authenticated using (
   and nullif(btrim(payment_reference),'') is not null and paid_at is not null
   and starts_at <= now() and ends_at > now()
 );
-grant select on public.event_highlights to anon, authenticated;
+-- A API pública só pode ler os campos necessários à ordenação;
+-- valores, referência de pagamento e identidade do solicitante são privados.
+grant select (id,event_id,status,starts_at,ends_at) on public.event_highlights to anon, authenticated;
 grant insert, update, delete on public.event_highlights to authenticated;
 grant usage, select on sequence public.event_highlights_id_seq to authenticated;
 comment on table public.event_highlights is 'Pedidos de destaque por evento. Apenas confirmação administrativa de pagamento pode ativar prioridade; solicitação não equivale a compra.';
