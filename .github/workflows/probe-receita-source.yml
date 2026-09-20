@@ -1,0 +1,43 @@
+name: Diagnóstico de acesso à fonte oficial RFB
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/probe-receita-source.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Testar resposta HTTP de ZIP oficial sem baixar dados
+        shell: bash
+        run: |
+          set -uo pipefail
+          HOST="https://arquivos.receitafederal.gov.br"
+          URLS=(
+            "$HOST/public.php/dav/files/YggdBLfdninEJX9/2026-08/Municipios.zip"
+            "$HOST/public.php/webdav/2026-08/Municipios.zip"
+            "$HOST/index.php/s/YggdBLfdninEJX9/download?path=%2F2026-08&files=Municipios.zip"
+          )
+          for url in "${URLS[@]}"; do
+            echo "Consultando endpoint público oficial da RFB; 3 bytes somente."
+            code="$(curl --silent --show-error --location --http1.1 --connect-timeout 8 \
+              --max-time 25 --retry 2 --retry-delay 2 --retry-all-errors \
+              --range 0-2 --output /tmp/rfb-probe.bin \
+              --write-out '%{http_code}' \
+              -H 'Accept: application/zip' \
+              -A 'O-Calcadao/1.0 (+https://ocalcadao.com.br/contato)' "$url")"
+            result=$?
+            echo "curl_exit=$result HTTP=$code response_bytes=$(wc -c < /tmp/rfb-probe.bin 2>/dev/null || echo 0)"
+            if [ "$result" -eq 0 ] && [ "$code" = "206" ] && [ "$(wc -c < /tmp/rfb-probe.bin)" -eq 3 ]; then
+              echo "OFICIAL_RANGE_ZIP_OK=1"
+              exit 0
+            fi
+          done
+          echo "::error::Não foi possível obter 3 bytes do ZIP oficial no runner GitHub, sem alterar TLS nem usar mirrors."
+          exit 1
