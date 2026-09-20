@@ -13,6 +13,11 @@ jobs:
       - name: Baixar código
         uses: actions/checkout@v4
 
+      - name: Validar parser da Receita Federal
+        run: |
+          python3 -m py_compile scripts/import-receita-cnpj.py
+          python3 -m unittest discover -s scripts/tests -p 'test_receita_cnpj.py'
+
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
