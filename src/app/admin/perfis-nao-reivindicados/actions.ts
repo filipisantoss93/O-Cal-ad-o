@@ -7,6 +7,42 @@ import { requireAdmin } from "@/lib/admin/dal";
 import { formString, normalizePhone, normalizePostalCode, normalizeSlug, normalizeWebsite, optionalText, positiveInteger, requiredText, ValidationError } from "@/lib/validation";
 import type { DatabaseWithBusinessClaims } from "@/types/business-claims";
 
+// Compara unidades do MESMO negócio no mesmo endereço. Salas/andares diferentes
+// não devem ser tratados como a mesma loja só porque compartilham o prédio.
+function normalizeUnitPart(value: string | null | undefined) {
+  return (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+async function assertNoSameBusinessUnit(
+  client: SupabaseClient<DatabaseWithBusinessClaims>,
+  values: { cityId: number; businessId?: number; name: string; street: string; addressNumber: string; complement: string | null },
+) {
+  const { data, error } = await client.from("businesses")
+    .select("id,name,street,address_number,complement")
+    .eq("city_id", values.cityId)
+    .ilike("name", values.name.replace(/[\\%_]/g, "\\function optionalCoordinate("))
+    .limit(250);
+  if (error) throw new Error("Não foi possível verificar os cadastros no mesmo endereço.");
+  const requestedComplement = normalizeUnitPart(values.complement);
+  for (const existing of data ?? []) {
+    if (existing.id === values.businessId) continue;
+    if (normalizeUnitPart(existing.name) !== normalizeUnitPart(values.name) ||
+        normalizeUnitPart(existing.street) !== normalizeUnitPart(values.street) ||
+        normalizeUnitPart(existing.address_number) !== normalizeUnitPart(values.addressNumber)) continue;
+    const registeredComplement = normalizeUnitPart(existing.complement);
+    // Complemento completo e diferente distingue unidades. Sem complemento
+    // em ambos ou mesmo complemento: corresponde à mesma unidade informada.
+    // Se o cadastro antigo não tem complemento e o novo informa uma sala,
+    // a sala explícita não deve ser bloqueada por um dado ausente no antigo.
+    if (registeredComplement === requestedComplement ||
+        (registeredComplement && !requestedComplement)) {
+      throw new ValidationError("complement",
+        "Já existe um estabelecimento com esse nome, endereço e complemento. Confira a sala/andar antes de salvar.");
+    }
+  }
+}
+
 function optionalCoordinate(formData: FormData, field: "latitude" | "longitude", minimum: number, maximum: number) {
   const rawValue = formString(formData, field);
   if (!rawValue) return null;
@@ -54,9 +90,15 @@ export async function createUnclaimedBusinessAction(formData: FormData) {
     if (categoryError || !category) throw new ValidationError("category_id", "Selecione uma categoria válida.");
     if (cityError || !city) throw new ValidationError("city_id", "Selecione uma cidade válida.");
 
+    await assertNoSameBusinessUnit(client, { cityId, name, street, addressNumber, complement });
+
     const baseSlug = normalizeSlug(name);
-    const { data: existing } = await supabase.from("businesses").select("id").eq("slug", baseSlug).limit(1).maybeSingle();
-    const slug = existing ? normalizeSlug(`${name}-${city.state_code}-${cityId}`) : baseSlug;
+    const { data: existing, error: slugError } = await supabase.from("businesses")
+      .select("id").eq("city_id", cityId).eq("slug", baseSlug).limit(1).maybeSingle();
+    if (slugError) throw new Error("Não foi possível verificar o endereço público da vitrine.");
+    // Duas unidades podem ter mesmo nome/cidade, mas precisam de URLs diferentes.
+    const suffix = crypto.randomUUID().slice(0, 12);
+    const slug = existing ? `${baseSlug.slice(0, 80).replace(/-+$/, "")}-${suffix}` : baseSlug;
     const publishNow = formData.get("publication_status") !== null;
     const description = `${category.name} localizado em ${city.name}/${city.state_code}. Perfil informativo ainda não reivindicado pelo responsável.`;
 
@@ -70,7 +112,7 @@ export async function createUnclaimedBusinessAction(formData: FormData) {
       data_source_url: dataSourceUrl, data_source_checked_at: new Date().toISOString(),
     });
     if (error) {
-      if (error.code === "23505") throw new Error("Já existe um estabelecimento com esse nome/endereço público.");
+      if (error.code === "23505") throw new Error("Conflito na URL pública da vitrine. Tente salvar novamente.");
       throw new Error("Não foi possível salvar o estabelecimento.");
     }
     revalidatePath("/"); revalidatePath("/buscar"); revalidatePath("/admin/perfis-nao-reivindicados");
@@ -120,18 +162,7 @@ export async function updateUnclaimedBusinessAction(formData: FormData) {
     if (categoryError || !category) throw new ValidationError("category_id", "Selecione uma categoria válida.");
     if (cityError || !city) throw new ValidationError("city_id", "Selecione uma cidade válida.");
 
-    const { data: duplicate, error: duplicateError } = await client
-      .from("businesses")
-      .select("id")
-      .eq("city_id", cityId)
-      .eq("name", name)
-      .eq("street", street)
-      .eq("address_number", addressNumber)
-      .neq("id", businessId)
-      .limit(1)
-      .maybeSingle();
-    if (duplicateError) throw new Error("Não foi possível validar possíveis duplicidades.");
-    if (duplicate) throw new ValidationError("name", "Já existe outro estabelecimento com esse nome e endereço.");
+    await assertNoSameBusinessUnit(client, { cityId, businessId, name, street, addressNumber, complement });
 
     const publishNow = formData.get("publication_status") !== null;
     const description = `${category.name} localizado em ${city.name}/${city.state_code}. Perfil informativo ainda não reivindicado pelo responsável.`;
