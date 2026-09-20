@@ -1,8 +1,10 @@
 "use server";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/dal";
+import type { DatabaseWithAdminOwnerLink } from "@/types/admin-owner-link";
 import {
   formString,
   normalizePhone,
@@ -152,4 +154,49 @@ export async function saveAdminBusinessAction(formData: FormData) {
   revalidatePath("/painel/loja");
   if (slug) revalidatePath("/loja/" + slug);
   redirect(basePath + "?tipo=empresa&id=" + id + "&salvo=1");
+}
+
+
+/** Somente perfis pré-cadastrados e sem proprietário. Limite validado no banco na mesma transação do vínculo. */
+export async function linkAdminUnclaimedBusinessAction(formData: FormData) {
+  const { supabase } = await requireAdmin(basePath);
+  const rawBusinessId = formString(formData, "business_id");
+  const businessId = Number(rawBusinessId);
+  const userId = formString(formData, "user_id");
+  if (!Number.isSafeInteger(businessId) || businessId <= 0 || !uuidPattern.test(userId)) {
+    redirect(basePath + "?erro=" + encodeURIComponent("Selecione uma empresa e um usuário válidos."));
+  }
+
+  try {
+    const client = supabase as unknown as SupabaseClient<DatabaseWithAdminOwnerLink>;
+    const { error } = await client.rpc("admin_link_unclaimed_business", {
+      p_business_id: businessId,
+      p_user_id: userId,
+    });
+    if (error) {
+      // Não exibir mensagens inesperadas do banco; erros conhecidos são explícitos.
+      if (error.message.includes("Limite de lojas atingido")) {
+        throw new ValidationError("user_id", "Limite de lojas atingido para esta conta. O vínculo não foi realizado.");
+      }
+      if (error.message.includes("já possui responsável") || error.message.includes("não está disponível") ||
+          error.message.includes("vinculada por outra operação")) {
+        throw new ValidationError("business_id", "A empresa não está mais disponível para vínculo. Atualize a página.");
+      }
+      if (error.message.includes("Usuário não encontrado")) {
+        throw new ValidationError("user_id", "Usuário não encontrado ou não autorizado a possuir empresas.");
+      }
+      throw new Error("Não foi possível realizar o vínculo. Verifique os cadastros e tente novamente.");
+    }
+  } catch (error) {
+    redirect(failurePath("empresa", rawBusinessId, error));
+  }
+
+  revalidatePath(basePath);
+  revalidatePath("/admin/perfis-nao-reivindicados");
+  revalidatePath("/admin/reivindicacoes");
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/painel");
+  revalidatePath("/painel/loja");
+  revalidatePath("/buscar");
+  redirect(basePath + "?tipo=empresa&id=" + businessId + "&vinculado=1");
 }
