@@ -63,7 +63,7 @@ export async function saveEventAction(formData: FormData) {
     const rawPrice = formString(formData, "ticket_price").replace(",", ".");
     const ticketPriceCents = freeEntry ? null : Math.round(Number(rawPrice) * 100);
     if (!freeEntry && (!/^\d+(?:[.,]\d{1,2})?$/.test(formString(formData, "ticket_price")) ||
-      !Number.isSafeInteger(ticketPriceCents) || ticketPriceCents <= 0 || ticketPriceCents > 100000000))
+      ticketPriceCents === null || !Number.isSafeInteger(ticketPriceCents) || ticketPriceCents <= 0 || ticketPriceCents > 100000000))
       throw new Error("Informe o valor válido do ingresso.");
     const ticketUrl = formString(formData, "ticket_url") || null;
     if (ticketUrl && (ticketUrl.length > 500 || !/^https:\/\/[^\s]+$/i.test(ticketUrl)))
