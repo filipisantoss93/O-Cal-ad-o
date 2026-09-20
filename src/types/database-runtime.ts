@@ -33,6 +33,21 @@ type EventRow = {
 };
 type EventInsert = Omit<EventRow, "id" | "created_at" | "updated_at">;
 
+type SeoReviewRow = {
+  id: number;
+  business_id: number;
+  related_business_id: number | null;
+  issue_code: string;
+  priority: number;
+  status: string;
+  evidence: Record<string, unknown>;
+  review_note: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 type PushSubscriptionRow = {
   endpoint: string; user_id: string; p256dh: string; auth: string; created_at: string;
 };
@@ -48,6 +63,8 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
     };
     Tables: Omit<GeneratedPublicSchema["Tables"], "businesses"> & {
       events: AdministrativeTable<EventRow, EventInsert>;
+      business_seo_review_queue: AdministrativeTable<SeoReviewRow,
+        Pick<SeoReviewRow, "status" | "review_note" | "reviewed_at" | "reviewed_by" | "updated_at">>;
       support_messages: AdministrativeTable<SupportMessage, Pick<SupportMessage, "name" | "email" | "subject" | "message"> & Partial<Pick<SupportMessage, "status" | "sender_id">>>;
       business_reports: AdministrativeTable<BusinessReport, Pick<BusinessReport, "business_id" | "name" | "email" | "reason" | "details"> & Partial<Pick<BusinessReport, "status" | "sender_id">>>;
       admin_notifications: AdministrativeTable<AdminNotification, Pick<AdminNotification, "recipient_id" | "event_type" | "source_id" | "title" | "body" | "destination"> & Partial<Pick<AdminNotification, "read_at" | "pushed_at" | "push_attempts">>>;
