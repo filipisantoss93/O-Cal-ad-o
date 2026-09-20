@@ -70,7 +70,7 @@ export default async function SeoQualityAdmin({ searchParams }: { searchParams: 
     row.related_business_id ? [row.business_id, row.related_business_id] : [row.business_id]))];
   const businessResult = allIds.length
     ? await supabase.from("businesses")
-      .select("id,name,slug,listing_type,pre_registered,owner_id,street,address_number,neighborhood,description,official_source_url,data_source_url,cities(name,state_code),categories(name)")
+      .select("id,name,slug,listing_type,pre_registered,owner_id,street,address_number,complement,neighborhood,description,official_source_url,data_source_url,cities(name,state_code),categories(name)")
       .in("id", allIds)
     : { data: [], error: null };
   if (businessResult.error) throw new Error("Não foi possível carregar as informações das vitrines em análise.");
@@ -150,10 +150,11 @@ export default async function SeoQualityAdmin({ searchParams }: { searchParams: 
           <p className="mt-1 text-sm font-bold text-brand-dark">{issueLabels[entry.issue_code] ?? entry.issue_code}</p>
           <p className="mt-2 text-xs leading-5 text-muted">
             {category?.name ? category.name + " · " : ""}{city?.name ? city.name + "/" + city.state_code : "Cidade indisponível"}<br />
-            {business ? [business.street,business.address_number,business.neighborhood].filter(Boolean).join(", ") : "Cadastro indisponível"}
+            {business ? [business.street,business.address_number,business.complement,business.neighborhood].filter(Boolean).join(", ") : "Cadastro indisponível"}
           </p>
           {related && <p className="mt-2 rounded-xl bg-canvas p-3 text-xs leading-5 text-ink">
-            Comparar com: <strong>{related.name}</strong> (#{related.id}) · {related.street}, {related.address_number}.
+            Complementos diferentes podem indicar unidades distintas no mesmo prédio. Compare também as fontes e os dados comerciais.<br />
+            Comparar com: <strong>{related.name}</strong> (#{related.id}) · {related.street}, {related.address_number}{related.complement ? " · " + related.complement : " (sem complemento informado)"}.
             <Link className="ml-1 font-black text-brand-dark underline" href={"/loja/" + encodeURIComponent(related.slug)} target="_blank" rel="noreferrer">Abrir outra vitrine</Link>
           </p>}
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs font-bold text-brand-dark">
