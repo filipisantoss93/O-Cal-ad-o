@@ -20,6 +20,7 @@ export function SiteFooter() {
                 Descobrir comércios pelo Brasil
               </Link>
             </li>
+            <li><Link className="hover:text-ink" href="/eventos">Eventos da cidade</Link></li>
             <li>
               <Link className="hover:text-ink" href="/#categorias">
                 Categorias
