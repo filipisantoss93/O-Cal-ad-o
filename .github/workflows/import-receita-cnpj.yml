@@ -1,0 +1,86 @@
+name: Piloto de importação CNPJ - Receita Federal
+
+on:
+  workflow_dispatch:
+    inputs:
+      snapshot:
+        description: "Competência publicada oficialmente, AAAA-MM (ex.: 2026-08)"
+        required: true
+        type: string
+      establishment_index:
+        description: "Arquivo Estabelecimentos0..9 (um por execução)"
+        required: true
+        default: "0"
+        type: choice
+        options: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+      max_candidates:
+        description: "Máximo de estabelecimentos elegíveis ANTES do filtro de natureza jurídica; até 200"
+        required: true
+        default: "60"
+        type: choice
+        options: ["20", "60", "100", "200"]
+      city:
+        description: "Município do piloto"
+        required: true
+        default: "Assis"
+        type: string
+      uf:
+        description: "UF do piloto"
+        required: true
+        default: "SP"
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: rfb-cnpj-pilot
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validar parâmetros da fonte oficial
+        shell: bash
+        env:
+          SNAPSHOT: ${{ inputs.snapshot }}
+          UF: ${{ inputs.uf }}
+          CITY: ${{ inputs.city }}
+        run: |
+          set -euo pipefail
+          [[ "$SNAPSHOT" =~ ^20[0-9]{2}-(0[1-9]|1[0-2])$ ]] || exit 1
+          [[ "$UF" =~ ^[A-Z]{2}$ ]] || exit 1
+          test -n "$CITY"
+          python3 -m py_compile scripts/import-receita-cnpj.py
+          python3 -m unittest discover -s scripts/tests -p 'test_receita_cnpj.py'
+
+      - name: Gerar token OIDC exclusivo desta Action
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESPONSE="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=ocalcadao-rfb-cnpj-import")"
+          TOKEN="$(printf '%s' "$RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')"
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Importar pré-cadastros privados em lote limitado
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+          OCALCADAO_IMPORT_URL: "https://mieekhdagjlzdbeklrxp.supabase.co/functions/v1/import-receita-cnpj"
+          SNAPSHOT: ${{ inputs.snapshot }}
+          ESTABLISHMENT_INDEX: ${{ inputs.establishment_index }}
+          MAX_CANDIDATES: ${{ inputs.max_candidates }}
+          CITY: ${{ inputs.city }}
+          UF: ${{ inputs.uf }}
+        run: |
+          python3 scripts/import-receita-cnpj.py \
+            --snapshot "$SNAPSHOT" --index "$ESTABLISHMENT_INDEX" \
+            --max-candidates "$MAX_CANDIDATES" --city "$CITY" --uf "$UF"
