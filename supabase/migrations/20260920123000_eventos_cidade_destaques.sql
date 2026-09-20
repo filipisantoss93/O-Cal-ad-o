@@ -87,7 +87,7 @@ for select to anon,authenticated using (
 );
 -- A API pública só pode ler os campos necessários à ordenação;
 -- valores, referência de pagamento e identidade do solicitante são privados.
-grant select (id,event_id,status,starts_at,ends_at) on public.event_highlights to anon, authenticated;
+grant select (id,event_id,status,starts_at,ends_at,created_at) on public.event_highlights to anon, authenticated;
 grant insert, update, delete on public.event_highlights to authenticated;
 grant usage, select on sequence public.event_highlights_id_seq to authenticated;
 comment on table public.event_highlights is 'Pedidos de destaque por evento. Apenas confirmação administrativa de pagamento pode ativar prioridade; solicitação não equivale a compra.';
