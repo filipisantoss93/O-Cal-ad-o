@@ -39,10 +39,11 @@ export default async function AdminDashboard({ searchParams }: {
   const { periodo } = await searchParams;
   const days: 7 | 30 | 90 = periodo === "7" ? 7 : periodo === "90" ? 90 : 30;
   const { supabase } = await requireAdmin("/admin/dashboard");
-  const { metrics: m, stores, campaigns } = await getAdminDashboard(supabase, days);
+  const { metrics: m, stores, campaigns, warnings } = await getAdminDashboard(supabase, days);
   const peak = Math.max(1, ...m.monthly.flatMap((point) => [point.accounts, point.stores]));
 
   return <div className="space-y-8">
+    {(warnings.stores || warnings.campaigns) && <p role="status" className="rounded-xl border border-line bg-surface p-3 text-sm font-semibold text-muted">Algumas listas recentes estão indisponíveis. Os indicadores continuam atualizados.</p>}
     <header className="rounded-[2rem] bg-ink p-6 text-white sm:p-9">
       <p className="text-xs font-black uppercase tracking-[0.16em] text-accent">Administração · Visão geral</p>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
@@ -124,7 +125,7 @@ export default async function AdminDashboard({ searchParams }: {
     <div className="grid gap-6 lg:grid-cols-2">
       <section aria-labelledby="ultimas-lojas" className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7">
         <div className="flex items-center justify-between gap-3"><h2 id="ultimas-lojas" className="text-xl font-black text-ink">Últimas lojas</h2><Link href="/admin" className="text-sm font-black text-brand-dark hover:underline">Ver moderação</Link></div>
-        {stores.length ? <ul className="mt-5 divide-y divide-line">{stores.map((store) => {
+        {warnings.stores ? <p className="mt-5 text-sm text-muted">Não foi possível carregar a lista de lojas recentes.</p> : stores.length ? <ul className="mt-5 divide-y divide-line">{stores.map((store) => {
           const city = Array.isArray(store.cities) ? store.cities[0] : store.cities;
           return <li key={store.id} className="flex items-center justify-between gap-3 py-3 first:pt-0">
             <div className="min-w-0"><Link href={`/loja/${store.slug}?preview=admin`} className="font-black text-ink hover:underline">{store.name}</Link><p className="mt-1 text-xs text-muted">{city?.name}/{city?.state_code} · {date(store.created_at)}</p></div>
@@ -134,7 +135,7 @@ export default async function AdminDashboard({ searchParams }: {
       </section>
       <section aria-labelledby="ultimas-campanhas" className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7">
         <div className="flex items-center justify-between gap-3"><h2 id="ultimas-campanhas" className="text-xl font-black text-ink">Últimas campanhas</h2><Link href="/admin/destaques" className="text-sm font-black text-brand-dark hover:underline">Gerir publicidade</Link></div>
-        {campaigns.length ? <ul className="mt-5 divide-y divide-line">{campaigns.map((campaign) => {
+        {warnings.campaigns ? <p className="mt-5 text-sm text-muted">Não foi possível carregar a lista de campanhas recentes.</p> : campaigns.length ? <ul className="mt-5 divide-y divide-line">{campaigns.map((campaign) => {
           const store = Array.isArray(campaign.businesses) ? campaign.businesses[0] : campaign.businesses;
           return <li key={campaign.id} className="flex items-center justify-between gap-3 py-3 first:pt-0">
             <div className="min-w-0"><p className="font-black text-ink">{store?.name ?? `Campanha #${campaign.id}`}</p><p className="mt-1 text-xs text-muted">{campaign.placement === "banner" ? "Banner" : "Destaque"} · {date(campaign.created_at)} · {campaign.provider === "manual" ? "Cortesia" : money(campaign.charged_price_cents)}</p></div>
