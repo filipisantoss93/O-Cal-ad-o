@@ -1,32 +1,45 @@
-/* Admin-only push display. No page caching: authenticated pages must stay fresh. */
+/* Somente push administrativo. Sem fetch/cache: páginas autenticadas nunca ficam armazenadas offline. */
+function adminDestination(value) {
+  const url = new URL(typeof value === "string" ? value : "/admin/notificacoes", self.location.origin);
+  if (url.origin !== self.location.origin || !/^\/admin(?:\/|$)/.test(url.pathname)) {
+    return new URL("/admin/notificacoes", self.location.origin);
+  }
+  return url;
+}
+
 self.addEventListener("push", (event) => {
   if (!event.data) return;
   let payload;
   try { payload = event.data.json(); } catch { return; }
-  const title = typeof payload.title === "string" ? payload.title : "O Calçadão";
+  const title = typeof payload.title === "string" ? payload.title : "O Calçadão Admin";
   const body = typeof payload.body === "string" ? payload.body : "Há uma nova notificação.";
-  const url = typeof payload.url === "string" && payload.url.startsWith("/admin")
-    ? payload.url : "/admin/notificacoes";
+  const url = adminDestination(payload.url);
   event.waitUntil(self.registration.showNotification(title, {
     body,
-    icon: "/pwa-192.png",
+    icon: "/admin/app-icon?size=192",
     badge: "/notification-badge-96.png",
     tag: typeof payload.tag === "string" ? payload.tag : undefined,
-    data: { url },
+    data: { url: url.pathname + url.search + url.hash },
   }));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = new URL(event.notification.data?.url || "/admin/notificacoes", self.location.origin);
-  if (url.origin !== self.location.origin || !url.pathname.startsWith("/admin")) return;
+  const url = adminDestination(event.notification.data?.url);
   event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (windows) => {
-    const open = windows.find((client) => client.url.startsWith(self.location.origin) && "focus" in client);
-    if (open) {
-      await open.focus();
-      if ("navigate" in open) await open.navigate(url.href);
-      else await self.clients.openWindow(url.href);
+    // Não redireciona a janela do catálogo público ao abrir uma notificação do admin.
+    const adminWindow = windows.find((client) => {
+      try {
+        const current = new URL(client.url);
+        return current.origin === self.location.origin &&
+          /^\/admin(?:\/|$)/.test(current.pathname) && "focus" in client;
+      } catch { return false; }
+    });
+    if (adminWindow) {
+      if ("navigate" in adminWindow) await adminWindow.navigate(url.href);
+      await adminWindow.focus();
+      return;
     }
-    else await self.clients.openWindow(url.href);
+    await self.clients.openWindow(url.href);
   }));
 });
