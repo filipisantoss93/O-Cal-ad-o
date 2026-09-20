@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { logoutAction } from "@/app/(auth)/actions";
 import {
@@ -13,6 +14,22 @@ import { AdminNotificationBadge } from "@/components/admin-notification-badge";
 import { Logo } from "@/components/logo";
 import { requireAdmin } from "@/lib/admin/dal";
 
+export const metadata: Metadata = {
+  manifest: "/admin/manifest.webmanifest",
+  applicationName: "O Calçadão Admin",
+  appleWebApp: { capable: true, title: "Calçadão Admin", statusBarStyle: "black-translucent" },
+  icons: {
+    icon: [{ url: "/admin/app-icon?size=192", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/admin/app-icon?size=180", sizes: "180x180", type: "image/png" }],
+  },
+  robots: { index: false, follow: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width", initialScale: 1, maximumScale: 1, userScalable: false,
+  themeColor: "#071017", colorScheme: "light",
+};
+
 const adminLinks = [
   { href: "/admin/dashboard", label: "Dashboard", icon: HomeIcon },
   { href: "/admin", label: "Moderação", icon: ShieldCheckIcon },
@@ -23,6 +40,7 @@ const adminLinks = [
   { href: "/admin/locais-publicos", label: "Locais públicos", icon: MapPinIcon },
   { href: "/admin/destaques", label: "Publicidade", icon: StarIcon },
   { href: "/admin/eventos", label: "Destaques de eventos", icon: StarIcon },
+  { href: "/admin/instalar", label: "Instalar app", icon: HomeIcon },
 ];
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
