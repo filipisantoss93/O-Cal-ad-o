@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LocateIcon, XIcon } from "@/components/icons";
 import {
   detectCurrentCity,
@@ -47,6 +47,8 @@ const manualInstallSteps: Record<Platform, string> = {
 
 export function PwaExperience() {
   const router = useRouter();
+  const pathname = usePathname();
+  const isAdmin = pathname === "/admin" || pathname?.startsWith("/admin/");
   const [installed, setInstalled] = useState(true);
   const [initialized, setInitialized] = useState(false);
   const [platform, setPlatform] = useState<Platform>("other");
@@ -58,6 +60,7 @@ export function PwaExperience() {
   const installSuppressedRef = useRef(false);
 
   useEffect(() => {
+    if (isAdmin) return;
     if ("serviceWorker" in navigator && window.isSecureContext) {
       // O worker existente não armazena páginas; o cadastro global habilita
       // a instalação também para quem nunca acessou o painel.
@@ -94,10 +97,10 @@ export function PwaExperience() {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("appinstalled", onInstalled);
     };
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
-    if (!initialized || installed || installSuppressedRef.current) return;
+    if (isAdmin || !initialized || installed || installSuppressedRef.current) return;
     let dismissedUntil = 0;
     let dismissedThisSession = false;
     try {
@@ -113,10 +116,10 @@ export function PwaExperience() {
     }
     const timer = window.setTimeout(() => setShowInstall(true), 2500);
     return () => window.clearTimeout(timer);
-  }, [initialized, installed]);
+  }, [initialized, installed, isAdmin]);
 
   useEffect(() => {
-    if (!initialized || !installed) return;
+    if (isAdmin || !initialized || !installed) return;
     let cancelled = false;
     let status: PermissionStatus | undefined;
     const locationNoticeWasHandled = () => {
@@ -194,7 +197,7 @@ export function PwaExperience() {
         handlePermissionDenied,
       );
     };
-  }, [initialized, installed]);
+  }, [initialized, installed, isAdmin]);
 
   const dismissInstall = () => {
     installSuppressedRef.current = true;
@@ -247,7 +250,7 @@ export function PwaExperience() {
     }
   };
 
-  if (!showInstall && !showLocation) return null;
+  if (isAdmin || (!showInstall && !showLocation)) return null;
 
   return (
     <aside
