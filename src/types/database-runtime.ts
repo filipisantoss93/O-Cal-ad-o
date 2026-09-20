@@ -77,6 +77,7 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
           official_source_url: string | null;
           pre_registered: boolean;
           google_place_id: string | null;
+          data_source_url: string | null;
         };
         Insert: GeneratedBusinessTable["Insert"] & {
           publication_status?: string;
@@ -85,6 +86,7 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
           official_source_url?: string | null;
           pre_registered?: boolean;
           google_place_id?: string | null;
+          data_source_url?: string | null;
         };
         Update: GeneratedBusinessTable["Update"] & {
           publication_status?: string;
@@ -93,6 +95,7 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
           official_source_url?: string | null;
           pre_registered?: boolean;
           google_place_id?: string | null;
+          data_source_url?: string | null;
         };
         Relationships: GeneratedBusinessTable["Relationships"];
       };
