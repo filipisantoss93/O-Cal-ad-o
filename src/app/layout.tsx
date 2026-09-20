@@ -7,6 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://ocalcadao.com.br"),
+  manifest: "/manifest.webmanifest",
   title: {
     default: "O Calçadão | Seu Centro Comercial",
     template: "%s | O Calçadão",
