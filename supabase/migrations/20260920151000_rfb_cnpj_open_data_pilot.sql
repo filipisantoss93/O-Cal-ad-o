@@ -64,7 +64,7 @@ begin
   select id into src_id from public.business_data_sources
   where code='rfb_cnpj_open_data' and is_active and allows_import;
   if src_id is null then raise exception 'Fonte RFB não configurada'; end if;
-  v_source_url := 'https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/'||p_snapshot||'/';
+  v_source_url := 'https://arquivos.receitafederal.gov.br/public.php/dav/files/YggdBLfdninEJX9/'||p_snapshot||'/';
   for rec in select value from jsonb_array_elements(p_rows)
   loop
     v_total:=v_total+1;
@@ -170,7 +170,7 @@ begin
       v_duplicate:=v_duplicate+1;continue;
     end if;
 
-    v_slug:='rfb-cnpj-'||v_cnpj;
+    v_slug:='rfb-'||md5(v_cnpj);
     insert into public.businesses (
       owner_id,pre_registered,city_id,category_id,listing_type,public_place_kind,
       slug,name,street,address_number,complement,neighborhood,postal_code,
