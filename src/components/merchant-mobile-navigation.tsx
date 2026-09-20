@@ -119,6 +119,7 @@ export function MerchantMobileNavigation({
                 <TagIcon className="size-4 text-brand-dark" />
                 Produtos e serviços
               </Link>
+              <Link href="/painel/eventos" onClick={closeMenu} className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink transition hover:bg-canvas"><StarIcon className="size-4 text-brand-dark" /> Meus eventos</Link>
               <Link
                 href="/painel/planos-e-recursos"
                 onClick={closeMenu}

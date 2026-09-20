@@ -88,6 +88,7 @@ export default function Home() {
           </div>
         </section>
 
+        <section className="border-b border-line bg-canvas px-4 py-4 sm:px-6"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-black text-ink">O que acontece na sua cidade?</h2><p className="text-xs text-muted">Shows, feiras, festivais e encontros locais.</p></div><Link href="/eventos" className="rounded-xl bg-ink px-4 py-3 text-sm font-black text-white">Explorar eventos →</Link></div></section>
         <RegionalPaidBanners />
         <FeaturedBusinesses />
         <CityPromotions />

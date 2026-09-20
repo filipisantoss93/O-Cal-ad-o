@@ -31,6 +31,7 @@ const desktopNavigation = [
   { href: "/painel/loja", label: "Minhas lojas", icon: StoreIcon },
   { href: "/painel/catalogo", label: "Produtos e serviços", icon: TagIcon },
   { href: "/painel/promocoes", label: "Promoções", icon: TagIcon },
+  { href: "/painel/eventos", label: "Meus eventos", icon: StarIcon },
   { href: "/painel/destaques", label: "Publicidade", icon: StarIcon },
   { href: "/painel/planos-e-recursos", label: "Planos e recursos", icon: SparklesIcon },
   { href: "/painel/perfil", label: "Minha conta", icon: UserIcon },

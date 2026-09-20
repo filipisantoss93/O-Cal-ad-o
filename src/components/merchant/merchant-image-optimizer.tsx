@@ -13,6 +13,7 @@ const OPTIMIZED_FIELDS = new Set(["image", "logo", "cover"]);
 const OPTIMIZED_PATHS = new Set([
   "/painel/catalogo",
   "/painel/promocoes",
+  "/painel/eventos",
   "/painel/loja",
 ]);
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024;

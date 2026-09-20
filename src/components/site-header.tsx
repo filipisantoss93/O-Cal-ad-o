@@ -28,6 +28,7 @@ export function SiteHeader() {
           >
             Ofertas
           </Link>
+          <Link className="transition-colors hover:text-ink" href="/eventos">Eventos</Link>
           <Link className="transition-colors hover:text-ink" href="/planos">
             Planos
           </Link>
