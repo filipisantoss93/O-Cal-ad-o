@@ -34,7 +34,7 @@ begin
      raise exception 'Pedido de destaque de evento inválido para cobrança %',p_charge_id;
    end if;
    select * into v_business from public.businesses where id=v_event.business_id;
-   if v_business.id is null or v_business.city_id<>v_event.city_id or v_business.owner_id<>v_request.requester_id
+   if v_business.id is null or v_business.city_id<>v_event.city_id or v_business.owner_id is distinct from v_request.requester_id
       or v_business.listing_type<>'business' or not v_business.is_active
       or v_business.billing_suspended or v_business.publication_status<>'published'
       or not v_event.is_active or coalesce(v_event.ends_at,v_event.starts_at)<=v_now then
@@ -54,9 +54,15 @@ begin
      starts_at=v_now, ends_at=v_ends, updated_at=v_now
    where id=v_request.id and status='pending';
    return found;
- elsif lower(coalesce(p_status,'')) in ('refunded','contested','canceled','cancelled','unpaid') then
+ elsif lower(coalesce(p_status,'')) in ('refunded','contested','canceled','cancelled') then
    update public.event_highlights set status='cancelled',updated_at=v_now
     where id=v_request.id and status in ('active','pending');
+   return found;
+ elsif lower(coalesce(p_status,'')) = 'unpaid' then
+   -- Um link criado pode emitir "unpaid" antes de o cliente realizar o pagamento.
+   -- Não cancelar a reserva pendente, só retirar destaque que já estava ativo.
+   update public.event_highlights set status='cancelled',updated_at=v_now
+    where id=v_request.id and status='active';
    return found;
  end if;
  return false;
