@@ -197,7 +197,7 @@ export function PwaExperience() {
         handlePermissionDenied,
       );
     };
-  }, [initialized, installed]);
+  }, [initialized, installed, isAdmin]);
 
   const dismissInstall = () => {
     installSuppressedRef.current = true;
