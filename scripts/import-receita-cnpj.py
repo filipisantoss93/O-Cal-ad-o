@@ -20,7 +20,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-BASE = "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj"
+BASE = "https://arquivos.receitafederal.gov.br/public.php/dav/files/YggdBLfdninEJX9"
 CATEGORY_PREFIXES = (
     "4711", "4712", "4721", "4722", "4723", "4724", "4729",
     "4520", "4530", "4541", "4771", "4772", "4781", "4782", "4783",
@@ -68,6 +68,8 @@ def download(base, name, directory):
         "arquivos.receitafederal.gov.br", "dadosabertos.rfb.gov.br"
     } or parsed.username or parsed.password or parsed.query or parsed.fragment:
         raise ValueError("Fonte não é um dos servidores oficiais HTTPS da RFB.")
+    if parsed.hostname == "arquivos.receitafederal.gov.br" and not parsed.path.startswith("/public.php/dav/files/"):
+        raise ValueError("Fonte RFB deve usar o caminho público de arquivos verificado.")
     if not re.fullmatch(r"(Empresas[0-9]|Estabelecimentos[0-9]|Municipios)\.zip", name):
         raise ValueError("Nome de arquivo RFB inválido.")
     output = Path(directory) / name
@@ -80,6 +82,8 @@ def download(base, name, directory):
     for attempt in range(4):
         try:
             with urllib.request.urlopen(request, timeout=150) as response, output.open("wb") as target:
+                if response.status != 200 or response.headers.get("Content-Type", "").split(";")[0] not in {"application/zip", "application/octet-stream", "application/x-zip-compressed"}:
+                    raise ValueError("Servidor não forneceu arquivo ZIP oficial.")
                 if urllib.parse.urlparse(response.url).hostname not in {
                     "arquivos.receitafederal.gov.br", "dadosabertos.rfb.gov.br"
                 }:
@@ -214,6 +218,8 @@ def main():
     if not 0 <= args.index <= 9 or not 1 <= args.max_candidates <= 200:
         parser.error("Índice deve ser 0..9 e max-candidates 1..200")
     base = args.base_url or f"{BASE}/{args.snapshot}"
+    # O diretório antigo /dados/cnpj/dados_abertos_cnpj/ retorna HTTP 404;
+    # usar o compartilhamento público oficial de arquivos, validado via resposta 206 ZIP.
     endpoint = os.environ.get("OCALCADAO_IMPORT_URL")
     token = os.environ.get("GITHUB_OIDC_TOKEN")
     if not args.dry_run and (not endpoint or not token):
