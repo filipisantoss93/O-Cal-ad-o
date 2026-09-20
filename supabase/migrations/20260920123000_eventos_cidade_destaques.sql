@@ -61,10 +61,13 @@ create index if not exists event_highlights_requester_idx on public.event_highli
 create unique index if not exists event_highlights_one_pending_per_event on public.event_highlights(event_id)
 where status = 'pending';
 alter table public.event_highlights enable row level security;
+drop policy if exists event_highlights_admin_manage on public.event_highlights;
 create policy event_highlights_admin_manage on public.event_highlights
 for all to authenticated using ((select private.is_admin())) with check ((select private.is_admin()));
+drop policy if exists event_highlights_own_read on public.event_highlights;
 create policy event_highlights_own_read on public.event_highlights
 for select to authenticated using (requester_id = (select auth.uid()));
+drop policy if exists event_highlights_owner_request on public.event_highlights;
 create policy event_highlights_owner_request on public.event_highlights
 for insert to authenticated with check (
   requester_id = (select auth.uid()) and status = 'pending'
@@ -79,6 +82,7 @@ for insert to authenticated with check (
       and coalesce(e.ends_at,e.starts_at) > now()
   )
 );
+drop policy if exists event_highlights_public_paid_read on public.event_highlights;
 create policy event_highlights_public_paid_read on public.event_highlights
 for select to anon,authenticated using (
   status = 'active' and amount_paid_cents > 0
