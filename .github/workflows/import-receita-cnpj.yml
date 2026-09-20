@@ -82,10 +82,11 @@ jobs:
           SNAPSHOT: ${{ inputs.snapshot || '2026-08' }}
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --retry 2 --max-time 60 \
+          code=$(curl --silent --show-error --retry 1 --max-time 60 \
             -H "Authorization: Bearer $GITHUB_OIDC_TOKEN" \
             "https://mieekhdagjlzdbeklrxp.supabase.co/functions/v1/relay-receita-cnpj?snapshot=$SNAPSHOT&file=Municipios.zip&start=0&end=2" \
-            --output /tmp/rfb-zip-header
+            --output /tmp/rfb-zip-header --write-out '%{http_code}')
+          if [ "$code" != 206 ]; then echo "Relay retornou HTTP $code: $(head -c 250 /tmp/rfb-zip-header)"; exit 1; fi
           python3 -c "from pathlib import Path; assert Path('/tmp/rfb-zip-header').read_bytes() == b'PK\\x03'"
           echo "RFB_RELAY_PILOT_OK=1"
 
