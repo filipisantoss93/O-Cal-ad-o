@@ -41,7 +41,7 @@ type EventHighlightRow = {
   created_at: string; updated_at: string;
 };
 type EventHighlightInsert = Pick<EventHighlightRow, "event_id" | "requester_id"> &
-  Partial<Pick<EventHighlightRow, "status" | "amount_paid_cents" | "payment_reference" | "paid_at" | "starts_at" | "ends_at">>;
+  Partial<Pick<EventHighlightRow, "status" | "amount_paid_cents" | "payment_reference" | "paid_at" | "starts_at" | "ends_at" | "updated_at">>;;
 
 type PushSubscriptionRow = {
   endpoint: string; user_id: string; p256dh: string; auth: string; created_at: string;
