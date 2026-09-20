@@ -33,19 +33,22 @@ type EventRow = {
 };
 type EventInsert = Omit<EventRow, "id" | "created_at" | "updated_at">;
 
+type EventHighlightRow = {
+  id: number; event_id: number; requester_id: string;
+  status: "pending" | "active" | "cancelled" | "expired";
+  amount_paid_cents: number | null; payment_reference: string | null;
+  paid_at: string | null; starts_at: string | null; ends_at: string | null;
+  created_at: string; updated_at: string;
+};
+type EventHighlightInsert = Pick<EventHighlightRow, "event_id" | "requester_id"> &
+  Partial<Pick<EventHighlightRow, "status" | "amount_paid_cents" | "payment_reference" | "paid_at" | "starts_at" | "ends_at" | "updated_at">>;;
+
 type SeoReviewRow = {
-  id: number;
-  business_id: number;
-  related_business_id: number | null;
-  issue_code: string;
-  priority: number;
-  status: string;
+  id: number; business_id: number; related_business_id: number | null;
+  issue_code: string; priority: number; status: string;
   evidence: Record<string, unknown>;
-  review_note: string | null;
-  reviewed_at: string | null;
-  reviewed_by: string | null;
-  created_at: string;
-  updated_at: string;
+  review_note: string | null; reviewed_at: string | null;
+  reviewed_by: string | null; created_at: string; updated_at: string;
 };
 
 type PushSubscriptionRow = {
@@ -63,6 +66,7 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
     };
     Tables: Omit<GeneratedPublicSchema["Tables"], "businesses"> & {
       events: AdministrativeTable<EventRow, EventInsert>;
+      event_highlights: AdministrativeTable<EventHighlightRow, EventHighlightInsert>;
       business_seo_review_queue: AdministrativeTable<SeoReviewRow,
         Pick<SeoReviewRow, "status" | "review_note" | "reviewed_at" | "reviewed_by" | "updated_at">>;
       support_messages: AdministrativeTable<SupportMessage, Pick<SupportMessage, "name" | "email" | "subject" | "message"> & Partial<Pick<SupportMessage, "status" | "sender_id">>>;

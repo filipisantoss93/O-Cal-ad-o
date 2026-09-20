@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { deleteEventAction, saveEventAction, toggleEventAction } from "./actions";
+import { deleteEventAction, saveEventAction, toggleEventAction, requestEventHighlightAction } from "./actions";
 import { eventCategories, eventDate, eventInputDate, eventPrice, type EventRecord } from "@/lib/events";
 import { getMerchantWorkspace, type MerchantBusiness } from "@/lib/merchant/dal";
 import { publicMediaUrl } from "@/lib/merchant/media";
@@ -92,6 +92,19 @@ export default async function MerchantEvents({ searchParams }: Params) {
     supabase.from("cities").select("name,state_code").eq("id", business.city_id).maybeSingle(),
   ]);
   const events = (eventsResult.data ?? []) as EventRecord[];
+  const highlightResult = events.length
+    ? await supabase.from("event_highlights")
+        .select("event_id,status,ends_at").in("event_id", events.map(event => event.id))
+        .in("status", ["pending", "active"])
+        .order("created_at", { ascending: false }).limit(100)
+    : null;
+  const requestCutoff = new Date().getTime();
+  const highlightByEvent = new Map((highlightResult?.data ?? [])
+    .filter(highlight => highlight.status === "pending"
+      || (highlight.status === "active" && highlight.ends_at
+        && Date.parse(highlight.ends_at) > requestCutoff))
+    .map(highlight => [highlight.event_id, highlight]));
+
   const address = [business.street, business.address_number, business.neighborhood,
     cityResult.data?.name, cityResult.data?.state_code].filter(Boolean).join(", ");
   const ready = business.is_active && !business.billing_suspended;
@@ -105,7 +118,7 @@ export default async function MerchantEvents({ searchParams }: Params) {
       </div>
       {params.erro && <p role="alert" className="mt-5 rounded-xl bg-brand/10 p-4 text-sm font-bold text-brand-dark">{params.erro.slice(0, 180)}</p>}
       {params.sucesso && <p role="status" className="mt-5 rounded-xl bg-positive-soft p-4 text-sm font-bold text-positive">
-        {params.sucesso === "excluido" ? "Evento excluído." : "Evento salvo com sucesso."}</p>}
+        {params.sucesso === "excluido" ? "Evento excluído." : params.sucesso === "destaque_solicitado" ? "Solicitação registrada. O destaque só começa após confirmação do pagamento pela administração." : "Evento salvo com sucesso."}</p>}
       <div className="mt-6 flex gap-2 overflow-x-auto">
         {businesses.map(item => <Link key={item.id} href={"/painel/eventos?loja=" + item.id}
           className={"min-w-40 rounded-xl border px-4 py-3 text-sm font-black " +
@@ -122,6 +135,8 @@ export default async function MerchantEvents({ searchParams }: Params) {
       </section>}
       <section className="mt-8">
         <h2 className="text-xl font-black text-ink">Eventos cadastrados ({events.length})</h2>
+        <p className="mt-2 text-xs text-muted">O destaque pago dá prioridade apenas no feed da cidade do evento.
+          A solicitação não gera cobrança nem ativa o destaque automaticamente; a contratação e a confirmação do pagamento dependem da administração.</p>
         {eventsResult.error && <p className="mt-4 text-sm text-brand-dark">Não foi possível carregar os eventos.</p>}
         {events.length === 0 && !eventsResult.error && <p className="mt-4 rounded-xl bg-surface p-5 text-sm text-muted">Nenhum evento cadastrado nesta loja.</p>}
         <div className="mt-4 grid gap-4">
@@ -134,8 +149,21 @@ export default async function MerchantEvents({ searchParams }: Params) {
               <div className="min-w-0 flex-1"><h3 className="font-black text-ink">{event.title}</h3>
                 <p className="mt-1 text-xs font-bold text-muted">{eventDate(event.starts_at,event.utc_offset)} · {eventPrice(event.free_entry,event.ticket_price_cents)}</p>
                 <p className="mt-1 text-xs text-muted">{event.is_active ? "Publicado" : "Pausado"} · {event.venue_name}</p>
+                {highlightByEvent.get(event.id)?.status === "pending" &&
+                  <p className="mt-2 text-xs font-bold text-muted">Destaque solicitado · aguardando contratação e pagamento</p>}
+                {highlightByEvent.get(event.id)?.status === "active" &&
+                  <p className="mt-2 text-xs font-bold text-brand-dark">Destaque pago · ativo até {highlightByEvent.get(event.id)?.ends_at
+                    ? eventDate(highlightByEvent.get(event.id)!.ends_at!, event.utc_offset)
+                    : "a data contratada"}</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Link href={"/eventos/" + event.id} className="rounded-lg border border-line px-3 py-2 text-xs font-black">Abrir link público</Link>
+                  {!highlightByEvent.has(event.id) && event.is_active &&
+                    Date.parse(event.ends_at ?? event.starts_at) > requestCutoff && ready &&
+                    <form action={requestEventHighlightAction}>
+                      <input type="hidden" name="business_id" value={business.id} />
+                      <input type="hidden" name="event_id" value={event.id} />
+                      <button type="submit" className="rounded-lg border border-accent-dark/30 bg-accent/20 px-3 py-2 text-xs font-black text-ink">Solicitar destaque pago</button>
+                    </form>}
                   <form action={toggleEventAction}><input type="hidden" name="business_id" value={business.id} />
                     <input type="hidden" name="event_id" value={event.id} />
                     <input type="hidden" name="next_active" value={String(!event.is_active)} />

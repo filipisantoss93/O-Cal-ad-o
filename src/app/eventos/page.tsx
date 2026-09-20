@@ -22,20 +22,50 @@ export default async function EventsFeed({ searchParams }: Props) {
   const selectedCityId = Number.isSafeInteger(selectedId) && selectedId > 0 ? selectedId : null;
   const supabase = createPublicClient();
   const now = new Date();
+  const nowIso = now.toISOString();
   const selectedCategory = params.categoria && Object.hasOwn(eventCategories, params.categoria)
     ? params.categoria : "";
-  let query = supabase.from("events").select("*")
-    .gte("ends_at", now.toISOString()).eq("is_active", true)
-    .order("starts_at", { ascending: true }).limit(60);
-  if (selectedCityId) query = query.eq("city_id", selectedCityId);
-  if (selectedCategory) query = query.eq("category", selectedCategory);
-  if (params.quando === "semana") {
-    const end = new Date(now);
-    end.setDate(end.getDate() + 7);
-    query = query.lte("starts_at", end.toISOString());
+  const endOfWeek = new Date(now);
+  endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+  // Sem cidade selecionada, nunca consultar o catálogo nacional de eventos.
+  const highlightResult = selectedCityId
+    ? await supabase.from("event_highlights").select("event_id")
+        .eq("status", "active").lte("starts_at", nowIso).gt("ends_at", nowIso).limit(200)
+    : null;
+  const highlightIds = new Set<number>(
+    (highlightResult?.data ?? []).map(row => row.event_id),
+  );
+
+  let regularQuery = supabase.from("events").select("*")
+    .eq("city_id", selectedCityId ?? -1)
+    .gte("ends_at", nowIso).eq("is_active", true)
+    .order("starts_at", { ascending: true }).limit(120);
+  if (selectedCategory) regularQuery = regularQuery.eq("category", selectedCategory);
+  if (params.quando === "semana") regularQuery = regularQuery.lte("starts_at", endOfWeek.toISOString());
+  const regularResult = selectedCityId ? await regularQuery : null;
+
+  // Buscar patrocinados separadamente impede que o limite de eventos orgânicos
+  // esconda um destaque com data mais distante.
+  let paidResult = null;
+  if (selectedCityId && highlightIds.size > 0) {
+    let paidQuery = supabase.from("events").select("*")
+      .in("id", [...highlightIds]).eq("city_id", selectedCityId)
+      .gte("ends_at", nowIso).eq("is_active", true);
+    if (selectedCategory) paidQuery = paidQuery.eq("category", selectedCategory);
+    if (params.quando === "semana") paidQuery = paidQuery.lte("starts_at", endOfWeek.toISOString());
+    paidResult = await paidQuery;
   }
-  const { data, error } = await query;
-  const events = (data ?? []) as EventRecord[];
+  const byId = new Map<number, EventRecord>();
+  for (const event of [...(regularResult?.data ?? []), ...(paidResult?.data ?? [])]) {
+    byId.set(event.id, event as EventRecord);
+  }
+  const events = [...byId.values()].sort((a, b) =>
+    Number(highlightIds.has(b.id)) - Number(highlightIds.has(a.id))
+    || new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+    || a.id - b.id
+  ).slice(0, 60);
+  const error = highlightResult?.error ?? regularResult?.error ?? paidResult?.error ?? null;
   const businessIds = [...new Set(events.map(event => event.business_id))];
   const cityIds = [...new Set(events.map(event => event.city_id))];
   const [businessesResult, citiesResult, selectedCityResult] = await Promise.all([
@@ -53,7 +83,7 @@ export default async function EventsFeed({ searchParams }: Props) {
   const cityById = new Map((citiesResult.data ?? []).map(c => [c.id, c]));
   const visibleEvents = events.filter(event => organizerById.has(event.business_id));
   const cityName = selectedCityResult.data
-    ? selectedCityResult.data.name + " – " + selectedCityResult.data.state_code : "Todo o Brasil";
+    ? selectedCityResult.data.name + " – " + selectedCityResult.data.state_code : "Selecione uma cidade";
 
   return (<>
     <SiteHeader />
@@ -90,7 +120,11 @@ export default async function EventsFeed({ searchParams }: Props) {
           <button type="submit" className="min-h-11 rounded-xl bg-ink px-5 text-sm font-black text-white">Filtrar</button>
         </form>
       </section>
-      {error ? <p className="mt-8 rounded-xl border border-line p-5 text-sm text-muted">
+      {!selectedCityId ? <section className="mt-8 rounded-2xl border border-line bg-surface p-8 text-center">
+        <h2 className="text-xl font-black text-ink">Escolha sua cidade para ver os eventos</h2>
+        <p className="mt-2 text-sm text-muted">Os eventos são exibidos apenas na cidade selecionada. Use o seletor acima para começar.</p>
+      </section>
+      : error ? <p className="mt-8 rounded-xl border border-line p-5 text-sm text-muted">
         Não foi possível carregar os eventos agora.</p>
       : visibleEvents.length === 0 ? <section className="mt-8 rounded-2xl border border-line bg-surface p-8 text-center">
           <h2 className="text-xl font-black text-ink">Ainda não há eventos para este filtro</h2>
@@ -105,7 +139,8 @@ export default async function EventsFeed({ searchParams }: Props) {
               const city = cityById.get(event.city_id);
               const imageUrl = supabase.storage.from("business-media").getPublicUrl(event.banner_path).data.publicUrl;
               return <EventCard key={event.id} event={event} imageUrl={imageUrl}
-                organizer={business.name} location={city ? city.name + " – " + city.state_code : ""} />;
+                organizer={business.name} location={city ? city.name + " – " + city.state_code : ""}
+                sponsored={highlightIds.has(event.id)} />;
             })}
           </div>
         </section>}
