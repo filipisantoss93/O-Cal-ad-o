@@ -75,7 +75,22 @@ jobs:
           echo "::add-mask::$TOKEN"
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
 
+      - name: Confirmar acesso protegido à fonte oficial via relay
+        shell: bash
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+          SNAPSHOT: ${{ inputs.snapshot || '2026-08' }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 2 --max-time 60 \
+            -H "Authorization: Bearer $GITHUB_OIDC_TOKEN" \
+            "https://mieekhdagjlzdbeklrxp.supabase.co/functions/v1/relay-receita-cnpj?snapshot=$SNAPSHOT&file=Municipios.zip&start=0&end=2" \
+            --output /tmp/rfb-zip-header
+          python3 -c "from pathlib import Path; assert Path('/tmp/rfb-zip-header').read_bytes() == b'PK\\x03'"
+          echo "RFB_RELAY_PILOT_OK=1"
+
       - name: Importar pré-cadastros privados em lote limitado
+        if: github.event_name == 'workflow_dispatch'
         env:
           GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
           OCALCADAO_IMPORT_URL: "https://mieekhdagjlzdbeklrxp.supabase.co/functions/v1/import-receita-cnpj"
