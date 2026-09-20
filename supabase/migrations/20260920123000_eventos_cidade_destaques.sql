@@ -58,8 +58,8 @@ create table if not exists public.event_highlights (
 );
 create index if not exists event_highlights_active_idx on public.event_highlights(status, starts_at, ends_at, event_id);
 create index if not exists event_highlights_requester_idx on public.event_highlights(requester_id, created_at desc);
-create unique index if not exists event_highlights_one_open_per_event on public.event_highlights(event_id)
-where status in ('pending','active');
+create unique index if not exists event_highlights_one_pending_per_event on public.event_highlights(event_id)
+where status = 'pending';
 alter table public.event_highlights enable row level security;
 create policy event_highlights_admin_manage on public.event_highlights
 for all to authenticated using ((select private.is_admin())) with check ((select private.is_admin()));
