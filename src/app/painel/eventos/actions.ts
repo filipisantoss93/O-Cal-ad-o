@@ -127,7 +127,12 @@ export async function deleteEventAction(formData: FormData) {
     .eq("id", id).eq("business_id", businessId).maybeSingle();
   if (!event) return;
   const { error } = await supabase.from("events").delete().eq("id", id).eq("business_id", businessId);
-  if (error) redirect(errorPath("Não foi possível excluir o evento.", businessId));
+  if (error) redirect(errorPath(
+    error.message.includes("EVENT_HIGHLIGHT_PAYMENT_PENDING")
+      ? "Não é possível excluir o evento com cobrança de destaque em aberto ou destaque pago ainda ativo."
+      : "Não foi possível excluir o evento.",
+    businessId,
+  ));
   await removeMerchantImages(supabase, user.id, [event.banner_path]);
   refreshEventPages(id);
   redirect("/painel/eventos?loja=" + businessId + "&sucesso=excluido");
