@@ -77,7 +77,7 @@ async function stage(db:Db,sourceId:number,jobId:number,city:City,row:Row,
       data_atualizacao:clean(row.data_atualizacao,20)},
     dedupe_key:"cnes-private|"+cnes,processing_status:existing?.matched_business_id?"matched":"pending",
     processing_note:"CNES privado; piloto job "+jobId,
-    found_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    updated_at:new Date().toISOString()
   };
   if(existing?.id) {
     const {data,error}=await db.from("business_source_records").update(record).eq("id",existing.id)
@@ -85,7 +85,7 @@ async function stage(db:Db,sourceId:number,jobId:number,city:City,row:Row,
     if(error)throw error;
     return data as {id:number;matched_business_id:number|null};
   }
-  const {data,error}=await db.from("business_source_records").insert(record)
+  const {data,error}=await db.from("business_source_records").insert({...record,found_at:new Date().toISOString()})
     .select("id,matched_business_id").single();
   if(error)throw error;
   return data as {id:number;matched_business_id:number|null};
@@ -118,14 +118,15 @@ async function candidates(db:Db,cityId:number,name:string,street:string,number:s
   // Never merge by name alone, or by address alone: different clinics may share a building.
   const {data,error}=await db.from("businesses")
     .select("id,listing_type,name,street,address_number,complement")
-    .eq("city_id",cityId).eq("listing_type","business").ilike("name",name).limit(75);
+    .eq("city_id",cityId).ilike("name",name).limit(75);
   if(error)throw error;
   if((data??[]).length>=75)return {exact:[],ambiguous:true};
   const same=(data??[]).filter(x=>norm(x.name)===norm(name)
     &&norm(x.street)===norm(street)&&norm(x.address_number)===norm(number));
-  const exact=same.filter(x=>norm(x.complement)===norm(complement));
+  const publicConflicts=same.some(x=>x.listing_type==="public_place");
+  const exact=same.filter(x=>x.listing_type==="business"&&norm(x.complement)===norm(complement));
   // Unknown complement cannot establish that two businesses occupying one building coincide.
-  const ambiguous=exact.length>1 || same.some(x=>norm(x.complement)!==norm(complement)
+  const ambiguous=publicConflicts || exact.length>1 || same.some(x=>norm(x.complement)!==norm(complement)
     &&(!norm(x.complement)||!norm(complement)));
   return {exact,ambiguous};
 }
