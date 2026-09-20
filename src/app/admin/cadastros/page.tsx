@@ -4,6 +4,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/dal";
 import { linkAdminUnclaimedBusinessAction, saveAdminBusinessAction, saveAdminUserAction } from "./actions";
 import type { DatabaseWithAdminOwnerLink } from "@/types/admin-owner-link";
+import type { DatabaseWithBusinessClaims } from "@/types/business-claims";
 import { PreRegistrationLocationFields } from "@/components/admin/pre-registration-location-fields";
 import { FloatingNotice } from "@/components/floating-notice";
 
@@ -68,7 +69,7 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
   const businesses = businessesResult.data ?? [];
   const selectedUser = selectedUserResult.data;
   const business = selectedBusinessResult.data;
-  const canLinkBusiness = Boolean(business && business.listing_type !== "public_place" && business.pre_registered && !business.owner_id);
+  const canLinkBusiness = Boolean(business && business.pre_registered && !business.owner_id);
   // Pesquisa de usuários somente quando uma empresa não reivindicada está aberta.
   // A RPC protegida também encontra pelo e-mail de login, sem expor auth.users no cliente.
   const { data: ownerCandidates, error: ownerSearchError } = canLinkBusiness && ownerQ.length >= 2
@@ -78,7 +79,8 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
   if (ownerSearchError) throw new Error("Não foi possível pesquisar os usuários. Tente novamente.");
 
   const pendingClaimsResult = canLinkBusiness
-    ? await supabase.from("business_claim_requests")
+    ? await (supabase as unknown as SupabaseClient<DatabaseWithBusinessClaims>)
+        .from("business_claim_requests")
         .select("id", { count: "exact", head: true })
         .eq("business_id", business!.id).eq("status", "pending")
     : { count: 0, error: null };
