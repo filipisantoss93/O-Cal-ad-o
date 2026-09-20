@@ -36,19 +36,28 @@ export async function getAdminDashboard(
   ]);
 
   if (metricsResult.error || !metricsResult.data || storesResult.error || campaignsResult.error) {
-    // Registrar a origem da falha no servidor sem enviar detalhes do banco ao navegador.
+    // Registrar apenas o código e o tipo de falha no servidor.
     console.error("[admin/dashboard] Consulta falhou", {
       metrics: metricsResult.error && { code: metricsResult.error.code, message: metricsResult.error.message },
       metricsEmpty: !metricsResult.error && !metricsResult.data,
       stores: storesResult.error && { code: storesResult.error.code, message: storesResult.error.message },
       campaigns: campaignsResult.error && { code: campaignsResult.error.code, message: campaignsResult.error.message },
     });
+  }
+
+  // As listas recentes são auxiliares; sua indisponibilidade não deve derrubar
+  // os indicadores e a navegação do painel.
+  if (metricsResult.error || !metricsResult.data) {
     throw new Error("Não foi possível carregar o dashboard administrativo.");
   }
 
   return {
     metrics: metricsResult.data as unknown as DashboardMetrics,
-    stores: storesResult.data ?? [],
-    campaigns: campaignsResult.data ?? [],
+    stores: storesResult.error ? [] : storesResult.data ?? [],
+    campaigns: campaignsResult.error ? [] : campaignsResult.data ?? [],
+    warnings: {
+      stores: Boolean(storesResult.error),
+      campaigns: Boolean(campaignsResult.error),
+    },
   };
 }
