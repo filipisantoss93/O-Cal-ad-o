@@ -20,6 +20,7 @@ const adminLinks = [
   { href: "/admin/reivindicacoes", label: "Reivindicações", icon: ShieldCheckIcon },
   { href: "/admin/locais-publicos", label: "Locais públicos", icon: MapPinIcon },
   { href: "/admin/destaques", label: "Publicidade", icon: StarIcon },
+  { href: "/admin/eventos", label: "Destaques de eventos", icon: StarIcon },
 ];
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
