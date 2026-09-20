@@ -29,7 +29,8 @@ export async function activateEventHighlightAction(formData: FormData) {
   if (![7, 15, 30].includes(duration)) fail("Escolha um período válido.");
 
   const { data: request } = await supabase.from("event_highlights")
-    .select("id,event_id,status").eq("id", id).eq("status", "pending").maybeSingle();
+    .select("id,event_id,status,product_code").eq("id", id).eq("status", "pending").maybeSingle();
+  if (request?.product_code) fail("Este pedido usa checkout Efí e só pode ser ativado pela notificação de pagamento.");
   if (!request) fail("A solicitação já foi processada ou não existe.");
   const { data: event } = await supabase.from("events")
     .select("id,business_id,city_id,is_active,starts_at,ends_at")
@@ -69,6 +70,10 @@ export async function cancelEventHighlightRequestAction(formData: FormData) {
   const { supabase } = await requireAdmin("/admin/eventos");
   const id = Number(formString(formData, "highlight_id"));
   if (!Number.isSafeInteger(id) || id <= 0) fail("Solicitação inválida.");
+  const { data: request } = await supabase.from("event_highlights")
+    .select("id,product_code").eq("id", id).eq("status", "pending").maybeSingle();
+  if (!request) fail("Solicitação pendente não encontrada.");
+  if (request.product_code) fail("Pedidos Efí não podem ser cancelados manualmente enquanto a cobrança estiver em aberto.");
   const { error } = await supabase.from("event_highlights")
     .update({ status: "cancelled", updated_at: new Date().toISOString() })
     .eq("id", id).eq("status", "pending");

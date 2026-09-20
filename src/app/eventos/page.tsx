@@ -31,7 +31,8 @@ export default async function EventsFeed({ searchParams }: Props) {
   // Sem cidade selecionada, nunca consultar o catálogo nacional de eventos.
   const highlightResult = selectedCityId
     ? await supabase.from("event_highlights").select("event_id")
-        .eq("status", "active").lte("starts_at", nowIso).gt("ends_at", nowIso).limit(200)
+        .eq("city_id", selectedCityId).eq("status", "active")
+        .lte("starts_at", nowIso).gt("ends_at", nowIso).limit(200)
     : null;
   const highlightIds = new Set<number>(
     (highlightResult?.data ?? []).map(row => row.event_id),

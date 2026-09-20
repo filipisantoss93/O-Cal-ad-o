@@ -135,43 +135,70 @@ export async function deleteEventAction(formData: FormData) {
 
 
 /**
- * O comerciante apenas solicita a contratação. O status 'active' exige
- * comprovação de pagamento registrada pela administração (RLS).
- * Não acionar checkout de destaque de vitrine para eventos.
+ * Abre cobrança Efí associada ao evento na cidade da vitrine.
+ * A Edge Function confere proprietário, validade e preço no banco.
+ * Somente o webhook verificado pode ativar o destaque.
  */
-export async function requestEventHighlightAction(formData: FormData) {
+export async function startEventHighlightCheckoutAction(formData: FormData) {
+  const eventId = Number(formString(formData, "event_id"));
+  const businessId = Number(formString(formData, "business_id"));
+  const productCode = formString(formData, "product_code");
+  if (!Number.isSafeInteger(eventId) || eventId <= 0
+    || !Number.isSafeInteger(businessId) || businessId <= 0
+    || !/^event_(7|15|30)$/.test(productCode)) {
+    redirect(errorPath("Selecione um evento e pacote válidos.", Number.isSafeInteger(businessId) ? businessId : 0));
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/entrar?next=%2Fpainel%2Feventos");
-  const businessId = Number(formString(formData, "business_id"));
-  const eventId = Number(formString(formData, "event_id"));
-  if (!Number.isSafeInteger(businessId) || businessId <= 0
-    || !Number.isSafeInteger(eventId) || eventId <= 0) {
-    redirect("/painel/eventos?erro=" + encodeURIComponent("Selecione um evento válido."));
-  }
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) redirect("/entrar?next=%2Fpainel%2Feventos");
+
   const { data: business } = await supabase.from("businesses")
-    .select("id, city_id").eq("id", businessId).eq("owner_id", user.id)
+    .select("id").eq("id", businessId).eq("owner_id", user.id)
     .eq("listing_type", "business").maybeSingle();
-  if (!business) redirect(errorPath("Vitrine não encontrada.", businessId));
+  if (!business) redirect(errorPath("Esta vitrine não pertence à sua conta.", businessId));
   const { data: event } = await supabase.from("events")
-    .select("id, city_id, ends_at, starts_at, is_active")
-    .eq("id", eventId).eq("business_id", businessId).maybeSingle();
-  if (!event || !event.is_active || event.city_id !== business.city_id
-    || Date.parse(event.ends_at ?? event.starts_at) <= Date.now()) {
-    redirect(errorPath("O evento precisa estar ativo e ainda não ter terminado.", businessId));
+    .select("id").eq("id", eventId).eq("business_id", businessId).maybeSingle();
+  if (!event) redirect(errorPath("O evento não pertence a esta vitrine.", businessId));
+
+  // O servidor não altera preço ou status: somente a Efí e a confirmação do webhook.
+  const { getSupabaseEnv } = await import("@/lib/supabase/env");
+  const { url, publishableKey } = getSupabaseEnv();
+  let data: { payment_url?: string; error?: string } = {};
+  let successful = false;
+  try {
+    const response = await fetch(url + "/functions/v1/efi-billing-checkout", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + session.access_token,
+        apikey: publishableKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "event_highlight",
+        event_id: eventId,
+        product_code: productCode,
+      }),
+      cache: "no-store",
+    });
+    data = await response.json() as typeof data;
+    successful = response.ok && typeof data.payment_url === "string"
+      && data.payment_url.startsWith("https://");
+  } catch (error) {
+    console.error("Falha ao abrir checkout de evento", error);
   }
-  const { data: openRequest } = await supabase.from("event_highlights")
-    .select("id").eq("event_id", eventId).eq("status", "pending").limit(1);
-  if (openRequest?.length) {
-    redirect(errorPath("Este evento já possui uma solicitação de destaque em andamento.", businessId));
+  if (!successful || !data.payment_url) {
+    const messages: Record<string,string> = {
+      efi_nao_configurada: "A cobrança Efí ainda não está disponível.",
+      evento_invalido: "Evento não encontrado.",
+      pacote_evento_invalido: "O pacote de destaque não está disponível.",
+      evento_destaque_indisponivel: "O evento e a vitrine precisam estar publicados e ativos, com data futura.",
+      destaque_evento_ativo: "Este evento já possui um destaque ativo.",
+      pedido_evento_em_aberto: "Já existe um pedido de destaque pendente para este evento.",
+    };
+    redirect(errorPath(messages[data.error ?? ""] ?? "Não foi possível iniciar o pagamento do destaque.", businessId));
   }
-  const { error } = await supabase.from("event_highlights")
-    .insert({ event_id: eventId, requester_id: user.id });
-  if (error) {
-    redirect(errorPath(error.code === "23505"
-      ? "Este evento já possui uma solicitação de destaque."
-      : "Não foi possível solicitar o destaque.", businessId));
-  }
-  revalidatePath("/painel/eventos");
-  redirect("/painel/eventos?loja=" + businessId + "&sucesso=destaque_solicitado");
+  redirect(data.payment_url);
 }

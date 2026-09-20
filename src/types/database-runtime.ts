@@ -34,14 +34,24 @@ type EventRow = {
 type EventInsert = Omit<EventRow, "id" | "created_at" | "updated_at">;
 
 type EventHighlightRow = {
-  id: number; event_id: number; requester_id: string;
+  id: number; event_id: number; city_id: number; requester_id: string;
   status: "pending" | "active" | "cancelled" | "expired";
   amount_paid_cents: number | null; payment_reference: string | null;
   paid_at: string | null; starts_at: string | null; ends_at: string | null;
+  product_code: string | null; quoted_price_cents: number | null;
+  provider_charge_id: string | null; provider_payment_url: string | null;
+  payment_expires_at: string | null;
   created_at: string; updated_at: string;
 };
 type EventHighlightInsert = Pick<EventHighlightRow, "event_id" | "requester_id"> &
-  Partial<Pick<EventHighlightRow, "status" | "amount_paid_cents" | "payment_reference" | "paid_at" | "starts_at" | "ends_at" | "updated_at">>;;
+  Partial<Omit<EventHighlightRow, "id" | "event_id" | "requester_id" | "created_at">>;
+type EventHighlightPackage = {
+  code: string; duration_days: number; price_cents: number;
+  is_active: boolean; created_at: string;
+};
+type EventHighlightPackageInsert = Pick<EventHighlightPackage,"code" | "duration_days" | "price_cents"> &
+  Partial<Pick<EventHighlightPackage,"is_active">>;
+
 
 type SeoReviewRow = {
   id: number; business_id: number; related_business_id: number | null;
@@ -67,6 +77,7 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
     Tables: Omit<GeneratedPublicSchema["Tables"], "businesses"> & {
       events: AdministrativeTable<EventRow, EventInsert>;
       event_highlights: AdministrativeTable<EventHighlightRow, EventHighlightInsert>;
+      event_highlight_packages: AdministrativeTable<EventHighlightPackage, EventHighlightPackageInsert>;
       business_seo_review_queue: AdministrativeTable<SeoReviewRow,
         Pick<SeoReviewRow, "status" | "review_note" | "reviewed_at" | "reviewed_by" | "updated_at">>;
       support_messages: AdministrativeTable<SupportMessage, Pick<SupportMessage, "name" | "email" | "subject" | "message"> & Partial<Pick<SupportMessage, "status" | "sender_id">>>;
