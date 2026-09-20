@@ -98,13 +98,16 @@ export default async function MerchantEvents({ searchParams }: Params) {
         .in("status", ["pending", "active"])
         .order("created_at", { ascending: false }).limit(100)
     : null;
+  const requestCutoff = new Date().getTime();
   const highlightByEvent = new Map((highlightResult?.data ?? [])
+    .filter(highlight => highlight.status === "pending"
+      || (highlight.status === "active" && highlight.ends_at
+        && Date.parse(highlight.ends_at) > requestCutoff))
     .map(highlight => [highlight.event_id, highlight]));
 
   const address = [business.street, business.address_number, business.neighborhood,
     cityResult.data?.name, cityResult.data?.state_code].filter(Boolean).join(", ");
   const ready = business.is_active && !business.billing_suspended;
-  const requestCutoff = new Date().getTime();
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
