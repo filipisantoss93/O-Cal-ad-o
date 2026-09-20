@@ -2,8 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { eventCategoryName, eventDate, eventPrice, type EventRecord } from "@/lib/events";
 
-export function EventCard({ event, imageUrl, organizer, location }: {
-  event: EventRecord; imageUrl: string; organizer: string; location: string;
+export function EventCard({ event, imageUrl, organizer, location, sponsored = false }: {
+  event: EventRecord; imageUrl: string; organizer: string; location: string; sponsored?: boolean;
 }) {
   return (
     <article className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
@@ -14,6 +14,7 @@ export function EventCard({ event, imageUrl, organizer, location }: {
             className="object-cover transition group-hover:scale-[1.02]" />
         </div>
         <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
+          {sponsored && <span className="w-fit rounded-full bg-accent/30 px-2.5 py-1 text-[10px] font-black text-ink">Destaque · Patrocinado</span>}
           <p className="text-[11px] font-black uppercase tracking-wider text-brand-dark">
             {eventCategoryName(event.category)}
           </p>
