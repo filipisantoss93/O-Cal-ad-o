@@ -27,7 +27,7 @@ Deno.serve(async request=>{
     if(payload.repository!==REPOSITORY ||
        payload.ref!=="refs/heads/main" ||
        String(payload.workflow_ref??"")!==REPOSITORY+"/"+WORKFLOW+"@refs/heads/main" ||
-       !["workflow_dispatch","push"].includes(String(payload.event_name))){
+       payload.event_name!=="workflow_dispatch"){
       throw new Error("invalid_workflow_identity");
     }
   }catch{
