@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   detectCurrentCity,
   readCurrentCoordinates,
@@ -16,10 +16,13 @@ const minimumBackgroundTimeMs = 60_000;
 
 export function LocationAutoRefresh() {
   const router = useRouter();
+  const pathname = usePathname();
+  const isAdmin = pathname === "/admin" || pathname?.startsWith("/admin/");
   const refreshingRef = useRef(false);
   const hiddenAtRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (isAdmin) return;
     const refreshLocation = async (allowInitialRequest = false) => {
       const selectionMode = readLocationSelectionMode();
       const previousCity = readSelectedCity();
@@ -106,7 +109,7 @@ export function LocationAutoRefresh() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("pageshow", handlePageShow);
     };
-  }, [router]);
+  }, [router, isAdmin]);
 
   return null;
 }
