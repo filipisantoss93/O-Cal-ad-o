@@ -18,6 +18,7 @@ const adminLinks = [
   { href: "/admin", label: "Moderação", icon: ShieldCheckIcon },
   { href: "/admin/perfis-nao-reivindicados", label: "Perfis não reivindicados", icon: StoreIcon },
   { href: "/admin/qualidade-seo", label: "Qualidade SEO", icon: ShieldCheckIcon },
+  { href: "/admin/cadastros", label: "Usuários e empresas", icon: StoreIcon },
   { href: "/admin/reivindicacoes", label: "Reivindicações", icon: ShieldCheckIcon },
   { href: "/admin/locais-publicos", label: "Locais públicos", icon: MapPinIcon },
   { href: "/admin/destaques", label: "Publicidade", icon: StarIcon },
