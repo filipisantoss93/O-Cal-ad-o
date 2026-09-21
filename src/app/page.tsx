@@ -21,7 +21,7 @@ import { HomeFeedSection } from "@/components/home/home-feed-section";
 import { HomeScrollRestoration } from "@/components/home/home-scroll-restoration";
 import { categories } from "@/data/catalog";
 
-const homeCategories = categories.slice(0, 7);
+const homeCategories = categories.filter((category) => category.slug !== "eletropostos").slice(0, 7);
 
 export default function Home() {
   return (
@@ -76,6 +76,29 @@ export default function Home() {
           description="Atalhos rápidos para encontrar o que você procura."
           compact
         >
+          <Link
+            href="/buscar?categoria=eletropostos"
+            className="group mb-3 flex min-h-24 items-center gap-3 rounded-2xl border border-brand/30 bg-[#fff2e9] px-3.5 py-3 shadow-sm transition hover:border-brand/60 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:gap-4 sm:px-5"
+          >
+            <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-brand text-2xl text-white sm:size-14" aria-hidden="true">
+              ⚡
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[10px] font-black uppercase tracking-[0.1em] text-brand-dark">
+                Mobilidade elétrica · Em destaque
+              </span>
+              <span className="mt-0.5 block text-base font-black leading-tight text-ink sm:text-lg">
+                Eletropostos
+              </span>
+              <span className="mt-0.5 block text-xs font-semibold leading-5 text-muted sm:text-sm">
+                Encontre pontos de recarga para veículos elétricos na sua cidade.
+              </span>
+            </span>
+            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-dark text-white transition group-hover:translate-x-0.5 sm:size-auto sm:gap-2 sm:rounded-xl sm:px-3 sm:py-2" aria-hidden="true">
+              <span className="hidden text-xs font-black sm:inline">Ver pontos</span>
+              <ArrowRightIcon className="size-4" />
+            </span>
+          </Link>
           <CompactCategories categories={homeCategories} />
         </HomeFeedSection>
 
