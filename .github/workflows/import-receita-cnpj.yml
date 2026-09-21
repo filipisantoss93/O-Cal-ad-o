@@ -40,8 +40,9 @@ concurrency:
 
 jobs:
   import:
-    # O downloader usa faixas HTTP retomáveis para tolerar encerramentos da conexão oficial.
-    runs-on: ubuntu-latest
+    # A RFB encerra conexões originadas do runner hospedado antes de responder.
+    # O downloader retomável continua protegendo contra quedas em runner autorizado.
+    runs-on: [self-hosted, linux, x64, rfb-cnpj]
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
