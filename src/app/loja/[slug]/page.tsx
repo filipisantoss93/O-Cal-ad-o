@@ -159,6 +159,7 @@ export default async function BusinessPage({
   }
 
   const isPublicPlace = business.listingType === "public_place";
+  const isChargingStation = business.categorySlug === "eletropostos";
   const summary = seoIntro(business);
   const neighborhood = seoField(business.neighborhood);
   const safeAddress = seoAddressField(business.address);
@@ -346,7 +347,7 @@ export default async function BusinessPage({
                           {business.rating.toLocaleString("pt-BR")} ({business.reviewCount})
                         </span>
                       ) : (
-                        <span>{isPublicPlace ? "Local público" : "Nova no O Calçadão"}</span>
+                        <span>{isChargingStation ? "Ponto de recarga" : isPublicPlace ? "Local público" : "Nova no O Calçadão"}</span>
                       )}
                       <span>{neighborhood ?? [business.cityName, business.stateCode].filter(Boolean).join(" - ")}</span>
                     </p>
@@ -369,7 +370,7 @@ export default async function BusinessPage({
             <div className="space-y-6">
               <section className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
-                  {isPublicPlace ? "Sobre o local" : "Sobre a loja"}
+                  {isChargingStation ? "Sobre o eletroposto" : isPublicPlace ? "Sobre o local" : "Sobre a loja"}
                 </p>
                 <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">
                   {isPublicPlace ? business.name : `Informações de ${business.name}`}
@@ -391,6 +392,58 @@ export default async function BusinessPage({
                   ))}
                 </div>
               </section>
+
+              {isChargingStation && business.chargingStation && (
+                <section className="rounded-3xl border border-line bg-surface p-6 sm:p-8" aria-label="Detalhes da recarga">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">Recarga de veículo elétrico</p>
+                  <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">Potência e funcionamento</h2>
+                  <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-2xl bg-canvas p-4">
+                      <dt className="text-xs font-bold text-muted">Potência máxima informada</dt>
+                      <dd className="mt-1 text-xl font-black text-ink">
+                        {business.chargingStation.powerKw === null
+                          ? "Não informada"
+                          : `${business.chargingStation.powerKw.toLocaleString("pt-BR")} kW`}
+                        {business.chargingStation.powerType ? ` · ${business.chargingStation.powerType}` : ""}
+                      </dd>
+                    </div>
+                    <div className="rounded-2xl bg-canvas p-4">
+                      <dt className="text-xs font-bold text-muted">Horário de acesso à recarga</dt>
+                      <dd className="mt-1 text-base font-black text-ink">
+                        {business.chargingStation.openingHoursText || "Não informado"}
+                      </dd>
+                    </div>
+                    <div className="rounded-2xl bg-canvas p-4">
+                      <dt className="text-xs font-bold text-muted">Conectores</dt>
+                      <dd className="mt-1 text-base font-black text-ink">
+                        {business.chargingStation.connectors.length
+                          ? business.chargingStation.connectors.join(" · ")
+                          : "Não informados"}
+                      </dd>
+                    </div>
+                    <div className="rounded-2xl bg-canvas p-4">
+                      <dt className="text-xs font-bold text-muted">Acesso</dt>
+                      <dd className="mt-1 text-base font-black text-ink">
+                        {{ public: "Público", customers: "Exclusivo para clientes", restricted: "Restrito", unknown: "Não informado" }[business.chargingStation.accessType]}
+                      </dd>
+                    </div>
+                  </dl>
+                  <p className="mt-4 text-xs leading-5 text-muted">
+                    Potência nominal declarada; a potência efetiva e a disponibilidade podem variar.
+                    Confirme no aplicativo do operador ou no local antes da viagem.
+                  </p>
+                  {business.chargingStation.sourceUrl && (
+                    <a href={business.chargingStation.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex text-xs font-semibold text-brand-dark underline underline-offset-2">
+                      Consultar fonte e confirmar dados do carregador
+                    </a>
+                  )}
+                  {business.chargingStation.sourceLicense && business.chargingStation.sourceLicense.includes("OpenStreetMap") && (
+                    <p className="mt-2 text-xs text-muted">
+                      Dados © contribuidores do OpenStreetMap, licenciados sob ODbL.
+                    </p>
+                  )}
+                </section>
+              )}
 
               {!isPublicPlace && <section className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
                 <div>
