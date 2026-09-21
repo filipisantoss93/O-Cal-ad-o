@@ -6,7 +6,9 @@ import {
   locationSelectionModeStorageKey,
   selectedCityCookieName,
   selectedCityStorageKey,
+  selectedCoordinatesCookieName,
   selectedCoordinatesStorageKey,
+  serializeCoordinatesCookie,
   type CurrentCoordinates,
   type DetectedCity,
   type LocationSelectionMode,
@@ -60,6 +62,13 @@ function clearLocationPermissionDenied() {
   try {
     window.sessionStorage.removeItem(locationPermissionDeniedSessionKey);
   } catch {}
+}
+
+function saveCoordinatesCookie(coordinates?: CurrentCoordinates) {
+  const value = coordinates ? serializeCoordinatesCookie(coordinates) : null;
+  document.cookie = value
+    ? `${selectedCoordinatesCookieName}=${value}; Path=/; SameSite=Lax`
+    : `${selectedCoordinatesCookieName}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
 export function isLocationPermissionDeniedError(reason: unknown) {
@@ -135,6 +144,7 @@ export function saveSelectedCity(
     window.sessionStorage.removeItem(selectedCoordinatesStorageKey);
   }
   document.cookie = `${selectedCityCookieName}=${storedCity.id}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  saveCoordinatesCookie(coordinates);
   window.dispatchEvent(
     new CustomEvent(cityChangeEventName, {
       detail: { ...storedCity, ...coordinates },
