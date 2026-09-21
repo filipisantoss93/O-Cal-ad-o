@@ -11,6 +11,7 @@ type CompactCategoriesProps = {
 };
 
 function categoryHref(slug: string | undefined, query: string | undefined) {
+  if (slug === "eletropostos") return "/eletropostos";
   const params = new URLSearchParams();
   if (slug) params.set("categoria", slug);
   if (query?.trim()) params.set("q", query.trim());
