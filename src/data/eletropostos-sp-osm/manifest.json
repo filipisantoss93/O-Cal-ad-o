@@ -1,0 +1,10 @@
+{
+  "all_charging_nodes": 55,
+  "street_missing": 46,
+  "no_public_access": 2,
+  "eligible": 7,
+  "parts": 1,
+  "source": "OpenStreetMap São Paulo PBF extrato openstreetmap.fr 2026-09-21",
+  "license": "ODbL 1.0",
+  "url": "https://download.openstreetmap.fr/extracts/south-america/brazil/southeast/sao-paulo-latest.osm.pbf"
+}
