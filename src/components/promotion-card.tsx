@@ -64,7 +64,7 @@ export function PromotionCard({ promotion }: PromotionCardProps) {
             src={promotion.imageUrl}
             alt={promotion.title}
             fill
-            sizes="(max-width: 640px) 72vw, (max-width: 1024px) 42vw, 25vw"
+            sizes="(max-width: 640px) 46vw, (max-width: 1024px) 30vw, 25vw"
             className="object-cover"
           />
         </div>
@@ -99,7 +99,7 @@ export function PromotionCard({ promotion }: PromotionCardProps) {
             <a
               href={contactHref}
               {...(promotion.contactAction === "phone" ? {} : { target: "_blank", rel: "noreferrer" })}
-              className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${contactClass}`}
+              className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${contactClass}`}
             >
               <ContactIcon className="size-4 shrink-0" />
               {contactLabel}
@@ -107,7 +107,7 @@ export function PromotionCard({ promotion }: PromotionCardProps) {
           ) : null}
           <Link
             href={`/loja/${promotion.businessSlug}`}
-            className="inline-flex min-h-9 items-center justify-center gap-1 rounded-lg text-xs font-black text-ink outline-none hover:text-brand-dark focus-visible:ring-2 focus-visible:ring-brand"
+            className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg text-xs font-black text-ink outline-none hover:text-brand-dark focus-visible:ring-2 focus-visible:ring-brand"
           >
             Ver loja
             <ArrowRightIcon className="size-3.5" />
