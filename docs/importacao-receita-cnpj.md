@@ -1,21 +1,21 @@
 # Importação Receita Federal — pré-cadastro de empresas privadas
 
-## Situação verificada em 20/09/2026
+## Situação verificada em 21/09/2026
 
-O arquivo oficial `Municipios.zip` e os arquivos `Empresas*.zip`/`Estabelecimentos*.zip` de 2026-08 responderam com byte-range HTTP 206 no processo `pg_net` do banco, mas o servidor oficial encerrou a conexão (`curl 56 / connection reset`) tanto no GitHub Actions Ubuntu como no macOS. Uma Edge Function Supabase também falhou ao baixar do servidor (HTTP 502). A conexão de controle GitHub OIDC com o Supabase foi validada.
+O arquivo oficial `Municipios.zip` e os arquivos `Empresas*.zip`/`Estabelecimentos*.zip` respondem por byte-range HTTP 206 e podem encerrar conexões longas. O importador agora baixa em faixas de 8 MiB, preserva o arquivo parcial, retoma do último byte confirmado, valida host, tamanho, tipo de conteúdo e estrutura ZIP. A conexão de controle GitHub OIDC com o Supabase está validada.
 
 **Não configurar execução nacional automática nem afirmar importação concluída até um lote de CNPJ real ser persistido e auditado.**
 
-## Pré-requisito de infraestrutura para execução
+## Execução do piloto
 
-É necessário um runner Linux x64 confiável, autorizado pelo dono do projeto, **com acesso legítimo** ao compartilhamento público da RFB, ou arquivos ZIP oficiais já baixados e verificados localmente. Não desativar certificados TLS, não usar proxies para contornar restrições e não baixar de sites sem procedência comprovada.
+O piloto usa `ubuntu-latest` do GitHub Actions e baixa exclusivamente do host oficial da RFB, com retomada automática. Não desativar certificados TLS, não usar proxies para contornar restrições e não baixar de sites sem procedência comprovada.
 
-1. Registrar runner *self-hosted* neste repositório, Linux x64, adicionando o label customizado `rfb-cnpj`. Instalar Python 3.12+ e espaço livre para todos os arquivos a serem processados.
-2. Baixar a **mesma competência** da fonte oficial (ex.: `2026-08`): `Municipios.zip`, `Estabelecimentos0.zip`, e `Empresas0.zip` a `Empresas9.zip`. Não misturar competências. Conferir assinatura e estrutura ZIP, registrar SHA-256 no ambiente do runner e confirmar URL oficial de origem.
-3. Se os ZIPs já estiverem disponíveis no runner, definir uma variável **do repositório** no GitHub Actions chamada `RFB_OFFICIAL_ARCHIVES_DIR` com o caminho absoluto do diretório que contém os ZIPs. A rotina consumirá os arquivos locais; não fará novo download. Não versionar nem publicar esses arquivos no Git.
-4. Abrir GitHub → Actions → **Piloto de importação CNPJ - Receita Federal** → Run workflow, branch `main`, competência confirmada, arquivo `Estabelecimentos0`, cidade Assis, UF SP, `max_candidates=20`. O workflow é manual e não possui cron.
-5. Conferir logs sem copiar o token OIDC. Para validar dados no Supabase, consultar as tabelas `business_data_sources` (fonte `rfb_cnpj_open_data`), `business_source_records` e `businesses` vinculadas. Confirmar contagem real, candidatos de duplicidade, classificação por CNAE, complemento e que todos os novos cadastros tenham `owner_id IS NULL`, `pre_registered=true`, `publication_status='unpublished'` e `listing_type='business'`.
-6. Repetir o **mesmo** lote antes de aumentar a abrangência e verificar que o número de perfis criados não aumentou (idempotência). Conferir detalhes de endereço e publicação manual antes de autorizar novos arquivos, outras cidades ou agendamento nacional.
+1. Confirmar a competência oficial disponível (ex.: `2026-08`). Todos os arquivos usados precisam pertencer à mesma competência.
+2. Abrir GitHub → Actions → **Piloto de importação CNPJ - Receita Federal** → Run workflow, branch `main`, arquivo `Estabelecimentos0`, cidade Assis, UF SP, `max_candidates=20`. O workflow é manual e não possui cron.
+3. Conferir logs sem copiar o token OIDC. Para validar dados no Supabase, consultar as tabelas `business_data_sources` (fonte `rfb_cnpj_open_data`), `business_source_records` e `businesses` vinculadas. Confirmar contagem real, candidatos de duplicidade, classificação por CNAE, complemento e que todos os novos cadastros tenham `owner_id IS NULL`, `pre_registered=true`, `publication_status='unpublished'` e `listing_type='business'`.
+4. Repetir o mesmo lote e verificar que o número de perfis criados não aumentou. Só depois da auditoria ampliar arquivos, cidades ou agendamento.
+
+Opcionalmente, um runner compatível pode definir `RFB_OFFICIAL_ARCHIVES_DIR` com ZIPs oficiais previamente validados. Os arquivos não devem ser versionados no Git.
 
 ## Regras de segurança
 
