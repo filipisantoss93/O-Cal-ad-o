@@ -42,10 +42,10 @@ export function distanceKm(a: Coordinate, b: Coordinate) {
   return 12742 * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-export function googleDirectionsUrl(origin: Coordinate, destination: Coordinate, waypoints: Coordinate[] = []) {
+export function googleDirectionsUrl(origin: Coordinate | null, destination: Coordinate, waypoints: Coordinate[] = []) {
   const url = new URL("https://www.google.com/maps/dir/");
   url.searchParams.set("api", "1");
-  url.searchParams.set("origin", `${origin.latitude},${origin.longitude}`);
+  if (origin) url.searchParams.set("origin", `${origin.latitude},${origin.longitude}`);
   url.searchParams.set("destination", `${destination.latitude},${destination.longitude}`);
   url.searchParams.set("travelmode", "driving");
   if (waypoints.length) url.searchParams.set("waypoints", waypoints.map(point => `${point.latitude},${point.longitude}`).join("|"));
