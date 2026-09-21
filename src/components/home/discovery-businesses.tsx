@@ -185,16 +185,16 @@ export function DiscoveryBusinesses() {
         linkLabel="Explorar toda a cidade"
         tone="surface"
       >
-        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overscroll-x-none overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6">
           {result.businesses.map((business) => (
             <div
               key={business.id}
-              className="w-[72vw] max-w-[17.5rem] shrink-0 snap-start sm:w-[42vw] sm:max-w-[19rem] lg:w-auto lg:max-w-none lg:snap-none"
+              className="min-w-0"
             >
               <BusinessCard
                 business={business}
                 compact
-                imageSizes="(max-width: 640px) 72vw, (max-width: 1024px) 42vw, (max-width: 1280px) 25vw, 17vw"
+                imageSizes="(max-width: 640px) 46vw, (max-width: 1024px) 30vw, (max-width: 1280px) 25vw, 17vw"
               />
             </div>
           ))}
