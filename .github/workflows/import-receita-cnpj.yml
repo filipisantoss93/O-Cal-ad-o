@@ -40,8 +40,8 @@ concurrency:
 
 jobs:
   import:
-    # Registrar um runner de confiança com o rótulo rfb-cnpj que possua acesso autorizado à fonte oficial.
-    runs-on: [self-hosted, linux, x64, rfb-cnpj]
+    # O downloader usa faixas HTTP retomáveis para tolerar encerramentos da conexão oficial.
+    runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +84,8 @@ jobs:
           RFB_OFFICIAL_ARCHIVES_DIR: ${{ vars.RFB_OFFICIAL_ARCHIVES_DIR }}
         run: |
           set -euo pipefail
-          # Ao configurar o diretório local, evitar novo download pelo ambiente GitHub.
+          df -h .
+          # Mantém suporte a arquivos previamente validados em runners compatíveis.
           args=()
           if [ -n "$RFB_OFFICIAL_ARCHIVES_DIR" ]; then
             test -f "$RFB_OFFICIAL_ARCHIVES_DIR/Municipios.zip"

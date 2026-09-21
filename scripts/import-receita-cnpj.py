@@ -7,6 +7,8 @@ Modo restrito a município, setor e volume por execução; não publica vitrines
 """
 import argparse
 import csv
+import http.client
+import io
 import json
 import os
 import re
@@ -21,6 +23,8 @@ import zipfile
 from pathlib import Path
 
 BASE = "https://arquivos.receitafederal.gov.br/public.php/dav/files/YggdBLfdninEJX9"
+DOWNLOAD_RANGE_BYTES = 8 * 1024 * 1024
+MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 * 1024
 CATEGORY_PREFIXES = (
     "4711", "4712", "4721", "4722", "4723", "4724", "4729",
     "4520", "4530", "4541", "4771", "4772", "4781", "4782", "4783",
@@ -54,13 +58,46 @@ def read_member(archive):
 def csv_rows(zipped_path, min_columns):
     with zipfile.ZipFile(zipped_path) as archive:
         member = read_member(archive)
-        import io
         with archive.open(member) as raw:
             reader = csv.reader(io.TextIOWrapper(raw, encoding="latin-1", newline=""), delimiter=";")
             for row in reader:
                 if len(row) < min_columns:
                     raise ValueError(f"Layout RFB inesperado: {len(row)} colunas, esperadas {min_columns}.")
                 yield row
+
+def response_range(response, requested_offset):
+    """Valida a faixa devolvida e informa (início, fim, tamanho total)."""
+    status = response.status
+    if status == 206:
+        header = response.headers.get("Content-Range", "")
+        match = re.fullmatch(r"bytes (\d+)-(\d+)/(\d+)", header.strip())
+        if not match:
+            raise ValueError("Resposta parcial da RFB sem Content-Range válido.")
+        start, end, total = (int(value) for value in match.groups())
+        if start != requested_offset or end < start or total <= end:
+            raise ValueError("Faixa devolvida pela RFB não corresponde ao pedido.")
+        return start, end, total
+    if status == 200 and requested_offset == 0:
+        length = response.headers.get("Content-Length", "")
+        if not length.isdigit() or int(length) < 1:
+            raise ValueError("Resposta completa da RFB sem tamanho válido.")
+        return 0, int(length) - 1, int(length)
+    raise ValueError(f"Status HTTP inesperado no download oficial: {status}.")
+
+def validate_download_response(response, requested_offset):
+    content_type = response.headers.get("Content-Type", "").split(";")[0].strip().lower()
+    if content_type not in {
+        "application/zip", "application/octet-stream", "application/x-zip-compressed"
+    }:
+        raise ValueError("Servidor não forneceu arquivo ZIP oficial.")
+    if urllib.parse.urlparse(response.url).hostname not in {
+        "arquivos.receitafederal.gov.br", "dadosabertos.rfb.gov.br"
+    }:
+        raise ValueError("Redirecionamento para host não oficial.")
+    start, end, total = response_range(response, requested_offset)
+    if total > MAX_DOWNLOAD_BYTES:
+        raise ValueError("Arquivo oficial excede o limite de segurança do importador.")
+    return start, end, total
 
 def download(base, name, directory):
     parsed = urllib.parse.urlparse(base)
@@ -73,34 +110,63 @@ def download(base, name, directory):
     if not re.fullmatch(r"(Empresas[0-9]|Estabelecimentos[0-9]|Municipios)\.zip", name):
         raise ValueError("Nome de arquivo RFB inválido.")
     output = Path(directory) / name
+    partial = output.with_suffix(output.suffix + ".part")
     url = base.rstrip("/") + "/" + name
     if output.is_file():
         return output
-    request = urllib.request.Request(url, headers={
-        "User-Agent": "O-Calcadao-CNPJ-Importer/1.0 (+https://ocalcadao.com.br/contato)"
-    })
-    for attempt in range(4):
+    expected_total = None
+    failures = 0
+    while failures < 12:
+        offset = partial.stat().st_size if partial.is_file() else 0
+        request = urllib.request.Request(url, headers={
+            "User-Agent": "O-Calcadao-CNPJ-Importer/1.1 (+https://ocalcadao.com.br/contato)",
+            "Accept-Encoding": "identity",
+            "Range": f"bytes={offset}-{offset + DOWNLOAD_RANGE_BYTES - 1}",
+        })
         try:
-            with urllib.request.urlopen(request, timeout=150) as response, output.open("wb") as target:
-                if response.status != 200 or response.headers.get("Content-Type", "").split(";")[0] not in {"application/zip", "application/octet-stream", "application/x-zip-compressed"}:
-                    raise ValueError("Servidor não forneceu arquivo ZIP oficial.")
-                if urllib.parse.urlparse(response.url).hostname not in {
-                    "arquivos.receitafederal.gov.br", "dadosabertos.rfb.gov.br"
-                }:
-                    raise ValueError("Redirecionamento para host não oficial.")
-                while True:
-                    chunk = response.read(1024 * 1024)
-                    if not chunk:
-                        break
-                    target.write(chunk)
-            with zipfile.ZipFile(output) as archive:
-                archive.getinfo(read_member(archive).filename)
-            return output
-        except (OSError, ValueError, zipfile.BadZipFile, urllib.error.URLError):
-            output.unlink(missing_ok=True)
-            if attempt == 3:
+            with urllib.request.urlopen(request, timeout=150) as response:
+                start, end, total = validate_download_response(response, offset)
+                if expected_total is not None and total != expected_total:
+                    raise ValueError("O tamanho do arquivo oficial mudou durante o download.")
+                expected_total = total
+                mode = "ab" if start else "wb"
+                before = offset
+                with partial.open(mode) as target:
+                    try:
+                        while True:
+                            chunk = response.read(1024 * 1024)
+                            if not chunk:
+                                break
+                            target.write(chunk)
+                    except http.client.IncompleteRead as exc:
+                        if exc.partial:
+                            target.write(exc.partial)
+                current = partial.stat().st_size
+                if current > total or current > end + 1:
+                    raise ValueError("Servidor devolveu mais dados que a faixa solicitada.")
+                if current <= before:
+                    raise OSError("Download oficial não avançou.")
+                failures = 0
+                if current < total:
+                    continue
+            if partial.stat().st_size != expected_total:
+                raise OSError("Download oficial incompleto.")
+            partial.replace(output)
+            try:
+                with zipfile.ZipFile(output) as archive:
+                    archive.getinfo(read_member(archive).filename)
+            except (ValueError, zipfile.BadZipFile):
+                output.unlink(missing_ok=True)
                 raise
-            time.sleep(min(25, 2 ** attempt))
+            return output
+        except (OSError, zipfile.BadZipFile, urllib.error.URLError) as exc:
+            failures += 1
+            if failures >= 12:
+                raise RuntimeError("Download oficial indisponível após tentativas retomáveis.") from exc
+            time.sleep(min(30, 2 ** min(failures, 5)))
+        except ValueError:
+            partial.unlink(missing_ok=True)
+            raise
     raise RuntimeError("Download oficial indisponível.")
 
 def municipalities(zip_path):

@@ -1,8 +1,10 @@
 import importlib.util
+import io
 import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 IMPORTER = Path(__file__).resolve().parents[1] / "import-receita-cnpj.py"
 spec = importlib.util.spec_from_file_location("rfb_cnpj_importer", IMPORTER)
@@ -16,6 +18,61 @@ def zipped(path, line):
 
 
 class CnpjImporterTests(unittest.TestCase):
+    def test_valida_content_range_oficial(self):
+        response = mock.Mock(
+            status=206,
+            headers={
+                "Content-Type": "application/zip",
+                "Content-Range": "bytes 8-15/20",
+            },
+            url="https://arquivos.receitafederal.gov.br/public.php/dav/files/test.zip",
+        )
+        self.assertEqual(module.validate_download_response(response, 8), (8, 15, 20))
+
+    def test_download_retomavel_em_duas_faixas(self):
+        archive_bytes = io.BytesIO()
+        with zipfile.ZipFile(archive_bytes, "w") as archive:
+            archive.writestr("RFB.CSV", b"conteudo-oficial")
+        payload = archive_bytes.getvalue()
+        middle = len(payload) // 2
+
+        class FakeResponse:
+            def __init__(self, body, start, end):
+                self.status = 206
+                self.headers = {
+                    "Content-Type": "application/zip",
+                    "Content-Range": f"bytes {start}-{end}/{len(payload)}",
+                }
+                self.url = "https://arquivos.receitafederal.gov.br/public.php/dav/files/test.zip"
+                self.body = io.BytesIO(body)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self, size):
+                return self.body.read(size)
+
+        responses = [
+            FakeResponse(payload[:middle], 0, middle - 1),
+            FakeResponse(payload[middle:], middle, len(payload) - 1),
+        ]
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
+            module.urllib.request, "urlopen", side_effect=responses
+        ) as opener:
+            result = module.download(
+                "https://arquivos.receitafederal.gov.br/public.php/dav/files/test",
+                "Municipios.zip",
+                tmp,
+            )
+            self.assertEqual(result.read_bytes(), payload)
+            self.assertEqual(opener.call_count, 2)
+            self.assertTrue(opener.call_args_list[1].args[0].headers["Range"].startswith(
+                f"bytes={middle}-"
+            ))
+
     def test_natureza_privada_sem_pessoa_fisica(self):
         self.assertTrue(module.private_nature("2062"))
         self.assertFalse(module.private_nature("1244"))
