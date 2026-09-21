@@ -437,6 +437,22 @@ export default async function BusinessPage({
                       Consultar fonte e confirmar dados do carregador
                     </a>
                   )}
+                  {business.chargingStation.sourceCheckedAt && (
+                    <p className="mt-2 text-xs text-muted">
+                      Última verificação registrada na fonte:{" "}
+                      <time dateTime={business.chargingStation.sourceCheckedAt}>
+                        {new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeZone: "UTC" }).format(new Date(business.chargingStation.sourceCheckedAt))}
+                      </time>
+                      . O funcionamento atual não foi confirmado pelo O Calçadão.
+                    </p>
+                  )}
+                  {business.chargingStation.sourceLicense && business.chargingStation.sourceLicense.includes("Open Charge Map") && (
+                    <p className="mt-2 text-xs text-muted">
+                      Dados © contribuidores do <a href="https://openchargemap.org/about/terms" target="_blank" rel="noopener noreferrer" className="underline">Open Charge Map</a>, sob licença{" "}
+                      <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" className="underline">CC BY 4.0</a>.
+                      Dados importados e reorganizados pelo O Calçadão.
+                    </p>
+                  )}
                   {business.chargingStation.sourceLicense && business.chargingStation.sourceLicense.includes("OpenStreetMap") && (
                     <p className="mt-2 text-xs text-muted">
                       Dados © contribuidores do OpenStreetMap, licenciados sob ODbL.
