@@ -93,7 +93,7 @@ export async function POST(request: Request) {
   if (!start || !end) {
     return Response.json({ error: "Origem ou destino não localizado. Informe cidade e UF, por exemplo: Assis, SP." }, { status: 422 });
   }
-  const url = "https://api.openrouteservice.org/v2/directions/driving-car/geojson";
+  const url = "https://api.heigit.org/openrouteservice/v2/directions/driving-car/geojson";
   try {
     const response = await fetch(url, {
       method: "POST",
