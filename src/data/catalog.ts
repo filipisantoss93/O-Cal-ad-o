@@ -16,6 +16,13 @@ export const categories: Category[] = [
     accent: "bg-[#e5f1ef]",
   },
   {
+    slug: "eletropostos",
+    name: "Eletropostos",
+    icon: "⚡",
+    description: "Pontos de recarga para veículos elétricos",
+    accent: "bg-[#fff0df]",
+  },
+  {
     slug: "moda-acessorios",
     name: "Moda e Acessórios",
     icon: "👕",
