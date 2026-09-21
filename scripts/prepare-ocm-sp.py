@@ -64,7 +64,7 @@ def main():
             counts["no_valid_address"] += 1
             continue
         # Sem número explícito, manter S/N; nunca inferir ou geocodificar pela cidade.
-        parts = re.match(r"^(.+?),?\\s*,\\s*(\\d{1,6}[A-Za-z]?|s/?n)\\s*$", raw_street, flags=re.I)
+        parts = re.match(r"^(.+?),?\s*,\s*(\d{1,6}[A-Za-z]?|s/?n)\s*$", raw_street, flags=re.I)
         if parts:
             street, number = validated(parts.group(1), 160), validated(parts.group(2), 20)
         else:
@@ -101,7 +101,7 @@ def main():
             "external_id": "ocm:" + str(ident),
             "name": title, "city": town, "street": street, "number": number,
             "neighborhood": validated(address.get("AddressLine2"), 120) or "Não informado",
-            "postal_code": re.sub(r"\\D", "", str(address.get("Postcode") or "")),
+            "postal_code": re.sub(r"\D", "", str(address.get("Postcode") or "")),
             "latitude": round(lat, 7), "longitude": round(lon, 7),
             "power_kw": max(kw) if kw else None, "power_type": power_type,
             "connectors": names[:16], "opening_hours_text": None,
