@@ -91,7 +91,6 @@ export function CityPromotions() {
   return (
     <div ref={sectionRef}>
       <HomeFeedSection
-        id="ofertas"
         eyebrow="Vale aproveitar"
         title="Ofertas da cidade"
         description="Promoções publicadas pelos comércios locais."
