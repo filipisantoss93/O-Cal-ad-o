@@ -116,6 +116,13 @@ async function loadBusiness(
   const category = categoryResult.data;
   const city = cityResult.data;
   if (!category || !city) return null;
+  const stationResult = category.slug === "eletropostos"
+    ? await supabase.from("charging_station_details")
+        .select("power_kw, power_type, connectors, opening_hours_text, access_type, source_url, source_checked_at, source_license")
+        .eq("business_id", business.id).maybeSingle()
+    : null;
+  if (stationResult?.error) return null;
+  const station = stationResult?.data ?? null;
   const schedule = getBusinessSchedule(hoursResult.data ?? [], city.timezone);
   const catalogItems = (itemsResult.data ?? []) as unknown as PublicCatalogRow[];
   const isPublicPlace = business.listing_type === "public_place";
@@ -127,6 +134,16 @@ async function loadBusiness(
     description: business.description || (isPublicPlace ? `Consulte as informações de ${business.name}.` : `Conheça a ${business.name} no O Calçadão.`),
     listingType: listingType(business.listing_type),
     publicPlaceKind: business.public_place_kind as PublicPlaceKind | null,
+    chargingStation: station ? {
+      powerKw: station.power_kw === null ? null : Number(station.power_kw),
+      powerType: station.power_type,
+      connectors: station.connectors ?? [],
+      openingHoursText: station.opening_hours_text,
+      accessType: station.access_type,
+      sourceUrl: safePublicUrl(station.source_url) ?? "",
+      sourceCheckedAt: station.source_checked_at,
+      sourceLicense: station.source_license,
+    } : null,
     officialSourceUrl: safePublicUrl(business.official_source_url),
     categorySlug: category.slug,
     categoryName: category.name,

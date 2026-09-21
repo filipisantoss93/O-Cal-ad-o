@@ -55,6 +55,17 @@ export type FeaturedCatalogItem = {
   contactUrl?: string | null;
 };
 
+export type ChargingStationDetails = {
+  powerKw: number | null;
+  powerType: "AC" | "DC" | "AC/DC" | null;
+  connectors: string[];
+  openingHoursText: string | null;
+  accessType: "public" | "customers" | "restricted" | "unknown";
+  sourceUrl: string;
+  sourceCheckedAt: string;
+  sourceLicense: string | null;
+};
+
 export type Business = {
   id: string;
   slug: string;
@@ -62,6 +73,7 @@ export type Business = {
   description: string;
   listingType: ListingType;
   publicPlaceKind?: PublicPlaceKind | null;
+  chargingStation?: ChargingStationDetails | null;
   officialSourceUrl?: string | null;
   categorySlug: string;
   categoryName: string;

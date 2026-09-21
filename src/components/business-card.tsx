@@ -75,9 +75,11 @@ export function BusinessCard({
         }`}>
           {business.alwaysOpen
             ? "Aberto 24h"
-            : business.isOpen
-              ? "Aberto agora"
-              : "Fechado"}
+            : business.hoursAvailable === false
+              ? "Horário não informado"
+              : business.isOpen
+                ? "Aberto agora"
+                : "Fechado"}
         </span>
       </div>
 
@@ -107,8 +109,10 @@ export function BusinessCard({
           <span className={`flex shrink-0 flex-col text-ink ${compact ? "items-start sm:items-end sm:max-w-[7.4rem]" : "items-end max-w-[9rem]"}`}>
             <span className={`inline-flex items-center gap-1 font-black ${compact ? "text-xs" : "text-sm"}`}>
               <StarIcon className="size-4 fill-accent stroke-accent-dark" />
-              {isPublicPlace
-                ? "Público"
+              {business.categorySlug === "eletropostos"
+                ? "Recarga"
+                : isPublicPlace
+                  ? "Público"
                 : hasRating
                   ? `${business.rating.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} (${business.reviewCount.toLocaleString("pt-BR")})`
                   : "Novo"}

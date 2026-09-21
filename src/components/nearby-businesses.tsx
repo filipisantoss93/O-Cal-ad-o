@@ -105,7 +105,7 @@ export function NearbyBusinesses() {
     ? `${city.id}:${coordinates ? `${coordinates.latitude}:${coordinates.longitude}` : "city"}`
     : null;
 
-  async function useCurrentLocation() {
+  async function requestCurrentLocation() {
     if (detecting) return;
     setDetecting(true);
     setLocationError("");
@@ -229,7 +229,7 @@ export function NearbyBusinesses() {
           <div className="mb-4">
             <button
               type="button"
-              onClick={() => void useCurrentLocation()}
+              onClick={() => void requestCurrentLocation()}
               disabled={detecting}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-brand-dark bg-canvas px-4 text-sm font-black text-brand-dark transition hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
             >
