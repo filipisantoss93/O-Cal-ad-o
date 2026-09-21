@@ -1,0 +1,55 @@
+name: Preparar eletropostos SP a partir do Open Charge Map
+on:
+  push:
+    branches: [feat/eletropostos-lote-sp]
+    paths:
+      - ".github/workflows/prepare-eletropostos-sp.yml"
+      - "scripts/prepare-ocm-sp.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prepare-eletropostos-sp
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Baixar projeto
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Obter export público OCM com clone raso
+        shell: bash
+        run: |
+          set -euo pipefail
+          OCM_DIR="$RUNNER_TEMP/ocm-export"
+          git clone --quiet --depth=1 --filter=blob:none --sparse https://github.com/openchargemap/ocm-export.git "$OCM_DIR"
+          git -C "$OCM_DIR" sparse-checkout set data/BR
+          curl --fail --location --retry 3 --max-time 60 \
+            "https://raw.githubusercontent.com/openchargemap/ocm-export/main/data/referencedata.json" \
+            --output "$RUNNER_TEMP/ocm-reference.json"
+          echo "OCM_DIR=$OCM_DIR" >> "$GITHUB_ENV"
+      - name: Filtrar somente SP e origem CC BY 4.0
+        run: |
+          python3 scripts/prepare-ocm-sp.py \
+            "$OCM_DIR/data/BR" "$RUNNER_TEMP/ocm-reference.json" \
+            src/data/eletropostos-sp-ocm | tee "$RUNNER_TEMP/eletropostos-summary.json"
+          cat "$RUNNER_TEMP/eletropostos-summary.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Salvar lote documentado na branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/eletropostos-sp-ocm
+          if git diff --cached --quiet; then
+            echo "Sem alterações no lote."
+            exit 0
+          fi
+          git commit -m "data: preparar lote elegível de eletropostos de São Paulo"
+          git push origin HEAD:feat/eletropostos-lote-sp
