@@ -24,6 +24,8 @@ type Platform = "ios" | "android" | "windows" | "other";
 const installDismissedKey = "ocalcadao:install-dismissed-until";
 const installDismissedSessionKey = "ocalcadao:install-dismissed";
 const locationDismissedKey = "ocalcadao:location-dismissed";
+const visitCountKey = "ocalcadao:visit-count";
+const visitRecordedKey = "ocalcadao:visit-recorded-this-session";
 
 function installedMode() {
   return window.matchMedia("(display-mode: standalone)").matches ||
@@ -53,6 +55,7 @@ export function PwaExperience() {
   const [initialized, setInitialized] = useState(false);
   const [platform, setPlatform] = useState<Platform>("other");
   const [showInstall, setShowInstall] = useState(false);
+  const [installEligible, setInstallEligible] = useState(false);
   const [showLocation, setShowLocation] = useState(false);
   const [installEvent, setInstallEvent] = useState<InstallEvent | null>(null);
   const [detecting, setDetecting] = useState(false);
@@ -100,7 +103,25 @@ export function PwaExperience() {
   }, [isAdmin]);
 
   useEffect(() => {
+    if (isAdmin) return;
+    try {
+      const existing = Number(window.localStorage.getItem(visitCountKey)) || 0;
+      const alreadyRecorded = window.sessionStorage.getItem(visitRecordedKey) === "1";
+      const count = alreadyRecorded ? existing : Math.min(existing + 1, 2);
+      if (!alreadyRecorded) {
+        window.sessionStorage.setItem(visitRecordedKey, "1");
+        window.localStorage.setItem(visitCountKey, String(count));
+      }
+      setInstallEligible(count >= 2);
+    } catch {
+      // Sem armazenamento, a instalação só é sugerida após uma navegação.
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
     if (isAdmin || !initialized || installed || installSuppressedRef.current) return;
+    // No primeiro acesso, permita que a pessoa explore antes da sugestão.
+    if (!installEligible && pathname === "/") return;
     let dismissedUntil = 0;
     let dismissedThisSession = false;
     try {
@@ -116,7 +137,7 @@ export function PwaExperience() {
     }
     const timer = window.setTimeout(() => setShowInstall(true), 2500);
     return () => window.clearTimeout(timer);
-  }, [initialized, installed, isAdmin]);
+  }, [initialized, installed, isAdmin, installEligible, pathname]);
 
   useEffect(() => {
     if (isAdmin || !initialized || !installed) return;
@@ -261,7 +282,7 @@ export function PwaExperience() {
         type="button"
         onClick={installed ? dismissLocation : dismissInstall}
         aria-label="Fechar aviso"
-        className="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-full text-muted hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="absolute right-3 top-3 z-10 grid size-11 place-items-center rounded-full text-muted hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         <XIcon className="size-4" />
       </button>
@@ -275,7 +296,7 @@ export function PwaExperience() {
             type="button"
             onClick={() => void requestLocation()}
             disabled={detecting}
-            className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-white hover:bg-brand-dark disabled:opacity-60"
+            className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-dark px-4 text-sm font-bold text-white hover:bg-ink disabled:opacity-60"
           >
             <LocateIcon className="size-4" />
             {detecting ? "Localizando…" : "Ativar localização"}
@@ -292,7 +313,7 @@ export function PwaExperience() {
             <button
               type="button"
               onClick={() => void requestInstall()}
-              className="mt-4 min-h-11 w-full rounded-xl bg-brand px-4 text-sm font-bold text-white hover:bg-brand-dark"
+              className="mt-4 min-h-11 w-full rounded-xl bg-brand-dark px-4 text-sm font-bold text-white hover:bg-ink"
             >
               Instalar aplicativo
             </button>
