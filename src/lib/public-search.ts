@@ -2,6 +2,7 @@ import "server-only";
 
 import { getBusinessSchedule, type BusinessHour } from "@/lib/business-hours";
 import { loadResolvedBusinessLogoPaths } from "@/lib/business-logo";
+import type { CurrentCoordinates } from "@/lib/location";
 import { publicMediaUrl } from "@/lib/merchant/media";
 import { createPublicClient } from "@/lib/supabase/server";
 import type { Business } from "@/types/catalog";
@@ -19,6 +20,7 @@ export const PUBLIC_SEARCH_PAGE_SIZE = 12;
 type SearchIdRow = {
   business_id: number;
   total_count: number;
+  distance_km: number | null;
 };
 
 export type PublicBusinessSearchResult = {
@@ -37,6 +39,11 @@ function initials(name: string) {
     .map((word) => word[0])
     .join("")
     .toLocaleUpperCase("pt-BR");
+}
+
+function formatDistance(distanceKm: number) {
+  if (distanceKm < 1) return `${Math.max(1, Math.round(distanceKm * 1_000))} m`;
+  return `${distanceKm.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km`;
 }
 
 function emptyResult(page: number): PublicBusinessSearchResult {
@@ -58,6 +65,7 @@ export async function searchPublicBusinesses(
   categorySlug?: string,
   cityId?: number,
   requestedPage = 1,
+  coordinates?: CurrentCoordinates | null,
 ): Promise<PublicBusinessSearchResult> {
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0
     ? requestedPage
@@ -69,22 +77,26 @@ export async function searchPublicBusinesses(
   const supabase = createPublicClient();
   const offset = (page - 1) * PUBLIC_SEARCH_PAGE_SIZE;
   const rpc = supabase.rpc.bind(supabase) as unknown as (
-    fn: "search_public_business_ids",
+    fn: "search_public_business_ids_by_location",
     args: {
       p_city_id: number;
       p_query: string;
       p_category_slug: string | null;
+      p_latitude: number | null;
+      p_longitude: number | null;
       p_limit: number;
       p_offset: number;
     },
   ) => Promise<{ data: SearchIdRow[] | null; error: { message: string } | null }>;
 
   const { data: matches, error: searchError } = await rpc(
-    "search_public_business_ids",
+    "search_public_business_ids_by_location",
     {
       p_city_id: cityId,
       p_query: query?.trim() ?? "",
       p_category_slug: categorySlug ?? null,
+      p_latitude: coordinates?.latitude ?? null,
+      p_longitude: coordinates?.longitude ?? null,
       p_limit: PUBLIC_SEARCH_PAGE_SIZE,
       p_offset: offset,
     },
@@ -101,6 +113,7 @@ export async function searchPublicBusinesses(
 
   const total = Number(matches[0]?.total_count ?? 0);
   const businessIds = matches.map((row) => row.business_id);
+  const matchesById = new Map(matches.map((row) => [row.business_id, row]));
   const { data: rows, error } = await supabase
     .from("businesses")
     .select(
@@ -149,6 +162,8 @@ export async function searchPublicBusinesses(
       hoursByBusiness.get(row.id) ?? [],
       city.timezone,
     );
+    const distanceKm = matchesById.get(row.id)?.distance_km;
+    const hasDistance = typeof distanceKm === "number" && Number.isFinite(distanceKm);
 
     return [{
       id: String(row.id),
@@ -166,7 +181,7 @@ export async function searchPublicBusinesses(
       categoryName: category.name,
       neighborhood: row.neighborhood,
       address: [row.street, row.address_number, row.complement].filter(Boolean).join(", "),
-      distance: `${city.name} - ${city.state_code}`,
+      distance: hasDistance ? formatDistance(distanceKm) : `${city.name} - ${city.state_code}`,
       rating: 0,
       reviewCount: 0,
       ...schedule,

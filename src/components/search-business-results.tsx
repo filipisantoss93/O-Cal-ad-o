@@ -1,40 +1,35 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { BusinessListCard } from "@/components/business-list-card";
-import { compareByDistanceRatingName } from "@/lib/business-order";
 import { loadGoogleRatings } from "@/lib/google-ratings-client";
 import {
   cityChangeEventName,
   selectedCityStorageKey,
+  selectedCoordinatesCookieName,
   selectedCoordinatesStorageKey,
+  serializeCoordinatesCookie,
   type CurrentCoordinates,
   type SelectedCity,
 } from "@/lib/location";
 import { recordHighlightEvent } from "@/lib/highlights-client";
 import type { Business } from "@/types/catalog";
 
-type NearbyBusiness = {
-  slug: string;
-  distanceKm: number | null;
-};
-
 function readStoredValue(key: string, storage: Storage) {
   return storage.getItem(key);
-}
-
-function formatDistance(distanceKm: number) {
-  if (distanceKm < 1) return `${Math.max(1, Math.round(distanceKm * 1_000))} m`;
-  return `${distanceKm.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km`;
 }
 
 export function SearchBusinessResults({
   businesses,
   categorySlug,
+  distanceOrdered,
 }: {
   businesses: Business[];
   categorySlug?: string;
+  distanceOrdered: boolean;
 }) {
+  const router = useRouter();
   const storedCity = useSyncExternalStore(
     (onChange) => {
       window.addEventListener(cityChangeEventName, onChange);
@@ -75,23 +70,10 @@ export function SearchBusinessResults({
       return null;
     }
   }, [storedCoordinates]);
-  const distanceBusinessIds = useMemo(
-    () => businesses
-      .map((business) => Number(business.id))
-      .filter((id) => Number.isSafeInteger(id) && id > 0),
-    [businesses],
-  );
   const ratingsKey = useMemo(
     () => businesses.map((business) => business.id).join(","),
     [businesses],
   );
-  const locationKey = city && coordinates
-    ? `${city.id}:${coordinates.latitude}:${coordinates.longitude}:${distanceBusinessIds.join(",")}`
-    : null;
-  const [distanceResult, setDistanceResult] = useState<{
-    locationKey: string;
-    distances: Map<string, number>;
-  } | null>(null);
   const [ratingResult, setRatingResult] = useState<{
     ratingsKey: string;
     businesses: Business[];
@@ -125,11 +107,7 @@ export function SearchBusinessResults({
         : business;
     });
 
-    if (locationKey && distanceResult?.locationKey === locationKey) {
-      return decorated.sort((first, second) =>
-        compareByDistanceRatingName(first, second, distanceResult.distances),
-      );
-    }
+    if (distanceOrdered) return decorated;
 
     return decorated.sort((first, second) => {
       if (Boolean(first.isSponsored) !== Boolean(second.isSponsored)) {
@@ -137,7 +115,16 @@ export function SearchBusinessResults({
       }
       return 0;
     });
-  }, [businesses, distanceResult, highlightKey, highlightResult, locationKey, ratingResult, ratingsKey]);
+  }, [businesses, distanceOrdered, highlightKey, highlightResult, ratingResult, ratingsKey]);
+
+  useEffect(() => {
+    if (distanceOrdered || !coordinates) return;
+    const value = serializeCoordinatesCookie(coordinates);
+    if (!value) return;
+
+    document.cookie = `${selectedCoordinatesCookieName}=${value}; Path=/; SameSite=Lax`;
+    router.refresh();
+  }, [coordinates, distanceOrdered, router]);
 
   useEffect(() => {
     if (businesses.length === 0) return;
@@ -151,45 +138,6 @@ export function SearchBusinessResults({
     void loadRatings();
     return () => controller.abort();
   }, [businesses, ratingsKey]);
-
-  useEffect(() => {
-    if (!city || !coordinates || !locationKey || distanceBusinessIds.length === 0) return;
-
-    const controller = new AbortController();
-    const loadDistances = async () => {
-      try {
-        const response = await fetch("/api/comercios-proximos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            cityId: city.id,
-            latitude: coordinates.latitude,
-            longitude: coordinates.longitude,
-            businessIds: distanceBusinessIds,
-          }),
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        if (!response.ok) return;
-        const payload = (await response.json()) as { businesses?: NearbyBusiness[] };
-        setDistanceResult({
-          locationKey,
-          distances: new Map(
-            (payload.businesses ?? [])
-              .filter(
-                (business): business is NearbyBusiness & { distanceKm: number } =>
-                  typeof business.distanceKm === "number",
-              )
-              .map((business) => [business.slug, business.distanceKm]),
-          ),
-        });
-      } catch (error) {
-        if (!controller.signal.aborted) console.error("[buscar] distance lookup failed", error);
-      }
-    };
-    void loadDistances();
-    return () => controller.abort();
-  }, [city, coordinates, distanceBusinessIds, locationKey]);
 
   useEffect(() => {
     if (!city || !highlightKey) return;
@@ -245,22 +193,12 @@ export function SearchBusinessResults({
       className="mt-7 space-y-3 sm:space-y-4"
       onClickCapture={trackStoreView}
     >
-      {displayedBusinesses.map((business) => {
-        const distanceKm =
-          distanceResult?.locationKey === locationKey
-            ? distanceResult.distances.get(business.slug)
-            : undefined;
-        return (
-          <BusinessListCard
-            key={business.id}
-            business={
-              distanceKm === undefined
-                ? business
-                : { ...business, distance: formatDistance(distanceKm) }
-            }
-          />
-        );
-      })}
+      {displayedBusinesses.map((business) => (
+        <BusinessListCard
+          key={business.id}
+          business={business}
+        />
+      ))}
     </div>
   );
 }

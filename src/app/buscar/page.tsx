@@ -8,7 +8,11 @@ import { SearchBusinessResults } from "@/components/search-business-results";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { categories } from "@/data/catalog";
-import { selectedCityCookieName } from "@/lib/location";
+import {
+  parseCoordinatesCookie,
+  selectedCityCookieName,
+  selectedCoordinatesCookieName,
+} from "@/lib/location";
 import { searchPublicBusinesses } from "@/lib/public-search";
 
 export const metadata: Metadata = {
@@ -48,6 +52,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     : 1;
   const cookieStore = await cookies();
   const cityId = Number(cookieStore.get(selectedCityCookieName)?.value ?? "");
+  const coordinates = parseCoordinatesCookie(
+    cookieStore.get(selectedCoordinatesCookieName)?.value,
+  );
   const hasSelectedCity = Number.isInteger(cityId) && cityId > 0;
   const selectedCategory = categories.find((item) => item.slug === categoria);
   const searchResult = hasSelectedCity
@@ -56,6 +63,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         selectedCategory?.slug,
         cityId,
         requestedPage,
+        coordinates,
       )
     : {
         businesses: [],
@@ -141,6 +149,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 <SearchBusinessResults
                   businesses={results}
                   categorySlug={selectedCategory?.slug}
+                  distanceOrdered={coordinates !== null}
                 />
 
                 {searchResult.totalPages > 1 && (
