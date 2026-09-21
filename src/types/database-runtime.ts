@@ -61,6 +61,14 @@ type SeoReviewRow = {
   reviewed_by: string | null; created_at: string; updated_at: string;
 };
 
+type ChargingStationDetailsRow = {
+  business_id: number; power_kw: number | null; power_type: "AC" | "DC" | "AC/DC" | null;
+  connectors: string[]; opening_hours_text: string | null;
+  access_type: "public" | "customers" | "restricted" | "unknown";
+  source_url: string; source_external_id: string | null; source_license: string | null;
+  source_checked_at: string; updated_at: string;
+};
+
 type PushSubscriptionRow = {
   endpoint: string; user_id: string; p256dh: string; auth: string; created_at: string;
 };
@@ -75,6 +83,8 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       admin_vapid_public_key: { Args: Record<PropertyKey, never>; Returns: string | null };
     };
     Tables: Omit<GeneratedPublicSchema["Tables"], "businesses"> & {
+      charging_station_details: AdministrativeTable<ChargingStationDetailsRow,
+        Pick<ChargingStationDetailsRow, "business_id" | "source_url"> & Partial<Omit<ChargingStationDetailsRow, "business_id" | "source_url">>>;
       events: AdministrativeTable<EventRow, EventInsert>;
       event_highlights: AdministrativeTable<EventHighlightRow, EventHighlightInsert>;
       event_highlight_packages: AdministrativeTable<EventHighlightPackage, EventHighlightPackageInsert>;
