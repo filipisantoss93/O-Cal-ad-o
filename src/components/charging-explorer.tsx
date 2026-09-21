@@ -74,7 +74,7 @@ function StationCard({ station, position, planned }: {
         <Link href={`/loja/${station.slug}`} className="inline-flex min-h-10 items-center rounded-xl border border-line px-3 text-xs font-black text-ink">
           Ver dados e fonte
         </Link>
-        <a href={googleDirectionsUrl(position ?? station, station)}
+        <a href={googleDirectionsUrl(position, station)}
           target="_blank" rel="noopener noreferrer"
           className="inline-flex min-h-10 items-center rounded-xl bg-brand-dark px-3 text-xs font-black text-white">
           Navegar até o ponto ↗
