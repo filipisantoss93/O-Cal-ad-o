@@ -91,17 +91,16 @@ export function CityPromotions() {
   return (
     <div ref={sectionRef}>
       <HomeFeedSection
-        id="ofertas"
         eyebrow="Vale aproveitar"
         title="Ofertas da cidade"
         description="Promoções publicadas pelos comércios locais."
         tone="canvas"
       >
-        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overscroll-x-none overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {promotions.map((promotion) => (
             <div
               key={promotion.id}
-              className="w-[72vw] max-w-[17.5rem] shrink-0 snap-start sm:w-[42vw] sm:max-w-[19rem] lg:w-auto lg:max-w-none lg:snap-none"
+              className="min-w-0"
             >
               <PromotionCard promotion={promotion} />
             </div>

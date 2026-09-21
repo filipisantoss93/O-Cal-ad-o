@@ -25,13 +25,13 @@ export function HomeSectionSkeleton({
       tone={tone}
     >
       <div
-        className="-mx-4 flex gap-3 overflow-hidden px-4 sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:px-0"
+        className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4"
         aria-hidden="true"
       >
         {[0, 1, 2, 3].map((item) => (
           <div
             key={item}
-            className={`${height} w-[72vw] max-w-[17.5rem] shrink-0 animate-pulse rounded-2xl border border-line/70 bg-canvas sm:w-[42vw] sm:max-w-[19rem] lg:w-auto lg:max-w-none`}
+            className={`${height} min-w-0 animate-pulse rounded-2xl border border-line/70 bg-canvas`}
           />
         ))}
       </div>

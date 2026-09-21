@@ -82,7 +82,7 @@ export function BusinessCard({
       </div>
 
       <div className={compact ? "p-3 sm:p-4" : "p-5"}>
-        <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className={`flex min-w-0 items-start justify-between gap-2 ${compact ? "flex-col sm:flex-row" : "flex-row"}`}>
           <div className="min-w-0">
             <p className={`truncate font-extrabold uppercase text-brand-dark ${compact ? "text-[9px] tracking-[0.06em] sm:text-[10px]" : "text-xs tracking-[0.12em]"}`}>
               {business.categoryName}
@@ -104,8 +104,8 @@ export function BusinessCard({
               )}
             </h3>
           </div>
-          <span className={`flex shrink-0 flex-col items-end text-ink ${compact ? "max-w-[7.4rem]" : "max-w-[9rem]"}`}>
-            <span className={`inline-flex items-center gap-1 font-black ${compact ? "text-[10px] sm:text-xs" : "text-sm"}`}>
+          <span className={`flex shrink-0 flex-col text-ink ${compact ? "items-start sm:items-end sm:max-w-[7.4rem]" : "items-end max-w-[9rem]"}`}>
+            <span className={`inline-flex items-center gap-1 font-black ${compact ? "text-xs" : "text-sm"}`}>
               <StarIcon className="size-4 fill-accent stroke-accent-dark" />
               {isPublicPlace
                 ? "Público"
@@ -125,7 +125,7 @@ export function BusinessCard({
           {business.description}
         </p>
 
-        <div className={`flex flex-wrap font-semibold text-muted ${compact ? "mt-2 gap-1 text-[10px] sm:mt-3 sm:text-xs" : "mt-4 gap-x-4 gap-y-2 text-xs"}`}>
+        <div className={`flex flex-wrap font-semibold text-muted ${compact ? "mt-2 gap-1 text-xs sm:mt-3" : "mt-4 gap-x-4 gap-y-2 text-xs"}`}>
           <span className="inline-flex min-w-0 items-center gap-1">
             <MapPinIcon className={`shrink-0 text-brand ${compact ? "size-3.5" : "size-4"}`} />
             <span className={compact ? "truncate" : ""}>{business.neighborhood} · {business.distance}</span>
@@ -144,7 +144,7 @@ export function BusinessCard({
 
         <Link
           href={`/loja/${business.slug}`}
-          className={`inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-ink font-black text-white transition hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${compact ? "mt-3 min-h-10 px-2 text-xs sm:text-sm" : "mt-5 min-h-11 px-4 text-sm"}`}
+          className={`inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-ink font-black text-white transition hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${compact ? "mt-3 min-h-11 px-2 text-xs sm:text-sm" : "mt-5 min-h-11 px-4 text-sm"}`}
         >
           {isPublicPlace ? "Ver local" : compact ? "Ver loja" : "Ver vitrine"}
           <ArrowRightIcon className={`transition-transform group-hover:translate-x-1 ${compact ? "size-3.5" : "size-4"}`} />

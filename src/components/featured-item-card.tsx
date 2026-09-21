@@ -49,7 +49,7 @@ export function FeaturedItemCard({ item }: { item: FeaturedCatalogItem }) {
             src={item.imageUrl}
             alt={item.name}
             fill
-            sizes="(max-width: 640px) 72vw, (max-width: 1024px) 42vw, (max-width: 1280px) 25vw, 20vw"
+            sizes="(max-width: 640px) 46vw, (max-width: 1024px) 30vw, (max-width: 1280px) 25vw, 20vw"
             className="object-cover"
           />
         </div>
@@ -89,7 +89,7 @@ export function FeaturedItemCard({ item }: { item: FeaturedCatalogItem }) {
                 {...(item.contactAction === "phone"
                   ? {}
                   : { target: "_blank", rel: "noreferrer" })}
-                className={`inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-xl px-1.5 py-2 text-center text-[10px] font-black leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:px-3 sm:text-xs ${contactClass}`}
+                className={`inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-xl px-1.5 py-2 text-center text-[10px] font-black leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:px-3 sm:text-xs ${contactClass}`}
               >
                 <ContactIcon className="hidden size-4 shrink-0 sm:block" />
                 {contactLabel}
@@ -97,7 +97,7 @@ export function FeaturedItemCard({ item }: { item: FeaturedCatalogItem }) {
             ) : null}
             <Link
               href={storeHref}
-              className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border border-line bg-canvas px-1.5 text-center text-[10px] font-black text-brand-dark outline-none transition hover:border-brand/30 hover:bg-brand/5 focus-visible:ring-2 focus-visible:ring-brand sm:text-xs"
+              className="inline-flex min-h-11 items-center justify-center gap-1 rounded-xl border border-line bg-canvas px-1.5 text-center text-[10px] font-black text-brand-dark outline-none transition hover:border-brand/30 hover:bg-brand/5 focus-visible:ring-2 focus-visible:ring-brand sm:text-xs"
             >
               Ver na loja
               <ArrowRightIcon className="size-3.5 shrink-0" />
