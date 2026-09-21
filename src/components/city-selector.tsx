@@ -154,7 +154,7 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
         className={
           variant === "hero"
             ? "inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-full border border-line bg-surface px-4 text-sm font-extrabold text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            : "inline-flex min-h-10 min-w-0 max-w-44 items-center gap-2 overflow-hidden rounded-full px-3 text-sm font-extrabold text-ink transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            : "inline-flex min-h-11 min-w-0 max-w-44 items-center gap-2 overflow-hidden rounded-full px-3 text-sm font-extrabold text-ink transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         }
         aria-haspopup="dialog"
         aria-label={selectedCity ? `Cidade: ${selectedCity.name}, ${selectedCity.stateCode}` : "Escolher cidade"}
@@ -214,7 +214,7 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
               onClick={() => void refreshCurrentLocation()}
               disabled={detecting}
               autoFocus
-              className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-black text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-65"
+              className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-dark px-4 text-sm font-black text-white transition hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-65"
             >
               <LocateIcon className="size-5" />
               {detecting ? "Identificando sua cidade..." : "Usar localização atual"}
