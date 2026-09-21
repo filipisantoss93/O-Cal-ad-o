@@ -34,7 +34,7 @@ export function SearchForm({
       {category && <input name="categoria" type="hidden" value={category} />}
       <button
         type="submit"
-        className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-brand px-3.5 text-sm font-black text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:px-6"
+        className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-brand-dark px-3.5 text-sm font-black text-white transition hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:px-6"
       >
         Buscar
       </button>
