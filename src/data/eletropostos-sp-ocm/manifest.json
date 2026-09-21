@@ -1,0 +1,16 @@
+{
+  "files": 1298,
+  "other_state": 648,
+  "no_valid_address": 14,
+  "eligible": 97,
+  "not_approved_or_operational": 9,
+  "non_open_provider": 530,
+  "parts": 2,
+  "source": "Open Charge Map ocm-export data/BR",
+  "provider_id": 1,
+  "license": "CC BY 4.0",
+  "snapshot_date": "2026-04-23",
+  "states": [
+    "SP"
+  ]
+}
