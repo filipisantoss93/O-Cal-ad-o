@@ -104,6 +104,7 @@ export function PwaExperience() {
 
   useEffect(() => {
     if (isAdmin) return;
+    let eligible = false;
     try {
       const existing = Number(window.localStorage.getItem(visitCountKey)) || 0;
       const alreadyRecorded = window.sessionStorage.getItem(visitRecordedKey) === "1";
@@ -112,10 +113,13 @@ export function PwaExperience() {
         window.sessionStorage.setItem(visitRecordedKey, "1");
         window.localStorage.setItem(visitCountKey, String(count));
       }
-      setInstallEligible(count >= 2);
+      eligible = count >= 2;
     } catch {
       // Sem armazenamento, a instalação só é sugerida após uma navegação.
     }
+    // A atualização agendada evita renderizações em cascata dentro do efeito.
+    const timer = window.setTimeout(() => setInstallEligible(eligible), 0);
+    return () => window.clearTimeout(timer);
   }, [isAdmin]);
 
   useEffect(() => {
