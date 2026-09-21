@@ -79,20 +79,22 @@ export default function Home() {
           <CompactCategories categories={homeCategories} />
         </HomeFeedSection>
 
+        <NearbyBusinesses />
+        <RegionalPaidBanners />
+        <FeaturedBusinesses />
+        <div id="ofertas" className="scroll-mt-24"><CityPromotions /></div>
+
+        <section className="border-b border-line bg-canvas px-4 py-4 sm:px-6"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-black text-ink">O que acontece na sua cidade?</h2><p className="text-xs text-muted">Shows, feiras, festivais e encontros locais.</p></div><Link href="/eventos" className="inline-flex min-h-11 items-center rounded-xl bg-ink px-4 py-3 text-sm font-black text-white">Explorar eventos →</Link></div></section>
+
         <section className="border-b border-line bg-surface px-4 py-5 sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-semibold text-muted">Quer explorar estabelecimentos de outras cidades?</p>
-            <Link href="/descobrir" className="text-sm font-black text-brand-dark underline underline-offset-4 hover:text-ink">
+            <Link href="/descobrir" className="inline-flex min-h-11 items-center text-sm font-black text-brand-dark underline underline-offset-4 hover:text-ink">
               Descobrir pelo Brasil →
             </Link>
           </div>
         </section>
 
-        <section className="border-b border-line bg-canvas px-4 py-4 sm:px-6"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-black text-ink">O que acontece na sua cidade?</h2><p className="text-xs text-muted">Shows, feiras, festivais e encontros locais.</p></div><Link href="/eventos" className="rounded-xl bg-ink px-4 py-3 text-sm font-black text-white">Explorar eventos →</Link></div></section>
-        <RegionalPaidBanners />
-        <FeaturedBusinesses />
-        <CityPromotions />
-        <NearbyBusinesses />
         <FeaturedCatalogItems />
         <DiscoveryBusinesses />
 
@@ -115,7 +117,7 @@ export default function Home() {
             </div>
             <Link
               href="/cadastro"
-              className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-black text-white shadow-[0_12px_25px_rgba(187,61,35,0.2)] transition hover:-translate-y-0.5 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-accent sm:rounded-2xl sm:px-6 sm:text-base"
+              className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-dark px-5 text-sm font-black text-white shadow-[0_12px_25px_rgba(187,61,35,0.2)] transition hover:-translate-y-0.5 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-accent sm:rounded-2xl sm:px-6 sm:text-base"
             >
               Criar minha vitrine
               <ArrowRightIcon className="size-5" />
