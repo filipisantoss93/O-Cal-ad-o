@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { SearchIcon } from "@/components/icons";
 import { CompactCategories } from "@/components/home/compact-categories";
 import { SearchForm } from "@/components/search-form";
@@ -46,6 +47,7 @@ function searchPageHref(
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const { q = "", categoria, pagina } = await searchParams;
+  if (categoria === "eletropostos") redirect("/eletropostos");
   const parsedPage = Number.parseInt(pagina ?? "1", 10);
   const requestedPage = Number.isSafeInteger(parsedPage) && parsedPage > 0
     ? parsedPage
