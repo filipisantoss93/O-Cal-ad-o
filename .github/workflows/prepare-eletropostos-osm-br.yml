@@ -50,4 +50,5 @@ jobs:
           git add src/data/eletropostos-br-osm
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "data: extrair pontos de recarga OSM do Brasil"
+          git pull --rebase origin main
           git push origin HEAD:main
