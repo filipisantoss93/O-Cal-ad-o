@@ -1,0 +1,47 @@
+name: Preparar eletropostos OSM PR SP SC RS
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prepare-eletropostos-sul-sudeste.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: prepare-eletropostos-sul-sudeste
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Instalar leitor de dados OSM
+        run: python3 -m pip install --quiet "osmium==4.1.1"
+      - name: Baixar e extrair dados de cada estado
+        shell: bash
+        run: |
+          set -euo pipefail
+          for entry in "PR:south:parana" "SP:southeast:sao-paulo" "SC:south:santa-catarina" "RS:south:rio-grande-do-sul"; do
+            IFS=: read -r UF REGION SLUG <<< "${entry}"
+            URL="https://download.openstreetmap.fr/extracts/south-america/brazil/${REGION}/${SLUG}-latest.osm.pbf"
+            curl --fail --location --retry 4 --retry-all-errors --retry-delay 5 --max-time 1800               --user-agent "O-Calcadao/1.0 (+https://ocalcadao.com.br/contato)"               "${URL}" --output "${RUNNER_TEMP}/state.osm.pbf"
+            test "$(stat -c %s "${RUNNER_TEMP}/state.osm.pbf")" -ge 10000000
+            OSM_EXTRACT_URL="${URL}" python3 scripts/prepare-osm-br-charging.py               "${RUNNER_TEMP}/state.osm.pbf" "src/data/eletropostos-${UF}-osm" |
+              tee "${RUNNER_TEMP}/summary-${UF}.json"
+            cat "${RUNNER_TEMP}/summary-${UF}.json" >> "${GITHUB_STEP_SUMMARY}"
+            rm -f "${RUNNER_TEMP}/state.osm.pbf"
+          done
+      - name: Salvar os quatro datasets ODbL separados
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/eletropostos-{PR,SP,SC,RS}-osm
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "data: preparar eletropostos OSM PR SP SC RS"
+          git pull --rebase origin main
+          git push origin HEAD:main
