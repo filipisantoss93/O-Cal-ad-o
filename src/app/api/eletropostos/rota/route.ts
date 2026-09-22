@@ -114,7 +114,15 @@ export async function POST(request: Request) {
       signal: AbortSignal.timeout(18000),
     });
     if (!response.ok) {
-      console.error("[eletropostos/rota] upstream", response.status);
+      // A API externa pode enviar uma descrição útil do erro. Nunca registre credenciais.
+      const responseText = (await response.text()).slice(0, 600);
+      const sanitized = responseText.replaceAll(apiKey, "[redacted]")
+        .replace(/[A-Za-z0-9_=-]{24,}/g, "[redacted]");
+      console.error("[eletropostos/rota] upstream", {
+        status: response.status,
+        contentType: response.headers.get("content-type"),
+        reason: sanitized.slice(0, 240),
+      });
       return Response.json({ error: "Não foi possível traçar a rota rodoviária. Confira a origem e o destino." }, { status: 503 });
     }
     const payload = await response.json() as OrsResponse;
