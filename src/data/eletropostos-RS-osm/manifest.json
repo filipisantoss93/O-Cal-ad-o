@@ -1,0 +1,11 @@
+{
+  "all_charging_nodes": 37,
+  "street_missing": 31,
+  "insufficient_ev_evidence": 31,
+  "no_public_access": 1,
+  "eligible": 5,
+  "parts": 1,
+  "source": "OpenStreetMap extrato regional do Brasil",
+  "license": "ODbL 1.0",
+  "url": "https://download.openstreetmap.fr/extracts/south-america/brazil/south/rio-grande-do-sul-latest.osm.pbf"
+}
