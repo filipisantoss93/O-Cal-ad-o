@@ -1,0 +1,54 @@
+name: Preparar eletropostos nacionais OpenStreetMap
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prepare-eletropostos-osm-br.yml"
+      - "scripts/prepare-osm-br-charging.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prepare-eletropostos-osm-br
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Instalar leitor do extrato OSM
+        run: python3 -m pip install --quiet "osmium==4.1.1"
+      - name: Baixar extrato atualizado do Brasil
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 --retry-all-errors --retry-delay 8 \
+            --max-time 3600 --user-agent "O-Calcadao/1.0 (+https://ocalcadao.com.br/contato)" \
+            "https://download.geofabrik.de/south-america/brazil-latest.osm.pbf" \
+            --output "$RUNNER_TEMP/brazil.osm.pbf"
+          test "$(stat -c %s "$RUNNER_TEMP/brazil.osm.pbf")" -ge 1000000000
+      - name: Extrair somente pontos de recarga existentes e publicáveis
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/prepare-osm-br-charging.py \
+            "$RUNNER_TEMP/brazil.osm.pbf" \
+            src/data/eletropostos-br-osm | tee "$RUNNER_TEMP/summary.json"
+          cat "$RUNNER_TEMP/summary.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Registrar base ODbL independente
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/eletropostos-br-osm
+          if git diff --cached --quiet; then exit 0; fi
+          git pull --rebase origin main
+          git commit -m "data: extrair pontos de recarga OSM do Brasil"
+          git push origin HEAD:main
