@@ -5,6 +5,7 @@ Produz dataset aberto separado (ODbL) com campos de origem e horários não pres
 import json
 import re
 import sys
+import os
 from collections import Counter
 from pathlib import Path
 
@@ -118,8 +119,8 @@ def main():
         (directory / f"part-{start//80+1:04d}.json").write_text(
             json.dumps(stations[start:start+80],ensure_ascii=False,separators=(",",":")) + "\n",encoding="utf-8")
     manifest = {**handler.counts,"parts":(len(stations)+79)//80,
-       "source":"OpenStreetMap Brasil PBF extrato Geofabrik",
-       "license":"ODbL 1.0","url":"https://download.geofabrik.de/south-america/brazil-latest.osm.pbf"}
+       "source":"OpenStreetMap extrato regional do Brasil",
+       "license":"ODbL 1.0","url":os.environ.get("OSM_EXTRACT_URL","https://download.geofabrik.de/south-america/brazil-latest.osm.pbf")}
     (directory / "manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     print(json.dumps(manifest,ensure_ascii=False))
 
