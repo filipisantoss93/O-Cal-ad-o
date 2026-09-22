@@ -24,8 +24,9 @@ def power(value):
         return None
 
 def main():
-    if len(sys.argv) != 4:
-        raise SystemExit("Uso: prepare-ocm-br.py DIRETORIO_BR REFERENCE_JSON OUTPUT_DIR")
+    if len(sys.argv) not in (4, 5) or (len(sys.argv) == 5 and sys.argv[4] != "--geolocalizados-sem-endereco"):
+        raise SystemExit("Uso: prepare-ocm-br.py DIRETORIO_BR REFERENCE_JSON OUTPUT_DIR [--geolocalizados-sem-endereco]")
+    geolocalizados = len(sys.argv) == 5
     root, reference_path, output_dir = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
     reference = json.loads(reference_path.read_text(encoding="utf-8"))
     connectors = {str(x["ID"]): validated(x.get("Title"), 80) for x in reference["ConnectionTypes"]}
@@ -57,8 +58,19 @@ def main():
         town = validated(address.get("Town"), 120)
         title = validated(address.get("Title"), 120)
         raw_street = validated(address.get("AddressLine1"), 170)
-        if not town or not title or len(raw_street) < 5:
+        falta_endereco = not town or len(raw_street) < 5
+        if not title or (falta_endereco and not geolocalizados):
             counts["no_valid_address"] += 1
+            continue
+        if geolocalizados and not falta_endereco:
+            counts["already_eligible_in_original_dataset"] += 1
+            continue
+        if geolocalizados and not any(
+            power(connection.get("PowerKW")) is not None
+            or (connectors.get(str(connection.get("ConnectionTypeID")), "").lower() not in {"", "unknown", "desconhecido"})
+            for connection in (record.get("Connections") or [])
+        ):
+            counts["no_ev_hardware_evidence"] += 1
             continue
         # Sem número explícito, manter S/N; nunca inferir ou geocodificar pela cidade.
         parts = re.match(r"^(.+?),?\s*,\s*(\d{1,6}[A-Za-z]?|s/?n)\s*$", raw_street, flags=re.I)
@@ -67,8 +79,10 @@ def main():
         else:
             street, number = validated(raw_street, 160), "S/N"
         if len(street) < 2:
-            counts["invalid_street"] += 1
-            continue
+            if not geolocalizados:
+                counts["invalid_street"] += 1
+                continue
+            street = "Endereço não informado"
         ident = record.get("ID")
         if not isinstance(ident, int) or ident in seen:
             counts["duplicate_or_missing_id"] += 1
@@ -118,7 +132,7 @@ def main():
     for idx in range(0, len(stations), 80):
         path = output_dir / f"part-{idx // 80 + 1:04d}.json"
         path.write_text(json.dumps(stations[idx:idx+80], ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
-    manifest = {**counts, "parts": (len(stations) + 79) // 80, "source": "Open Charge Map ocm-export data/BR", "provider_id": 1, "license": "CC BY 4.0", "extracted_at": dt.datetime.now(dt.timezone.utc).isoformat(), "states_in_source": sorted(set(x["state_hint"] for x in stations if x["state_hint"]))}
+    manifest = {**counts, "parts": (len(stations) + 79) // 80, "source": "Open Charge Map ocm-export data/BR", "provider_id": 1, "license": "CC BY 4.0", "dataset_variant": "geolocalizados_sem_endereco" if geolocalizados else "original", "extracted_at": dt.datetime.now(dt.timezone.utc).isoformat(), "states_in_source": sorted(set(x["state_hint"] for x in stations if x["state_hint"]))}
     (output_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(manifest, ensure_ascii=False))
 
