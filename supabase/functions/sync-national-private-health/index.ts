@@ -175,6 +175,10 @@ Deno.serve(async request=>{
         let latitude=validNumber(row.latitude_estabelecimento_decimo_grau);
         let longitude=validNumber(row.longitude_estabelecimento_decimo_grau);
         if(!(await coordsInsideCity(db,city.id,latitude,longitude))){latitude=null;longitude=null}
+        // Assis pilot: city-only validation does not prove the source point is at this street/number.
+        // Keep CNES coordinates in source staging; do not publish them as precise business positions.
+        const validatedLatitude=city.id===1?null:latitude;
+        const validatedLongitude=city.id===1?null:longitude;
         try {
           const entry=await stage(db,source.id,job.id,city,row,cnes,name,street,number,
             complement,neighborhood,postal(row.codigo_cep_estabelecimento),latitude,longitude);
@@ -206,7 +210,7 @@ Deno.serve(async request=>{
           const {data:createdRow,error:insertError}=await db.from("businesses").insert({
             owner_id:null,pre_registered:true,city_id:city.id,category_id:6,
             slug,name,street,address_number:number,complement:complement||null,neighborhood,
-            postal_code:postal(row.codigo_cep_estabelecimento),latitude,longitude,
+            postal_code:postal(row.codigo_cep_estabelecimento),latitude:validatedLatitude,longitude:validatedLongitude,
             status:"approved",plan:"free",is_active:true,publication_status:"unpublished",
             listing_type:"business",public_place_kind:null,whatsapp_e164:null,
             featured_until:null,data_source_url:sourceUrl,data_source_checked_at:new Date().toISOString(),
