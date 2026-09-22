@@ -457,7 +457,7 @@ export default async function BusinessPage({
                   )}
                   {business.chargingStation.sourceLicense && business.chargingStation.sourceLicense.includes("OpenStreetMap") && (
                     <p className="mt-2 text-xs text-muted">
-                      Dados © contribuidores do <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap</a>, licenciados sob <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener noreferrer" className="underline">ODbL 1.0</a>. Dataset de recarga disponibilizado separadamente em <a href="https://github.com/filipisantoss93/O-Cal-ad-o/tree/main/src/data/eletropostos-sp-osm" target="_blank" rel="noopener noreferrer" className="underline">dados abertos</a>.
+                      Dados © contribuidores do <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap</a>, licenciados sob <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener noreferrer" className="underline">ODbL 1.0</a>. Dataset de recarga disponibilizado separadamente em <a href={business.chargingStation.sourceUrl.includes("openstreetmap.org/") ? "https://github.com/filipisantoss93/O-Cal-ad-o/tree/main/src/data/eletropostos-br-osm" : "https://github.com/filipisantoss93/O-Cal-ad-o/tree/main/src/data/eletropostos-sp-osm"} target="_blank" rel="noopener noreferrer" className="underline">dados abertos</a>.
                     </p>
                   )}
                 </section>
