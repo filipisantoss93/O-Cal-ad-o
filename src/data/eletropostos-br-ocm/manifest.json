@@ -9,7 +9,8 @@
   "source": "Open Charge Map ocm-export data/BR",
   "provider_id": 1,
   "license": "CC BY 4.0",
-  "extracted_at": "2026-09-22T04:46:06.129173+00:00",
+  "dataset_variant": "original",
+  "extracted_at": "2026-09-22T14:29:07.350084+00:00",
   "states_in_source": [
     "AL",
     "Alagoas",
