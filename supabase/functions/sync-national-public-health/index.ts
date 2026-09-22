@@ -177,6 +177,10 @@ Deno.serve(async(request)=>{
         let lat:number|null=Number.isFinite(latitude)?Number(latitude.toFixed(6)):null;
         let lon:number|null=Number.isFinite(longitude)?Number(longitude.toFixed(6)):null;
         if(lat!==null&&lon!==null&&!(await coordinatesInsideCity(supabase,cityRow.id,lat,lon))){lat=null;lon=null}
+        // Assis pilot: coordinates inside municipal borders are not proof of the source street and number.
+        // Source coordinates remain in the staging record for later independent address verification.
+        const validatedLat=cityRow.id===1?null:lat;
+        const validatedLon=cityRow.id===1?null:lon;
 
         try{
           const staged=await stageRecord(supabase,source.id,job.id,cityRow,row,name,street,number,neighborhood,postal,lat,lon);
@@ -185,9 +189,9 @@ Deno.serve(async(request)=>{
 
           if(businessId){
             const {data:existingBusiness}=await supabase.from("businesses").select("id,latitude,longitude").eq("id",businessId).maybeSingle();
-            if(existingBusiness && (existingBusiness.latitude===null||existingBusiness.longitude===null) && lat!==null&&lon!==null){
+            if(existingBusiness && (existingBusiness.latitude===null||existingBusiness.longitude===null) && validatedLat!==null&&validatedLon!==null){
               await supabase.from("businesses").update({
-                latitude:lat,longitude:lon,data_source_checked_at:new Date().toISOString(),
+                latitude:validatedLat,longitude:validatedLon,data_source_checked_at:new Date().toISOString(),
                 official_source_url:`https://apidadosabertos.saude.gov.br/cnes/estabelecimentos/${encodeURIComponent(cnes)}`
               }).eq("id",businessId).eq("listing_type","public_place");
             }
@@ -204,7 +208,7 @@ Deno.serve(async(request)=>{
               const {data:inserted,error:insertError}=await supabase.from("businesses").insert({
                 owner_id:null,city_id:cityRow.id,category_id:27,slug,name,
                 street,address_number:number,neighborhood,postal_code:postal,
-                latitude:lat,longitude:lon,status:"approved",plan:"free",is_active:true,
+                latitude:validatedLat,longitude:validatedLon,status:"approved",plan:"free",is_active:true,
                 publication_status:"published",listing_type:"public_place",public_place_kind:"health",
                 official_source_url:sourceUrl,pre_registered:false,data_source_url:sourceUrl,
                 data_source_checked_at:new Date().toISOString(),tags:["cnes","saude-publica"]
