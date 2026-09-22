@@ -32,7 +32,7 @@ async function geocode(place: string): Promise<Place | null> {
     url.searchParams.set("limit", "1");
     const response = await fetch(url, {
       headers: {
-        Accept: "application/geo+json",
+        Accept: "application/json",
         "Accept-Language": "pt-BR,pt;q=0.9",
         "User-Agent": "O-Calcadao/1.0 (+https://ocalcadao.com.br/contato)",
         Referer: "https://ocalcadao.com.br/",
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
       headers: {
         Authorization: apiKey,
         "Content-Type": "application/json",
-        Accept: "application/json",
+        Accept: "application/geo+json",
       },
       body: JSON.stringify({
         coordinates: [
