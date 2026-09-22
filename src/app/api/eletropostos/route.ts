@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     const city = single(row.cities);
     const details = single(row.charging_station_details);
     const coordinate = { latitude: Number(row.latitude), longitude: Number(row.longitude) };
-    if (!city || !validCoordinate(coordinate)) return [];
+    if (!city || !validCoordinate(coordinate) || details?.access_type === "restricted") return [];
     return [{
       id: row.id, slug: row.slug, name: row.name, city: city.name, state: city.state_code,
       address: [row.street, row.address_number, row.neighborhood, city.name, city.state_code].filter(Boolean).join(", "),
