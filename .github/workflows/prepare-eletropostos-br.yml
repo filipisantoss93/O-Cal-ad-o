@@ -1,0 +1,52 @@
+name: Preparar eletropostos do Brasil (OCM)
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/prepare-ocm-br.py"
+      - ".github/workflows/prepare-eletropostos-br.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prepare-eletropostos-br
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Obter export público brasileiro Open Charge Map
+        shell: bash
+        run: |
+          set -euo pipefail
+          OCM_DIR="$RUNNER_TEMP/ocm-export"
+          git clone --quiet --depth=1 --filter=blob:none --sparse https://github.com/openchargemap/ocm-export.git "$OCM_DIR"
+          git -C "$OCM_DIR" sparse-checkout set data/BR
+          curl --fail --location --retry 3 --max-time 60             "https://raw.githubusercontent.com/openchargemap/ocm-export/main/data/referencedata.json"             --output "$RUNNER_TEMP/ocm-reference.json"
+          echo "OCM_DIR=$OCM_DIR" >> "$GITHUB_ENV"
+      - name: Gerar base nacional documentada e licenciada
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/prepare-ocm-br.py             "$OCM_DIR/data/BR" "$RUNNER_TEMP/ocm-reference.json"             src/data/eletropostos-br-ocm | tee "$RUNNER_TEMP/eletropostos-summary.json"
+          cat "$RUNNER_TEMP/eletropostos-summary.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Salvar arquivos para importação nacional
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/eletropostos-br-ocm
+          if git diff --cached --quiet; then
+            echo "Dataset nacional sem alterações."
+            exit 0
+          fi
+          git commit -m "data: preparar pontos de recarga OCM do Brasil"
+          git push origin HEAD:main
