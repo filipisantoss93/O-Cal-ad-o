@@ -35,7 +35,7 @@ export async function GET(request: Request) {
   if (categoryError || !category) return Response.json({ error: "Categoria indisponível." }, { status: 503 });
 
   const all: StationRow[] = [];
-  for (let offset = 0; offset < 5000; offset += 500) {
+  for (let offset = 0; ; offset += 500) {
     const { data, error } = await supabase.from("businesses")
       .select("id,slug,name,street,address_number,neighborhood,latitude,longitude,cities(name,state_code),charging_station_details(power_kw,connectors,opening_hours_text,access_type,source_url,source_checked_at)")
       .eq("category_id", category.id).eq("is_active", true).eq("billing_suspended", false)
