@@ -87,6 +87,9 @@ class Stations(osmium.SimpleHandler):
             if "(DC)" in n or n in {"CCS", "CHAdeMO", "Tesla Supercharger", "GB/T DC"}: supply_types.add("DC")
             if "(AC)" in n or n in {"Tesla Destination", "Schuko", "CEE azul", "CEE vermelha 16 A"}: supply_types.add("AC")
         kind = "AC/DC" if len(supply_types) == 2 else next(iter(supply_types)) if supply_types else None
+        if not names and not powers and street == "Endereço não informado":
+            self.counts["insufficient_ev_evidence"] += 1
+            return
         postal = re.sub(r"\D", "", tags.get("addr:postcode") or "")
         if len(postal) != 8: postal = None
         access = "customers" if access_tag in {"customers", "destination"} else "restricted" if access_tag in {"permit", "delivery"} else "public" if access_tag in {"yes", "permissive", "public"} else "unknown"
