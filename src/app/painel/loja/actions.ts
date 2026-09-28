@@ -262,6 +262,7 @@ export async function saveBusinessAction(
       ? validateEmail(publicEmailValue, "public_email")
       : null;
     const websiteUrl = normalizeWebsite(formString(formData, "website_url"));
+    const websiteButtonLabel = optionalText(formData, "website_button_label", "O texto do botão", 32);
     const instagramUrl = normalizeSocialProfile(
       formString(formData, "instagram_url"),
       "instagram",
@@ -337,6 +338,7 @@ export async function saveBusinessAction(
       phone_e164: phone,
       public_email: publicEmail,
       website_url: websiteUrl,
+      website_button_label: websiteButtonLabel || null,
       instagram_url: instagramUrl,
       facebook_url: facebookUrl,
       street,
