@@ -159,14 +159,14 @@ export async function getMerchantBillingSummary(
   const freeRule = rules.find((rule) => rule.code === "free") ?? {
     code: "free" as const,
     name: "Grátis",
-    included_businesses: 3,
+    included_businesses: 1,
     included_promotions_per_business: 2,
     included_catalog_items: 4,
   };
   const proRule = rules.find((rule) => rule.code === "pro") ?? {
     code: "pro" as const,
     name: "Calçadão Pro",
-    included_businesses: 10,
+    included_businesses: 4,
     included_promotions_per_business: 10,
     included_catalog_items: 20,
   };
