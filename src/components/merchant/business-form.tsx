@@ -28,6 +28,7 @@ export type BusinessFormValue = {
   phone: string;
   publicEmail: string;
   websiteUrl: string;
+  websiteButtonLabel?: string;
   instagramUrl: string;
   facebookUrl: string;
   street: string;
@@ -541,6 +542,24 @@ export function BusinessForm({
             placeholder="www.sualoja.com.br"
           />
           {fieldError(state, "website_url")}
+        </div>
+        <div className="sm:col-span-2">
+          <label className={labelClass} htmlFor="business-website-button-label">
+            Texto do botão do site <span className="font-semibold text-muted">(opcional)</span>
+          </label>
+          <input
+            className={inputClass}
+            id="business-website-button-label"
+            name="website_button_label"
+            type="text"
+            defaultValue={business?.websiteButtonLabel ?? ""}
+            maxLength={32}
+            placeholder="Ex.: Ver cardápio"
+          />
+          <p className="mt-1.5 text-xs font-semibold leading-5 text-muted">
+            Deixe em branco para sugerirmos um texto conforme a categoria. Você pode personalizar o botão da sua vitrine.
+          </p>
+          {fieldError(state, "website_button_label")}
         </div>
         <div>
           <label className={labelClass} htmlFor="business-instagram">
