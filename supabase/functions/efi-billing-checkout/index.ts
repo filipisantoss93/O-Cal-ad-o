@@ -274,7 +274,7 @@ async function isProActive(admin: ReturnType<typeof adminClient>, userId: string
     .eq("plan_code", "pro")
     .eq("status", "active")
     .lte("current_period_start", now)
-    .gt("current_period_end", now)
+    .or(`current_period_end.is.null,current_period_end.gt.${now}`)
     .limit(1)
     .maybeSingle();
   if (error) throw error;
