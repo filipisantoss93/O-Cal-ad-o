@@ -87,7 +87,7 @@ function websiteButtonLabel(business: Business) {
 
   const category = `${business.categorySlug} ${business.categoryName}`
     .normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLocaleLowerCase("pt-BR");
   if (/restaurante|aliment|bar|lanch|pizz|padaria|cafeter|hamburg|sushi|sorvete/.test(category)) {
     return "Ver cardápio";
