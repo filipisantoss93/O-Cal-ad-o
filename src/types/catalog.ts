@@ -102,6 +102,7 @@ export type Business = {
   whatsapp: string | null;
   phone?: string | null;
   websiteUrl?: string | null;
+  websiteButtonLabel?: string | null;
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   directionsUrl?: string | null;
