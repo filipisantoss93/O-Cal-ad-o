@@ -81,6 +81,23 @@ function seoDescription(b: Business) {
   return text.length > 200 ? text.slice(0, 200).replace(/\s+\S*$/, "").trimEnd() + "…" : text;
 }
 
+function websiteButtonLabel(business: Business) {
+  const customLabel = business.websiteButtonLabel?.trim();
+  if (customLabel) return customLabel;
+
+  const category = `${business.categorySlug} ${business.categoryName}`
+    .normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR");
+  if (/restaurante|aliment|bar|lanch|pizz|padaria|cafeter|hamburg|sushi|sorvete/.test(category)) {
+    return "Ver cardápio";
+  }
+  if (/moda|vestu|calcad|acessor|mercado|supermerc|flor|presente|varejo|loja/.test(category)) {
+    return "Ver catálogo";
+  }
+  return "Acessar site";
+}
+
 function formatPhone(phone: string) {
   const digits = phone.replace(/\D/g, "");
   if (digits.startsWith("55") && digits.length === 12) {
@@ -208,7 +225,7 @@ export default async function BusinessPage({
     business.websiteUrl
       ? {
           href: business.websiteUrl,
-          label: "Site",
+          label: websiteButtonLabel(business),
           ariaLabel: undefined,
           icon: GlobeIcon,
           external: true,
