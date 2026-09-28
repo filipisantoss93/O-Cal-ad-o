@@ -121,9 +121,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             Assinatura
           </h1>
           <p className="mt-2 max-w-3xl text-base leading-7 text-muted">
-            O Pro libera até 3 lojas e 10 promoções por loja. Acima disso,
-            compre lojas individualmente ou pacotes de promoções para a unidade
-            que precisar.
+            O Pro inclui até 10 lojas e 10 promoções por loja. Acima de 10 lojas,
+            cada loja adicional tem cobrança mensal. Você também pode contratar pacotes
+            de promoções para a loja que precisar.
           </p>
         </div>
       </div>
@@ -157,7 +157,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <p className="mt-2 text-sm font-semibold text-muted">
             {billing.proActive
               ? `${billing.storeLimit} vagas de loja disponíveis`
-              : "1 loja e 2 promoções por loja"}
+              : "Até 3 lojas e 2 promoções por loja"}
           </p>
         </article>
         <article className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
@@ -326,17 +326,17 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             Calçadão Pro
           </p>
           <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">
-            3 lojas e 10 promoções por loja
+            10 lojas e 10 promoções por loja
           </h2>
           <div className="mt-4 grid gap-2 text-sm font-bold text-muted sm:grid-cols-2">
             <p className="flex items-center gap-2">
-              <CheckIcon className="size-4 text-positive" /> Até 3 lojas incluídas
+              <CheckIcon className="size-4 text-positive" /> Até 10 lojas incluídas
             </p>
             <p className="flex items-center gap-2">
               <CheckIcon className="size-4 text-positive" /> 10 promoções por loja
             </p>
             <p className="flex items-center gap-2">
-              <CheckIcon className="size-4 text-positive" /> Lojas extras compradas individualmente
+              <CheckIcon className="size-4 text-positive" /> Lojas acima de 10 cobradas individualmente
             </p>
             <p className="flex items-center gap-2">
               <CheckIcon className="size-4 text-positive" /> Pacotes extras por loja
@@ -418,13 +418,13 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">
-              Acima de 3 lojas
+              Acima de 10 lojas
             </p>
             <h2 className="mt-2 flex items-center gap-2 text-2xl font-black tracking-tight text-ink">
               <StoreIcon className="size-5" /> Loja adicional
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-              Cada compra acrescenta uma vaga enquanto o Pro estiver regular.
+              O Pro inclui 10 lojas. Acima desse limite, cada loja adicional tem cobrança mensal por unidade.
               Se o Pro vencer, as lojas excedentes são suspensas sem apagar os
               dados e retornam automaticamente após a regularização.
             </p>
