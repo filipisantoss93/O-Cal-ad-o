@@ -114,6 +114,7 @@ export default async function BusinessPage({ searchParams }: BusinessPageProps) 
         phone: business.phone_e164 ?? "",
         publicEmail: business.public_email ?? "",
         websiteUrl: business.website_url ?? "",
+        websiteButtonLabel: business.website_button_label ?? "",
         instagramUrl: business.instagram_url ?? "",
         facebookUrl: business.facebook_url ?? "",
         street: business.street,

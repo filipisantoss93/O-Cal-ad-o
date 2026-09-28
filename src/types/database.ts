@@ -341,6 +341,7 @@ export type Database = {
           tags: string[]
           updated_at: string
           website_url: string | null
+          website_button_label: string | null
           whatsapp_e164: string | null
         }
         Insert: {
@@ -381,6 +382,7 @@ export type Database = {
           tags?: string[]
           updated_at?: string
           website_url?: string | null
+          website_button_label?: string | null
           whatsapp_e164?: string | null
         }
         Update: {
@@ -421,6 +423,7 @@ export type Database = {
           tags?: string[]
           updated_at?: string
           website_url?: string | null
+          website_button_label?: string | null
           whatsapp_e164?: string | null
         }
         Relationships: [

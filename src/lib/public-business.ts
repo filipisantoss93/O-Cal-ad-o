@@ -85,7 +85,7 @@ async function loadBusiness(
 ): Promise<Business | null> {
   let query = supabase
     .from("businesses")
-    .select("id, city_id, category_id, slug, name, description, listing_type, public_place_kind, official_source_url, pre_registered, tags, whatsapp_e164, phone_e164, website_url, instagram_url, facebook_url, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path, status")
+    .select("id, city_id, category_id, slug, name, description, listing_type, public_place_kind, official_source_url, pre_registered, tags, whatsapp_e164, phone_e164, website_url, website_button_label, instagram_url, facebook_url, street, address_number, complement, neighborhood, latitude, longitude, logo_path, cover_path, status")
     .eq("slug", slug);
 
   if (publishedOnly) {
@@ -167,6 +167,7 @@ async function loadBusiness(
     whatsapp: business.whatsapp_e164?.replace(/\D/g, "") ?? null,
     phone: business.phone_e164,
     websiteUrl: safePublicUrl(business.website_url),
+    websiteButtonLabel: business.website_button_label,
     instagramUrl: safePublicUrl(business.instagram_url, "www.instagram.com"),
     facebookUrl: safePublicUrl(business.facebook_url, "www.facebook.com"),
     ...directionsUrls(business.latitude, business.longitude),

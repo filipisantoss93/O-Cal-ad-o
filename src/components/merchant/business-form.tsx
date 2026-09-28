@@ -28,6 +28,7 @@ export type BusinessFormValue = {
   phone: string;
   publicEmail: string;
   websiteUrl: string;
+  websiteButtonLabel?: string;
   instagramUrl: string;
   facebookUrl: string;
   street: string;
@@ -61,6 +62,20 @@ function fieldError(state: ActionState, name: string) {
   ) : null;
 }
 
+function suggestWebsiteButtonLabel(categoryName: string) {
+  const category = categoryName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR");
+  if (/restaurante|aliment|bar|lanch|pizz|padaria|cafeter|hamburg|sushi|sorvete/.test(category)) {
+    return "Ver cardápio";
+  }
+  if (/moda|vestu|calcad|acessor|mercado|supermerc|flor|presente|varejo|loja/.test(category)) {
+    return "Ver catálogo";
+  }
+  return "Acessar site";
+}
+
 function slugify(value: string) {
   return value
     .normalize("NFD")
@@ -87,6 +102,12 @@ export function BusinessForm({
   const [slugWasEdited, setSlugWasEdited] = useState(Boolean(business?.slug));
   const [stateCode, setStateCode] = useState(initialCity?.stateCode ?? "");
   const [cityId, setCityId] = useState(initialCity ? String(initialCity.id) : "");
+  const [categoryId, setCategoryId] = useState(
+    business?.categoryId ? String(business.categoryId) : "",
+  );
+  const [websiteButtonLabel, setWebsiteButtonLabel] = useState(
+    business?.websiteButtonLabel ?? "",
+  );
   const [cities, setCities] = useState<CityOption[]>(initialCity ? [initialCity] : []);
   const [loadingCities, setLoadingCities] = useState(false);
   const [detectingCity, setDetectingCity] = useState(false);
@@ -417,7 +438,8 @@ export function BusinessForm({
             className={inputClass}
             id="business-category"
             name="category_id"
-            defaultValue={business?.categoryId ?? ""}
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
             required
           >
             <option value="" disabled>
@@ -541,6 +563,33 @@ export function BusinessForm({
             placeholder="www.sualoja.com.br"
           />
           {fieldError(state, "website_url")}
+        </div>
+        <div className="sm:col-span-2">
+          <label className={labelClass} htmlFor="business-website-button-label">
+            Texto do botão do site <span className="font-semibold text-muted">(opcional)</span>
+          </label>
+          <input
+            className={inputClass}
+            id="business-website-button-label"
+            name="website_button_label"
+            type="text"
+            value={websiteButtonLabel}
+            onChange={(event) => setWebsiteButtonLabel(event.target.value)}
+            maxLength={32}
+            placeholder="Ex.: Ver cardápio"
+          />
+          <p className="mt-1.5 text-xs font-semibold leading-5 text-muted">
+            Deixe em branco para sugerirmos um texto conforme a categoria. Você pode personalizar o botão da sua vitrine.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-canvas p-3">
+            <span className="text-xs font-bold text-muted">Prévia na vitrine</span>
+            <span className="inline-flex min-h-9 items-center rounded-lg bg-brand px-3 text-sm font-black text-white">
+              {websiteButtonLabel.trim() || suggestWebsiteButtonLabel(
+                categories.find((category) => String(category.id) === categoryId)?.label ?? "",
+              )}
+            </span>
+          </div>
+          {fieldError(state, "website_button_label")}
         </div>
         <div>
           <label className={labelClass} htmlFor="business-instagram">
