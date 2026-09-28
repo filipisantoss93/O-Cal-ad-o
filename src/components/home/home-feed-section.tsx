@@ -34,7 +34,7 @@ export function HomeFeedSection({
         <div className="flex items-end justify-between gap-4">
           <div className="min-w-0">
             {eyebrow ? (
-              <p className="text-[10px] font-black uppercase tracking-[0.13em] text-brand-dark sm:text-[11px]">
+              <p className="text-xs font-black uppercase tracking-[0.13em] text-brand-dark">
                 {eyebrow}
               </p>
             ) : null}
@@ -64,7 +64,7 @@ export function HomeFeedSection({
         {linkHref && linkLabel ? (
           <Link
             href={linkHref}
-            className="mt-4 inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-ink/10 px-3.5 text-xs font-black text-ink outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-brand sm:hidden"
+            className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-ink/10 px-3.5 text-sm font-black text-ink outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-brand sm:hidden"
           >
             {linkLabel}
             <ArrowRightIcon className="size-3.5" />

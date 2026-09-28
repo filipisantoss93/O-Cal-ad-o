@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import {
   ArrowRightIcon,
   ShieldCheckIcon,
@@ -20,10 +21,34 @@ import { DiscoveryBusinesses } from "@/components/home/discovery-businesses";
 import { HomeFeedSection } from "@/components/home/home-feed-section";
 import { HomeScrollRestoration } from "@/components/home/home-scroll-restoration";
 import { categories } from "@/data/catalog";
+import { selectedCityCookieName } from "@/lib/location";
+import { createPublicClient } from "@/lib/supabase/server";
 
 const homeCategories = categories.filter((category) => category.slug !== "eletropostos").slice(0, 7);
 
-export default function Home() {
+async function hasUpcomingEventInSelectedCity() {
+  const selectedCityId = Number((await cookies()).get(selectedCityCookieName)?.value);
+  if (!Number.isSafeInteger(selectedCityId) || selectedCityId <= 0) return false;
+
+  const { data, error } = await createPublicClient()
+    .from("events")
+    .select("id")
+    .eq("city_id", selectedCityId)
+    .eq("is_active", true)
+    .gte("ends_at", new Date().toISOString())
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[home] event availability lookup failed", error.message);
+    return false;
+  }
+  return data !== null;
+}
+
+export default async function Home() {
+  const showEvents = await hasUpcomingEventInSelectedCity();
+
   return (
     <>
       <HomeScrollRestoration />
@@ -39,7 +64,7 @@ export default function Home() {
             <div className="max-w-4xl">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <CitySelector variant="hero" />
-                <p className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.13em] text-brand-dark sm:text-xs">
+                <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.13em] text-brand-dark">
                   <SparklesIcon className="size-3.5" />
                   Seu Centro Comercial
                 </p>
@@ -56,7 +81,7 @@ export default function Home() {
                 <SearchForm />
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] font-bold text-muted sm:mt-4 sm:text-xs">
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-bold text-muted sm:mt-4">
                 <span className="inline-flex items-center gap-1.5">
                   <ShieldCheckIcon className="size-3.5 text-[#25835f]" />
                   Informações moderadas
@@ -84,7 +109,7 @@ export default function Home() {
               ⚡
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[10px] font-black uppercase tracking-[0.1em] text-brand-dark">
+              <span className="block text-xs font-black uppercase tracking-[0.1em] text-brand-dark">
                 Mobilidade elétrica · Em destaque
               </span>
               <span className="mt-0.5 block text-base font-black leading-tight text-ink sm:text-lg">
@@ -107,7 +132,19 @@ export default function Home() {
         <FeaturedBusinesses />
         <div id="ofertas" className="scroll-mt-24"><CityPromotions /></div>
 
-        <section className="border-b border-line bg-canvas px-4 py-4 sm:px-6"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-black text-ink">O que acontece na sua cidade?</h2><p className="text-xs text-muted">Shows, feiras, festivais e encontros locais.</p></div><Link href="/eventos" className="inline-flex min-h-11 items-center rounded-xl bg-ink px-4 py-3 text-sm font-black text-white">Explorar eventos →</Link></div></section>
+        {showEvents ? (
+          <section className="border-b border-line bg-canvas px-4 py-4 sm:px-6">
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-black text-ink">O que acontece na sua cidade?</h2>
+                <p className="text-xs text-muted">Shows, feiras, festivais e encontros locais.</p>
+              </div>
+              <Link href="/eventos" className="inline-flex min-h-11 items-center rounded-xl bg-ink px-4 py-3 text-sm font-black text-white">
+                Explorar eventos →
+              </Link>
+            </div>
+          </section>
+        ) : null}
 
         <section className="border-b border-line bg-surface px-4 py-5 sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
@@ -127,7 +164,7 @@ export default function Home() {
         >
           <div className="mx-auto flex max-w-7xl flex-col gap-5 rounded-[1.5rem] border border-ink/10 bg-[#ffd766] p-5 sm:gap-7 sm:rounded-[2rem] sm:p-8 lg:flex-row lg:items-center lg:justify-between lg:p-10">
             <div className="max-w-3xl">
-              <span className="inline-flex items-center gap-2 rounded-full bg-ink px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white sm:text-xs">
+              <span className="inline-flex items-center gap-2 rounded-full bg-ink px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white">
                 <StoreIcon className="size-4" />
                 Para o comércio local
               </span>

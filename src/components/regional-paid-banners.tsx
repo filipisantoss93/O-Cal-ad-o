@@ -85,11 +85,11 @@ export function RegionalPaidBanners() {
     <section className="bg-canvas px-4 py-4 sm:px-6 sm:py-6 lg:px-8" aria-label="Publicidade regional">
       <div className="mx-auto max-w-7xl">
         <div className="mb-2 flex items-center justify-between gap-3 px-0.5 sm:mb-2.5">
-          <p className="inline-flex min-w-0 items-center gap-1.5 truncate text-[10px] font-black uppercase tracking-[0.12em] text-muted sm:text-xs">
+          <p className="inline-flex min-w-0 items-center gap-1.5 truncate text-xs font-black uppercase tracking-[0.12em] text-muted">
             <MapPinIcon className="size-3.5 shrink-0 text-brand sm:size-4" />
             <span className="truncate">Publicidade em {activeBanner.cityName}</span>
           </p>
-          <span className="shrink-0 rounded-full border border-line bg-surface px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-muted sm:text-[10px]">
+          <span className="shrink-0 rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-black uppercase tracking-wide text-muted">
             Patrocinado
           </span>
         </div>

@@ -57,7 +57,7 @@ export function SiteHeader() {
         { href: "/#ofertas", label: "Ofertas" },
         { href: "/entrar", label: "Entrar" },
       ].map((item) => (
-        <Link key={item.href} href={item.href} className="flex min-h-12 min-w-0 items-center justify-center rounded-lg px-1 text-[11px] font-extrabold text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+        <Link key={item.href} href={item.href} className="flex min-h-12 min-w-0 items-center justify-center rounded-lg px-1 text-xs font-extrabold text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
           {item.label}
         </Link>
       ))}
