@@ -303,7 +303,7 @@ export default async function BusinessPage({ searchParams }: BusinessPageProps) 
             Limite de lojas atingido
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted">
-            O Pro inclui até 3 lojas. Depois disso, novas vagas são compradas
+            O Pro inclui até 4 lojas. Depois disso, novas vagas são compradas
             individualmente e permanecem vinculadas à assinatura.
           </p>
           <Link
