@@ -175,7 +175,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <p className="text-sm font-bold text-muted">Situação</p>
           <p className="mt-3 text-2xl font-black text-ink">
             {billing.subscription?.status === "active"
-              ? "Regular"
+              ? billing.subscription.current_period_end === null
+                ? "Sem expiração"
+                : "Regular"
               : billing.subscription?.status === "past_due"
                 ? "Pagamento pendente"
                 : billing.subscription?.status === "pending"
@@ -186,11 +188,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           </p>
           {billing.subscription && (
             <p className="mt-2 text-sm font-semibold text-muted">
-              {cycleLabels[billing.subscription.billing_cycle] ??
-                billing.subscription.billing_cycle}
-              {billing.subscription.current_period_end
-                ? ` · até ${date(billing.subscription.current_period_end)}`
-                : ""}
+              {billing.subscription.current_period_end === null
+                ? "Concessão administrativa · sem expiração"
+                : `${cycleLabels[billing.subscription.billing_cycle] ?? billing.subscription.billing_cycle} · até ${date(billing.subscription.current_period_end)}`}
             </p>
           )}
         </article>
@@ -349,7 +349,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             <p className="font-black">Seu Pro está ativo.</p>
             <p className="mt-1 text-sm font-semibold leading-6">
               {billing.subscription
-                ? `${paymentLabels[billing.subscription.payment_method] ?? billing.subscription.payment_method} · ${cycleLabels[billing.subscription.billing_cycle] ?? billing.subscription.billing_cycle}`
+                ? billing.subscription.current_period_end === null
+                  ? "Concessão administrativa · sem expiração"
+                  : `${paymentLabels[billing.subscription.payment_method] ?? billing.subscription.payment_method} · ${cycleLabels[billing.subscription.billing_cycle] ?? billing.subscription.billing_cycle}`
                 : "Benefícios liberados."}
             </p>
           </div>
