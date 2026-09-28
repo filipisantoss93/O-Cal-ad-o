@@ -74,26 +74,26 @@ export function PromotionCard({ promotion }: PromotionCardProps) {
           <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-white/80 text-lg shadow-sm sm:size-10 sm:text-xl" aria-hidden="true">
             {promotion.symbol}
           </span>
-          <span className="rounded-full bg-ink px-1.5 py-1 text-[9px] font-black text-white sm:px-2 sm:text-[10px]">
+          <span className="rounded-full bg-ink px-2 py-1 text-xs font-black text-white">
             {promotion.badge}
           </span>
         </div>
-        <p className="mt-3 truncate text-[10px] font-extrabold uppercase tracking-wide text-muted">
+        <p className="mt-3 truncate text-xs font-extrabold uppercase tracking-wide text-muted">
           {promotion.businessName}
         </p>
         <h3 className="mt-1.5 line-clamp-2 text-sm font-black leading-tight text-ink sm:text-base">
           {promotion.title}
         </h3>
-        <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-muted sm:text-xs sm:leading-5">{promotion.description}</p>
+        <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-muted">{promotion.description}</p>
         {promotion.offerPrice !== undefined ? (
           <div className="mt-3">
             {promotion.originalPrice !== null && promotion.originalPrice !== undefined ? (
-              <span className="block text-[10px] font-bold text-muted line-through">{money(promotion.originalPrice)}</span>
+              <span className="block text-xs font-bold text-muted line-through">{money(promotion.originalPrice)}</span>
             ) : null}
             <span className="text-sm font-black text-ink sm:text-base">{money(promotion.offerPrice)}</span>
           </div>
         ) : null}
-        <span className="mt-2 text-[10px] font-bold text-muted sm:text-xs">{promotion.expiresLabel}</span>
+        <span className="mt-2 text-xs font-bold text-muted">{promotion.expiresLabel}</span>
         <div className="mt-auto grid gap-2 pt-3">
           {contactHref ? (
             <a

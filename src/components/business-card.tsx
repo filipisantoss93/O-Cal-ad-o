@@ -60,7 +60,7 @@ export function BusinessCard({
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_25%,rgba(255,255,255,0.12)_25%,rgba(255,255,255,0.12)_50%,transparent_50%,transparent_75%,rgba(255,255,255,0.12)_75%)] bg-[length:28px_28px] opacity-30" />
         )}
         {business.isSponsored && (
-          <span className={`absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-accent font-black uppercase text-ink shadow-md ${compact ? "px-2 py-1 text-[9px] sm:text-[10px]" : "left-4 top-4 px-3 py-1.5 text-[11px] tracking-[0.08em]"}`}>
+          <span className={`absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-accent font-black uppercase text-ink shadow-md ${compact ? "px-2 py-1 text-[11px] sm:text-xs" : "left-4 top-4 px-3 py-1.5 text-xs tracking-[0.08em]"}`}>
             <SparklesIcon className="size-3" />
             Patrocinado
           </span>
@@ -70,7 +70,7 @@ export function BusinessCard({
             <Image src={business.logoUrl} alt={`Imagem de ${business.name}`} fill sizes={compact ? "48px" : "64px"} className="object-cover" />
           ) : business.initials}
         </span>
-        <span className={`relative ml-auto rounded-full text-center font-black shadow-sm ${compact ? "max-w-[82px] px-1.5 py-1 text-[9px] leading-tight sm:max-w-none sm:px-2 sm:text-[10px]" : "px-3 py-1.5 text-xs"} ${
+        <span className={`relative ml-auto rounded-full text-center font-black shadow-sm ${compact ? "max-w-[92px] px-1.5 py-1 text-[11px] leading-tight sm:max-w-none sm:px-2 sm:text-xs" : "px-3 py-1.5 text-xs"} ${
           business.isOpen ? "bg-white text-[#1f6a4a]" : "bg-ink/85 text-white"
         }`}>
           {business.alwaysOpen
@@ -86,7 +86,7 @@ export function BusinessCard({
       <div className={compact ? "p-3 sm:p-4" : "p-5"}>
         <div className={`flex min-w-0 items-start justify-between gap-2 ${compact ? "flex-col sm:flex-row" : "flex-row"}`}>
           <div className="min-w-0">
-            <p className={`truncate font-extrabold uppercase text-brand-dark ${compact ? "text-[9px] tracking-[0.06em] sm:text-[10px]" : "text-xs tracking-[0.12em]"}`}>
+            <p className={`truncate font-extrabold uppercase text-brand-dark ${compact ? "text-xs tracking-[0.04em]" : "text-xs tracking-[0.12em]"}`}>
               {business.categoryName}
             </p>
             <h3 className={`flex items-center gap-1 font-black tracking-tight text-ink ${compact ? "mt-1 text-sm leading-tight sm:text-base" : "mt-1.5 text-xl"}`}>
@@ -118,7 +118,7 @@ export function BusinessCard({
                   : "Novo"}
             </span>
             {hasRating && business.ratingSource === "google" ? (
-              <span className={`mt-0.5 text-right font-bold text-muted ${compact ? "text-[8px] sm:text-[9px]" : "text-[10px]"}`}>
+              <span className="mt-0.5 text-right text-xs font-bold text-muted">
                 Google Maps{business.reviewCount < 5 ? " · poucas avaliações" : ""}
               </span>
             ) : null}

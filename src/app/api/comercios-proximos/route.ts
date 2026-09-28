@@ -74,7 +74,10 @@ export async function POST(request: Request) {
     p_latitude: coordinatesAreValid ? (body.latitude as number) : null,
     p_longitude: coordinatesAreValid ? (body.longitude as number) : null,
     p_business_ids: businessIds,
-    p_limit: businessIds?.length ?? 10,
+    // Com GPS, dez resultados bastam porque a ordem é estritamente por
+    // distância. Sem GPS, buscamos mais candidatos para a home poder montar
+    // uma seleção variada por categoria e qualidade.
+    p_limit: businessIds?.length ?? (coordinatesAreValid ? 10 : 48),
   });
 
   if (error) {

@@ -9,7 +9,10 @@ import { HomeSectionSkeleton } from "@/components/home/home-section-skeleton";
 import { useHomeSectionVisibility } from "@/components/home/use-home-section-visibility";
 import { LocateIcon, StarIcon } from "@/components/icons";
 import { detectCurrentCity, saveSelectedCity } from "@/lib/location-client";
-import { compareByDistanceRatingName } from "@/lib/business-order";
+import {
+  compareByDistanceRatingName,
+  selectCityFallbackBusinesses,
+} from "@/lib/business-order";
 import { loadGoogleRatings } from "@/lib/google-ratings-client";
 import {
   cityChangeEventName,
@@ -163,11 +166,11 @@ export function NearbyBusinesses() {
         const distances = new Map(
           loadedBusinesses.map((business) => [business.slug, business.distanceKm]),
         );
-        setBusinesses(
-          [...loadedBusinesses].sort((first, second) =>
-            compareByDistanceRatingName(first, second, distances),
-          ),
-        );
+        setBusinesses(coordinates
+          ? [...loadedBusinesses].sort((first, second) =>
+              compareByDistanceRatingName(first, second, distances),
+            )
+          : selectCityFallbackBusinesses(loadedBusinesses, nearbyListLimit));
         setLoadedRequestKey(requestKey);
       } catch (reason: unknown) {
         if (controller.signal.aborted) return;
@@ -269,7 +272,7 @@ export function NearbyBusinesses() {
                     <span className="flex min-w-0 flex-wrap items-center gap-1">
                       <span className="min-w-0 truncate text-[13px] font-black text-ink sm:text-sm">{business.name}</span>
                       {business.isFeatured ? (
-                        <span className="shrink-0 rounded-full bg-accent/35 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-ink">
+                        <span className="shrink-0 rounded-full bg-accent/35 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-ink sm:text-xs">
                           Patrocinado
                         </span>
                       ) : null}
