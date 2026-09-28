@@ -50,7 +50,7 @@ type BillingProduct = {
 const fallbackFree: PlanRule = {
   code: "free",
   name: "Grátis",
-  included_businesses: 1,
+  included_businesses: 3,
   included_promotions_per_business: 2,
   included_catalog_items: 4,
 };
@@ -58,7 +58,7 @@ const fallbackFree: PlanRule = {
 const fallbackPro: PlanRule = {
   code: "pro",
   name: "Calçadão Pro",
-  included_businesses: 3,
+  included_businesses: 10,
   included_promotions_per_business: 10,
   included_catalog_items: 20,
 };
@@ -186,7 +186,7 @@ export default async function PublicPlansPage() {
   const faq = [
     {
       question: "Preciso pagar para cadastrar minha empresa?",
-      answer: `Não. O plano ${freeRule.name} permite começar sem mensalidade, com ${freeRule.included_businesses} loja, até ${freeRule.included_catalog_items} produtos ou serviços e ${freeRule.included_promotions_per_business} promoções por loja.`,
+      answer: `Não. O plano ${freeRule.name} permite começar sem mensalidade, com ${freeRule.included_businesses} ${freeRule.included_businesses === 1 ? "loja" : "lojas"}, até ${freeRule.included_catalog_items} produtos ou serviços e ${freeRule.included_promotions_per_business} promoções por loja.`,
     },
     {
       question: "O plano Grátis tem cobrança recorrente?",
@@ -220,7 +220,7 @@ export default async function PublicPlansPage() {
     },
     {
       question: "Posso cadastrar mais de uma empresa?",
-      answer: `O plano Grátis inclui ${freeRule.included_businesses} loja. O ${proRule.name} inclui até ${proRule.included_businesses} lojas e pode oferecer capacidade adicional conforme as opções disponíveis.`,
+      answer: `O plano Grátis inclui ${freeRule.included_businesses} ${freeRule.included_businesses === 1 ? "loja" : "lojas"}. O ${proRule.name} inclui até ${proRule.included_businesses} lojas e pode oferecer capacidade adicional conforme as opções disponíveis.`,
     },
     {
       question: "Minha vitrine passa por moderação?",
@@ -300,7 +300,7 @@ export default async function PublicPlansPage() {
               </div>
               <div className="mt-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
                 {[
-                  [String(freeRule.included_businesses), "loja"],
+                  [String(freeRule.included_businesses), freeRule.included_businesses === 1 ? "loja" : "lojas"],
                   [String(freeRule.included_catalog_items), "itens no catálogo"],
                   [String(freeRule.included_promotions_per_business), "promoções por loja"],
                 ].map(([value, label]) => (
@@ -379,7 +379,7 @@ export default async function PublicPlansPage() {
                 </p>
                 <PlanList
                   items={[
-                    `${freeRule.included_businesses} loja`,
+                    `${freeRule.included_businesses} ${freeRule.included_businesses === 1 ? "loja" : "lojas"}`,
                     `Até ${freeRule.included_catalog_items} produtos ou serviços`,
                     `Até ${freeRule.included_promotions_per_business} promoções por loja`,
                     "Vitrine comercial completa",

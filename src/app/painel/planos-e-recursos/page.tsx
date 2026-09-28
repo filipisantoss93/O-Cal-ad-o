@@ -50,14 +50,14 @@ export default async function PlansAndFeaturesPage() {
   const freeRule = rules.find((rule) => rule.code === "free") ?? {
     code: "free",
     name: "Grátis",
-    included_businesses: 1,
+    included_businesses: 3,
     included_promotions_per_business: 2,
     included_catalog_items: 4,
   };
   const proRule = rules.find((rule) => rule.code === "pro") ?? {
     code: "pro",
     name: "Calçadão Pro",
-    included_businesses: 3,
+    included_businesses: 10,
     included_promotions_per_business: 10,
     included_catalog_items: 20,
   };
@@ -96,7 +96,7 @@ export default async function PlansAndFeaturesPage() {
             <p className="mt-1 text-sm font-semibold leading-6 text-muted">
               {billing.proActive
                 ? `${billing.storeLimit} vagas de loja disponíveis no momento.`
-                : `${freeRule.included_businesses} loja e ${freeRule.included_promotions_per_business} promoções por loja sem mensalidade.`}
+                : `${freeRule.included_businesses} ${freeRule.included_businesses === 1 ? "loja" : "lojas"} e ${freeRule.included_promotions_per_business} promoções por loja sem mensalidade.`}
             </p>
           </div>
           <Link
