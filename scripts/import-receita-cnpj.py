@@ -38,6 +38,10 @@ def norm(text):
         c for c in ascii_text if unicodedata.category(c) != "Mn"
     ).upper()).strip()
 
+def valid_cnpj_identifier(value):
+    """Valida o formato novo: 12 posições alfanuméricas seguidas de 2 dígitos."""
+    return bool(re.fullmatch(r"[A-Z0-9]{12}[0-9]{2}", str(value or "").strip().upper()))
+
 def eligible_cnae(code):
     value = re.sub(r"\D", "", code)
     return len(value) == 7 and (value[:4] in CATEGORY_PREFIXES or value[:2] in CATEGORY_TWO_DIGITS)
@@ -185,7 +189,7 @@ def selected_establishments(zip_path, cities, uf, city, limit):
     city_norm = norm(city)
     for row in csv_rows(zip_path, 30):
         stats["read"] += 1
-        root, order, dv = (row[i].strip() for i in (0, 1, 2))
+        root, order, dv = (row[i].strip().upper() for i in (0, 1, 2))
         if (row[5].strip() != "02" or row[19].strip().upper() != uf
                 or not eligible_cnae(row[11])):
             continue
@@ -195,8 +199,7 @@ def selected_establishments(zip_path, cities, uf, city, limit):
             continue
         if norm(city_name) != city_norm:
             continue
-        if not (re.fullmatch(r"\d{8}", root) and re.fullmatch(r"\d{4}", order)
-                and re.fullmatch(r"\d{2}", dv)):
+        if not valid_cnpj_identifier(root + order + dv):
             continue
         fantasia, street, number, neighborhood = (
             row[4].strip(), " ".join(row[13:15]).strip(), row[15].strip(), row[17].strip()
@@ -235,7 +238,7 @@ def get_company_natures(roots, download_base, tmp_dir, explicit_directory=None):
         else:
             path = download(download_base, f"Empresas{index}.zip", tmp_dir)
         for row in csv_rows(path, 7):
-            root = row[0].strip()
+            root = row[0].strip().upper()
             if root in remaining:
                 found[root] = row[2].strip()
                 remaining.remove(root)

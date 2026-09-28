@@ -73,6 +73,12 @@ class CnpjImporterTests(unittest.TestCase):
                 f"bytes={middle}-"
             ))
 
+    def test_cnpj_alfanumerico_e_rejeita_formato_invalido(self):
+        self.assertTrue(module.valid_cnpj_identifier("00000000E08G12"))
+        self.assertTrue(module.valid_cnpj_identifier("00ab000ee08g12"))
+        self.assertFalse(module.valid_cnpj_identifier("00000000E08G1A"))
+        self.assertFalse(module.valid_cnpj_identifier("00000000-08G12"))
+
     def test_natureza_privada_sem_pessoa_fisica(self):
         self.assertTrue(module.private_nature("2062"))
         self.assertFalse(module.private_nature("1244"))
@@ -88,7 +94,7 @@ class CnpjImporterTests(unittest.TestCase):
 
     def test_piloto_prezerva_complemento_e_exclui_contatos(self):
         row = [""] * 30
-        row[0], row[1], row[2] = "12345678", "0001", "95"
+        row[0], row[1], row[2] = "00000000", "E08G", "12"
         row[4], row[5], row[11] = "LOJA TESTE", "02", "4711302"
         row[13], row[14], row[15], row[16] = "RUA", "COMERCIAL", "100", "SALA 3"
         row[17], row[18], row[19], row[20] = "CENTRO", "19800000", "SP", "6210"
@@ -103,7 +109,7 @@ class CnpjImporterTests(unittest.TestCase):
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0]["complemento"], "SALA 3")
         self.assertEqual(records[0]["logradouro"], "RUA COMERCIAL")
-        self.assertEqual(records[0]["cnpj"], "12345678000195")
+        self.assertEqual(records[0]["cnpj"], "00000000E08G12")
         self.assertFalse(any("telefone" in key or "email" in key or "socio" in key
                              for key in records[0]))
 

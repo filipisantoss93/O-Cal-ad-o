@@ -65,7 +65,7 @@ async function coordinatesInsideCity(supabase:ReturnType<typeof createClient>,ci
 }
 async function stageRecord(
   supabase:ReturnType<typeof createClient>, sourceId:number, jobId:number, city:City, row:CnesRow,
-  name:string, street:string, number:string, neighborhood:string, postal:string|null,
+  name:string, street:string, number:string, complement:string, neighborhood:string, postal:string|null,
   latitude:number|null, longitude:number|null
 ){
   const cnes=String(row.codigo_cnes ?? "").trim();
@@ -75,11 +75,16 @@ async function stageRecord(
     .select("id,matched_business_id").eq("source_id",sourceId).eq("external_id",externalId).maybeSingle();
   const payload={
     source_id:sourceId, import_id:null, external_id:externalId, external_unit_code:cnes,
-    name, street, address_number:number, neighborhood, postal_code:postal,
+    name, street, address_number:number, complement:complement||null, neighborhood, postal_code:postal,
     city_name:city.name, state_code:city.state_code, city_id:city.id,
-    latitude, longitude, source_url:sourceUrl, payload:row,
+    latitude, longitude, source_url:sourceUrl,
+    payload:{
+      codigo_cnes:cnes,
+      natureza_juridica:clean(row.descricao_natureza_juridica_estabelecimento,20),
+      data_atualizacao:clean(row.data_atualizacao,30)
+    },
     dedupe_key:`cnes|${cnes}`, processing_status:existing?.matched_business_id ? "matched" : "pending",
-    processing_note:`Fila nacional CNES job ${jobId}`, found_at:new Date().toISOString(), updated_at:new Date().toISOString()
+    processing_note:`Fila nacional CNES job ${jobId}`, updated_at:new Date().toISOString()
   };
   if(existing?.id){
     const {data,error}=await supabase.from("business_source_records").update(payload).eq("id",existing.id)
@@ -87,7 +92,8 @@ async function stageRecord(
     if(error) throw error;
     return data as {id:number;matched_business_id:number|null};
   }
-  const {data,error}=await supabase.from("business_source_records").insert(payload).select("id,matched_business_id").single();
+  const {data,error}=await supabase.from("business_source_records")
+    .insert({...payload,found_at:new Date().toISOString()}).select("id,matched_business_id").single();
   if(error) throw error;
   return data as {id:number;matched_business_id:number|null};
 }
@@ -155,10 +161,9 @@ Deno.serve(async(request)=>{
       if(!rows.length){done=true;break}
 
       const {data:existingPlaces}=await supabase.from("businesses")
-        .select("id,name,street,address_number,latitude,longitude")
+        .select("id,name,street,address_number,complement,latitude,longitude")
         .eq("city_id",cityRow.id).eq("listing_type","public_place").limit(5000);
-      const placeIndex=new Map<string,any>();
-      for(const place of existingPlaces ?? []) placeIndex.set(norm(place.name),place);
+      const placeIndex=[...(existingPlaces??[])];
 
       for(const row of rows){
         if(!publicNature(row.descricao_natureza_juridica_estabelecimento)){ignored++;continue}
@@ -166,6 +171,7 @@ Deno.serve(async(request)=>{
         const name=clean(row.nome_fantasia || row.nome_razao_social,120);
         const street=clean(row.endereco_estabelecimento,160);
         const number=clean(row.numero_estabelecimento,20);
+        const complement=clean(row.complemento_estabelecimento,120);
         const neighborhood=clean(row.bairro_estabelecimento,120);
         const postal=validPostal(row.codigo_cep_estabelecimento);
         if(!cnes||!name||name.length<2||!street||street.length<2||!number||!neighborhood||neighborhood.length<2){
@@ -183,12 +189,29 @@ Deno.serve(async(request)=>{
         const validatedLon=cityRow.id===1?null:lon;
 
         try{
-          const staged=await stageRecord(supabase,source.id,job.id,cityRow,row,name,street,number,neighborhood,postal,lat,lon);
+          const staged=await stageRecord(supabase,source.id,job.id,cityRow,row,name,street,number,complement,neighborhood,postal,lat,lon);
           let businessId=staged.matched_business_id ?? null;
           let recordOutcome=businessId ? "matched" : "created";
 
           if(businessId){
-            const {data:existingBusiness}=await supabase.from("businesses").select("id,latitude,longitude").eq("id",businessId).maybeSingle();
+            const {data:existingBusiness}=await supabase.from("businesses")
+              .select("id,name,street,address_number,complement,latitude,longitude")
+              .eq("id",businessId).maybeSingle();
+            const identityMatches=existingBusiness
+              &&norm(existingBusiness.name)===norm(name)
+              &&norm(existingBusiness.street)===norm(street)
+              &&norm(existingBusiness.address_number)===norm(number)
+              &&norm(existingBusiness.complement)===norm(complement);
+            if(!identityMatches){
+              await supabase.from("business_source_records").update({
+                matched_business_id:null,processing_status:"duplicate_candidate",
+                processing_note:"Vínculo CNES anterior diverge em nome/endereço/complemento; revisão manual.",
+                updated_at:new Date().toISOString()
+              }).eq("id",staged.id);
+              ignored++;
+              results.push({cnes,name,status:"review",reason:"linked_address_mismatch"});
+              continue;
+            }
             if(existingBusiness && (existingBusiness.latitude===null||existingBusiness.longitude===null) && validatedLat!==null&&validatedLon!==null){
               await supabase.from("businesses").update({
                 latitude:validatedLat,longitude:validatedLon,data_source_checked_at:new Date().toISOString(),
@@ -197,9 +220,23 @@ Deno.serve(async(request)=>{
             }
             matched++;
           }else{
-            const existing=placeIndex.get(norm(name));
-            if(existing){
-              businessId=existing.id;
+            const sameAddress=placeIndex.filter((place:any)=>norm(place.name)===norm(name)
+              &&norm(place.street)===norm(street)&&norm(place.address_number)===norm(number));
+            const exactMatches=sameAddress.filter((place:any)=>norm(place.complement)===norm(complement));
+            const uncertainComplement=sameAddress.length>0&&exactMatches.length===0
+              &&sameAddress.some((place:any)=>!norm(place.complement)||!norm(complement));
+            if(exactMatches.length>1||uncertainComplement){
+              await supabase.from("business_source_records").update({
+                processing_status:"duplicate_candidate",
+                processing_note:"CNES: mesmo nome/endereço com complemento ausente ou múltiplos candidatos; revisão manual.",
+                updated_at:new Date().toISOString()
+              }).eq("id",staged.id);
+              ignored++;
+              results.push({cnes,name,status:"review",reason:"ambiguous_address_complement"});
+              continue;
+            }
+            if(exactMatches.length===1){
+              businessId=exactMatches[0].id;
               recordOutcome="matched";
               matched++;
             }else{
@@ -207,20 +244,23 @@ Deno.serve(async(request)=>{
               const slug=`${slugPart(name)}-cnes-${cnes.toLowerCase().replace(/[^a-z0-9]/g,"")}`;
               const {data:inserted,error:insertError}=await supabase.from("businesses").insert({
                 owner_id:null,city_id:cityRow.id,category_id:27,slug,name,
-                street,address_number:number,neighborhood,postal_code:postal,
+                street,address_number:number,complement:complement||null,neighborhood,postal_code:postal,
                 latitude:validatedLat,longitude:validatedLon,status:"approved",plan:"free",is_active:true,
                 publication_status:"published",listing_type:"public_place",public_place_kind:"health",
                 official_source_url:sourceUrl,pre_registered:false,data_source_url:sourceUrl,
                 data_source_checked_at:new Date().toISOString(),tags:["cnes","saude-publica"]
-              }).select("id,name,street,address_number,latitude,longitude").single();
+              }).select("id,name,street,address_number,complement,latitude,longitude").single();
               if(insertError) throw insertError;
               businessId=inserted.id;
-              placeIndex.set(norm(name),inserted);
+              placeIndex.push(inserted);
               created++;
             }
 
             await supabase.from("business_source_records").update({
-              matched_business_id:businessId,processing_status:existing?"matched":"created",
+              matched_business_id:businessId,processing_status:recordOutcome==="matched"?"matched":"created",
+              processing_note:recordOutcome==="matched"
+                ?"CNES: nome, logradouro, número e complemento conferidos."
+                :"CNES: pré-cadastro criado com proveniência individual; aguardando revisão.",
               processed_at:new Date().toISOString(),updated_at:new Date().toISOString()
             }).eq("id",staged.id);
           }

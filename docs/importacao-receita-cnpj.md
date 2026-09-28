@@ -8,7 +8,7 @@ Em 21/09/2026, a execução real `#4` no `ubuntu-latest` confirmou que a RFB enc
 
 **Não configurar execução nacional automática nem afirmar importação concluída até um lote de CNPJ real ser persistido e auditado.**
 
-## Execução do piloto
+## Compatibilidade com CNPJ alfanumérico (2026)\n\nO identificador é tratado como texto, em formato de 14 caracteres: 12 posições alfanuméricas seguidas de dois dígitos verificadores. O parser e a RPC aceitam letras maiúsculas e minúsculas após normalização para maiúsculas; não converter CNPJ para número nem remover letras. CNPJs existentes numéricos continuam válidos. O piloto ainda precisa validar a primeira competência que contenha CNPJs alfa, além dos testes sintéticos do parser.\n\n## Execução do piloto
 
 O piloto exige um runner Linux x64 confiável com o rótulo `rfb-cnpj` e acesso legítimo à fonte oficial, ou os ZIPs oficiais já baixados no próprio runner. Não desativar certificados TLS, não usar proxies para contornar restrições e não baixar de sites sem procedência comprovada.
 
