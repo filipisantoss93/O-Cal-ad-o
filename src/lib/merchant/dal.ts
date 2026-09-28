@@ -14,6 +14,7 @@ export type MerchantBusiness = {
   phone_e164: string | null;
   public_email: string | null;
   website_url: string | null;
+  website_button_label: string | null;
   instagram_url: string | null;
   facebook_url: string | null;
   street: string;
