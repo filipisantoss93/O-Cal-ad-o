@@ -220,7 +220,7 @@ export default async function PublicPlansPage() {
     },
     {
       question: "Posso cadastrar mais de uma empresa?",
-      answer: `O plano Grátis inclui ${freeRule.included_businesses} ${freeRule.included_businesses === 1 ? "loja" : "lojas"}. O ${proRule.name} inclui até ${proRule.included_businesses} lojas e pode oferecer capacidade adicional conforme as opções disponíveis.`,
+      answer: `O plano Grátis inclui até ${freeRule.included_businesses} lojas. O ${proRule.name} inclui até ${proRule.included_businesses} lojas; acima desse limite, cada loja adicional tem cobrança recorrente${extraStore ? ` de ${money(extraStore.price_cents)}/mês` : ""}.`,
     },
     {
       question: "Minha vitrine passa por moderação?",
@@ -413,7 +413,7 @@ export default async function PublicPlansPage() {
                     "Todos os recursos do plano Grátis",
                     "Pode destacar uma promoção",
                     "10% de desconto em publicidade",
-                    "Acesso a adicionais de capacidade",
+                    `Lojas acima de ${proRule.included_businesses} com cobrança mensal por unidade`,
                   ]}
                 />
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -530,7 +530,7 @@ export default async function PublicPlansPage() {
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <p className="font-black text-ink">{extraStore.name}</p>
-                        <p className="mt-1 text-xs font-semibold text-muted">Capacidade adicional de loja.</p>
+                        <p className="mt-1 text-xs font-semibold text-muted">Cada loja acima das {proRule.included_businesses} incluídas no Pro.</p>
                       </div>
                       <p className="shrink-0 font-black text-ink">{money(extraStore.price_cents)}/mês</p>
                     </div>
