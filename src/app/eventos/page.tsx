@@ -40,7 +40,7 @@ export default async function EventsFeed({ searchParams }: Props) {
 
   let regularQuery = supabase.from("events").select("*")
     .eq("city_id", selectedCityId ?? -1)
-    .gte("ends_at", nowIso).eq("is_active", true)
+    .gte("starts_at", nowIso).eq("is_active", true)
     .order("starts_at", { ascending: true }).limit(120);
   if (selectedCategory) regularQuery = regularQuery.eq("category", selectedCategory);
   if (params.quando === "semana") regularQuery = regularQuery.lte("starts_at", endOfWeek.toISOString());
@@ -52,7 +52,7 @@ export default async function EventsFeed({ searchParams }: Props) {
   if (selectedCityId && highlightIds.size > 0) {
     let paidQuery = supabase.from("events").select("*")
       .in("id", [...highlightIds]).eq("city_id", selectedCityId)
-      .gte("ends_at", nowIso).eq("is_active", true);
+      .gte("starts_at", nowIso).eq("is_active", true);
     if (selectedCategory) paidQuery = paidQuery.eq("category", selectedCategory);
     if (params.quando === "semana") paidQuery = paidQuery.lte("starts_at", endOfWeek.toISOString());
     paidResult = await paidQuery;

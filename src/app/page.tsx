@@ -35,7 +35,7 @@ async function hasUpcomingEventInSelectedCity() {
     .select("id")
     .eq("city_id", selectedCityId)
     .eq("is_active", true)
-    .gte("ends_at", new Date().toISOString())
+    .gte("starts_at", new Date().toISOString())
     .limit(1)
     .maybeSingle();
 
