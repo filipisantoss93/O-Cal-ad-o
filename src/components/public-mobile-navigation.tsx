@@ -14,7 +14,7 @@ const items = [
   { href: "/", label: "Início", icon: HomeIcon },
   { href: "/buscar", label: "Explorar", icon: SearchIcon },
   { href: "/eventos", label: "Eventos", icon: StarIcon },
-  { href: "/#ofertas", label: "Ofertas", icon: TagIcon },
+  { href: "/ofertas", label: "Ofertas", icon: TagIcon },
   { href: "/entrar", label: "Entrar", icon: UserIcon },
 ] as const;
 
@@ -30,9 +30,7 @@ export function PublicMobileNavigation() {
         const Icon = item.icon;
         const active = item.href === "/"
           ? pathname === "/"
-          : item.href === "/#ofertas"
-            ? false
-            : pathname === item.href || pathname.startsWith(item.href + "/");
+          : pathname === item.href || pathname.startsWith(item.href + "/");
 
         return (
           <Link

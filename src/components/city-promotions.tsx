@@ -95,6 +95,8 @@ export function CityPromotions() {
         title="Ofertas da cidade"
         description="Promoções publicadas pelos comércios locais."
         tone="canvas"
+        linkHref="/ofertas"
+        linkLabel="Ver todas as ofertas"
       >
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {promotions.map((promotion) => (

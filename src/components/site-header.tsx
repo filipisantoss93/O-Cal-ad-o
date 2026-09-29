@@ -27,7 +27,7 @@ export function SiteHeader() {
           </Link>
           <Link
             className="transition-colors hover:text-ink"
-            href="/#ofertas"
+            href="/ofertas"
           >
             Ofertas
           </Link>
