@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { StoreIcon } from "@/components/icons";
 import { CitySelector } from "@/components/city-selector";
+import { PublicMobileNavigation } from "@/components/public-mobile-navigation";
 
 export function SiteHeader() {
   return (
@@ -49,19 +50,7 @@ export function SiteHeader() {
         </div>
       </div>
     </header>
-    <nav aria-label="Navegação móvel" className="fixed inset-x-0 bottom-0 z-[60] grid grid-cols-5 border-t border-line bg-surface/98 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(29,43,40,0.08)] backdrop-blur md:hidden">
-      {[
-        { href: "/", label: "Início" },
-        { href: "/buscar", label: "Explorar" },
-        { href: "/eventos", label: "Eventos" },
-        { href: "/#ofertas", label: "Ofertas" },
-        { href: "/entrar", label: "Entrar" },
-      ].map((item) => (
-        <Link key={item.href} href={item.href} className="flex min-h-12 min-w-0 items-center justify-center rounded-lg px-1 text-xs font-extrabold text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
-          {item.label}
-        </Link>
-      ))}
-    </nav>
+    <PublicMobileNavigation />
     </>
   );
 }
