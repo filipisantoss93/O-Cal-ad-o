@@ -119,8 +119,9 @@ export default async function Home() {
                 Encontre recarga perto de você ou planeje paradas durante a viagem.
               </span>
             </span>
-            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-dark text-white transition group-hover:translate-x-0.5 sm:size-auto sm:gap-2 sm:rounded-xl sm:px-3 sm:py-2" aria-hidden="true">
-              <span className="hidden text-xs font-black sm:inline">Explorar</span>
+            <span className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-brand-dark px-2.5 text-white transition group-hover:translate-x-0.5 sm:gap-2 sm:px-3 sm:py-2" aria-hidden="true">
+              <span className="text-xs font-black sm:hidden">Ver</span>
+              <span className="hidden text-xs font-black sm:inline">Ver eletropostos</span>
               <ArrowRightIcon className="size-4" />
             </span>
           </Link>

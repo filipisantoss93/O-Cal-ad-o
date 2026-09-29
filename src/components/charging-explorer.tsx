@@ -1,17 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
-  distanceKm, googleDirectionsUrl, locateAlongRoute, type ChargingStation,
+  distanceKm, googleDirectionsUrl, type ChargingStation,
   type Coordinate, type PlannedStation,
 } from "@/lib/charging-planner";
+import {
+  cityChangeEventName,
+  selectedCityStorageKey,
+  type SelectedCity,
+} from "@/lib/location";
 
 type RouteResult = {
   origin: Coordinate & { label: string };
   destination: Coordinate & { label: string };
   routeKm: number;
   points: Coordinate[];
+  stations: PlannedStation[];
   attribution: string;
 };
 
@@ -117,8 +123,12 @@ function RouteSketch({ route, stations }: { route: RouteResult; stations: Planne
 export function ChargingExplorer() {
   const [mode, setMode] = useState<"near" | "trip">("near");
   const [stations, setStations] = useState<ChargingStation[]>([]);
-  const [catalogError, setCatalogError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [totalStations, setTotalStations] = useState(0);
+  const [availableConnectors, setAvailableConnectors] = useState<string[]>([]);
+  const [paginationRequest, setPaginationRequest] = useState({ key: "", page: 1 });
+  const [completedRequestKey, setCompletedRequestKey] = useState("");
+  const [catalogFailure, setCatalogFailure] = useState<{ key: string; message: string } | null>(null);
+  const [selectionRequired, setSelectionRequired] = useState(false);
   const [position, setPosition] = useState<Coordinate | null>(null);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState("");
@@ -135,20 +145,85 @@ export function ChargingExplorer() {
   const [routeError, setRouteError] = useState("");
   const [planning, setPlanning] = useState(false);
 
+  const storedCity = useSyncExternalStore(
+    (onChange) => {
+      window.addEventListener(cityChangeEventName, onChange);
+      window.addEventListener("storage", onChange);
+      return () => {
+        window.removeEventListener(cityChangeEventName, onChange);
+        window.removeEventListener("storage", onChange);
+      };
+    },
+    () => window.localStorage.getItem(selectedCityStorageKey),
+    () => null,
+  );
+  const selectedCity = useMemo(() => {
+    if (!storedCity) return null;
+    try {
+      const value = JSON.parse(storedCity) as SelectedCity;
+      return Number.isSafeInteger(value.id) && value.id > 0 ? value : null;
+    } catch {
+      return null;
+    }
+  }, [storedCity]);
+  const deferredCityFilter = useDeferredValue(cityFilter.trim());
+  const requestKey = JSON.stringify({
+    connector,
+    city: deferredCityFilter,
+    cityId: selectedCity?.id ?? null,
+    latitude: position?.latitude ?? null,
+    longitude: position?.longitude ?? null,
+    minPower,
+    publicOnly,
+  });
+  const requestedPage = paginationRequest.key === requestKey ? paginationRequest.page : 1;
+  const fetchKey = `${requestKey}:${requestedPage}`;
+  const loading = mode === "near" && completedRequestKey !== fetchKey;
+  const catalogError = catalogFailure?.key === fetchKey ? catalogFailure.message : "";
+
   useEffect(() => {
+    if (mode !== "near") return;
     const controller = new AbortController();
-    fetch("/api/eletropostos", { signal: controller.signal })
+    const params = new URLSearchParams({ page: String(requestedPage) });
+    if (position) {
+      params.set("lat", String(position.latitude));
+      params.set("lon", String(position.longitude));
+    } else if (deferredCityFilter) {
+      params.set("city", deferredCityFilter);
+    } else if (selectedCity) {
+      params.set("cityId", String(selectedCity.id));
+    }
+    if (connector) params.set("connector", connector);
+    if (minPower) params.set("minPower", minPower);
+    if (publicOnly) params.set("publicOnly", "1");
+
+    fetch(`/api/eletropostos?${params}`, { signal: controller.signal })
       .then(async response => {
-        const result = await response.json() as { stations?: ChargingStation[]; error?: string };
+        const result = await response.json() as {
+          stations?: ChargingStation[];
+          total?: number;
+          connectors?: string[];
+          selectionRequired?: boolean;
+          error?: string;
+        };
         if (!response.ok) throw new Error(result.error || "Não foi possível consultar os eletropostos.");
-        setStations(result.stations ?? []);
+        setStations((current) => requestedPage === 1 ? result.stations ?? [] : [...current, ...(result.stations ?? [])]);
+        setTotalStations(result.total ?? 0);
+        setAvailableConnectors(result.connectors ?? []);
+        setSelectionRequired(Boolean(result.selectionRequired));
+        setCatalogFailure(null);
       })
       .catch(error => {
-        if (!controller.signal.aborted) setCatalogError(error instanceof Error ? error.message : "Não foi possível carregar os pontos.");
+        if (!controller.signal.aborted) {
+          setCatalogFailure({
+            key: fetchKey,
+            message: error instanceof Error ? error.message : "Não foi possível carregar os pontos.",
+          });
+        }
       })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+      .finally(() => { if (!controller.signal.aborted) setCompletedRequestKey(fetchKey); });
     return () => controller.abort();
-  }, []);
+  }, [connector, deferredCityFilter, fetchKey, minPower, mode, position, publicOnly, requestedPage, selectedCity]);
 
   function locate() {
     if (!navigator.geolocation) {
@@ -171,37 +246,33 @@ export function ChargingExplorer() {
     );
   }
 
-  const connectors = useMemo(() => [...new Set(stations.flatMap(s => s.connectors))].sort((a, b) => a.localeCompare(b, "pt-BR")), [stations]);
   const filtered = useMemo(() => {
     const power = minPower ? Number(minPower) : null;
-    return stations.filter(station => {
+    return (route?.stations ?? []).filter(station => {
       if (connector && !station.connectors.includes(connector)) return false;
       if (power !== null && (station.powerKw === null || station.powerKw < power)) return false;
       if (publicOnly && station.access !== "public") return false;
-      if (mode === "near" && cityFilter.trim() && !`${station.city} ${station.state}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-        .includes(cityFilter.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase())) return false;
       return true;
     });
-  }, [stations, connector, minPower, publicOnly, cityFilter, mode]);
+  }, [connector, minPower, publicOnly, route]);
 
-  const nearby = useMemo(() => [...filtered].sort((a, b) => position
-    ? distanceKm(position, a) - distanceKm(position, b)
-    : a.city.localeCompare(b.city, "pt-BR") || a.name.localeCompare(b.name, "pt-BR"))
-    .slice(0, 60), [filtered, position]);
+  const nearby = stations;
+  const connectorOptions = useMemo(() => {
+    if (mode !== "trip" || !route) return availableConnectors;
+    return [...new Set(route.stations.flatMap((station) => station.connectors))]
+      .sort((first, second) => first.localeCompare(second, "pt-BR"));
+  }, [availableConnectors, mode, route]);
 
   const planned = useMemo((): PlannedStation[] => {
     if (!route) return [];
     const available = autonomy.trim() !== "" && Number.isFinite(Number(autonomy)) && Number(autonomy) > 0
       ? Math.max(0, Number(autonomy) - (Number(reserve) || 0)) : null;
-    return filtered.flatMap(station => {
-      const { routeKm, lateralKm } = locateAlongRoute(station, route.points, route.routeKm);
-      // Exclui grandes desvios em linha reta e pontos já ultrapassados na rota.
-      if (lateralKm > 8 || routeKm < 0.5 || routeKm > route.routeKm - 0.5) return [];
-      return [{ ...station, routeKm, lateralKm,
-        remainingKm: Math.max(0, route.routeKm - routeKm),
-        withinRange: available === null ? null : routeKm <= available && lateralKm <= 3,
-      }];
-    }).sort((a, b) => a.routeKm - b.routeKm);
+    return filtered.map((station) => ({
+      ...station,
+      withinRange: available === null
+        ? null
+        : station.routeKm <= available && station.lateralKm <= 3,
+    })).sort((a, b) => a.routeKm - b.routeKm);
   }, [filtered, route, autonomy, reserve]);
 
   async function plan(event: React.FormEvent<HTMLFormElement>) {
@@ -254,10 +325,19 @@ export function ChargingExplorer() {
           </button>
           <label className="mt-3 block text-xs font-bold text-ink">Pesquisar cidade ou UF
             <input value={cityFilter} onChange={event => setCityFilter(event.target.value)}
-              placeholder="Ex.: Ourinhos ou SP" className="mt-1 block min-h-11 w-full rounded-xl border border-line bg-canvas px-3 text-sm text-ink" />
+              placeholder={selectedCity ? `${selectedCity.name}, ${selectedCity.stateCode}` : "Ex.: Ourinhos ou SP"}
+              className="mt-1 block min-h-11 w-full rounded-xl border border-line bg-canvas px-3 text-sm text-ink" />
           </label>
           {locationError && <p role="status" className="mt-2 text-xs font-semibold text-muted">{locationError}</p>}
-          <p className="mt-2 text-xs text-muted">{position ? "Ordenação por distância em linha reta, não por percurso rodoviário." : "Sem localização, os resultados são organizados por cidade."}</p>
+          <p className="mt-2 text-xs text-muted">
+            {position
+              ? "Ordenação por distância em linha reta, não por percurso rodoviário."
+              : deferredCityFilter
+                ? `Mostrando resultados para “${deferredCityFilter}”.`
+                : selectedCity
+                  ? `Mostrando primeiro os eletropostos de ${selectedCity.name} - ${selectedCity.stateCode}.`
+                  : "Escolha uma cidade no topo, pesquise acima ou use sua localização."}
+          </p>
         </div>
       ) : (
         <form onSubmit={plan} className="space-y-3 rounded-2xl border border-line bg-surface p-4">
@@ -310,7 +390,7 @@ export function ChargingExplorer() {
             <select value={connector} onChange={event => setConnector(event.target.value)}
               className="mt-1 min-h-11 w-full rounded-xl border border-line bg-canvas px-3 text-sm text-ink">
               <option value="">Todos os conectores</option>
-              {connectors.map(item => <option key={item} value={item}>{item}</option>)}
+              {connectorOptions.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="block text-xs font-bold text-ink">Potência mínima
@@ -331,12 +411,24 @@ export function ChargingExplorer() {
       {catalogError ? <p role="alert" className="text-sm font-semibold text-muted">{catalogError}</p> : null}
       {!loading && !catalogError && mode === "near" ? (
         <section>
-          <h2 className="mb-3 text-lg font-black text-ink">{nearby.length} {nearby.length === 1 ? "ponto encontrado" : "pontos encontrados"}</h2>
-          {nearby.length === 0 ? <p className="text-sm text-muted">Nenhum ponto no filtro. Tente outra cidade ou potência.</p> : (
+          <h2 className="mb-3 text-lg font-black text-ink">{totalStations} {totalStations === 1 ? "ponto encontrado" : "pontos encontrados"}</h2>
+          {selectionRequired ? (
+            <p className="rounded-2xl border border-dashed border-line bg-surface p-4 text-sm text-muted">
+              Escolha uma cidade, pesquise pelo nome ou use sua localização para ver os eletropostos mais úteis para você.
+            </p>
+          ) : nearby.length === 0 ? <p className="text-sm text-muted">Nenhum ponto no filtro. Tente outra cidade ou potência.</p> : (
             <div className="grid gap-3 sm:grid-cols-2">{nearby.map(station =>
               <StationCard key={station.id} station={station} position={position} />)}</div>
           )}
-          {filtered.length > nearby.length && <p className="mt-3 text-xs text-muted">Exibindo os 60 primeiros de {filtered.length} pontos. Refine a cidade para ver outros.</p>}
+          {nearby.length < totalStations ? (
+            <button
+              type="button"
+              onClick={() => setPaginationRequest({ key: requestKey, page: requestedPage + 1 })}
+              className="mt-4 min-h-11 w-full rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink transition hover:border-brand/50 hover:text-brand-dark"
+            >
+              Carregar mais eletropostos
+            </button>
+          ) : null}
         </section>
       ) : null}
       {mode === "trip" && route ? (

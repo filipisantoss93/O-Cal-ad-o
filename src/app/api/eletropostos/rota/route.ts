@@ -1,4 +1,10 @@
-import { validCoordinate, type Coordinate } from "@/lib/charging-planner";
+import {
+  locateAlongRoute,
+  validCoordinate,
+  type Coordinate,
+  type PlannedStation,
+} from "@/lib/charging-planner";
+import { loadChargingStations } from "@/lib/charging-stations-server";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -135,9 +141,41 @@ export async function POST(request: Request) {
         !points.every(validCoordinate)) {
       throw new Error("unexpected-route");
     }
+    const routeBounds = points.reduce((bounds, point) => ({
+      minimumLatitude: Math.min(bounds.minimumLatitude, point.latitude),
+      maximumLatitude: Math.max(bounds.maximumLatitude, point.latitude),
+      minimumLongitude: Math.min(bounds.minimumLongitude, point.longitude),
+      maximumLongitude: Math.max(bounds.maximumLongitude, point.longitude),
+    }), {
+      minimumLatitude: 90,
+      maximumLatitude: -90,
+      minimumLongitude: 180,
+      maximumLongitude: -180,
+    });
+    const boundsPadding = 0.15;
+    const candidates = await loadChargingStations({
+      bounds: {
+        minimumLatitude: routeBounds.minimumLatitude - boundsPadding,
+        maximumLatitude: routeBounds.maximumLatitude + boundsPadding,
+        minimumLongitude: routeBounds.minimumLongitude - boundsPadding,
+        maximumLongitude: routeBounds.maximumLongitude + boundsPadding,
+      },
+    });
+    const stations = candidates.flatMap((station): PlannedStation[] => {
+      const { routeKm, lateralKm } = locateAlongRoute(station, points, km);
+      if (lateralKm > 8 || routeKm < 0.5 || routeKm > km - 0.5) return [];
+      return [{
+        ...station,
+        routeKm,
+        lateralKm,
+        remainingKm: Math.max(0, km - routeKm),
+        withinRange: null,
+      }];
+    }).sort((first, second) => first.routeKm - second.routeKm);
+
     return Response.json({
       origin: start, destination: end,
-      routeKm: km, points,
+      routeKm: km, points, stations,
       attribution: "Trajeto: openrouteservice, dados © contribuidores OpenStreetMap (ODbL).",
     }, { headers: { "Cache-Control": "private, no-store" } });
   } catch {
