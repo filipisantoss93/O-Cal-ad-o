@@ -71,6 +71,7 @@ async function ownedBusiness(
 
 function revalidatePromotionViews() {
   revalidatePath("/");
+  revalidatePath("/ofertas");
   revalidatePath("/painel");
   revalidatePath("/painel/promocoes");
   revalidatePath("/painel/assinatura");

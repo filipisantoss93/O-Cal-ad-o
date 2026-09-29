@@ -56,7 +56,7 @@ export function PromotionCard({ promotion }: PromotionCardProps) {
 
   return (
     <article
-      className={`flex min-w-0 flex-col overflow-hidden rounded-2xl border border-ink/5 sm:rounded-3xl ${promotion.palette}`}
+      className={`flex min-w-0 flex-col overflow-hidden rounded-2xl border sm:rounded-3xl ${promotion.isFeatured ? "border-brand/45 shadow-[0_12px_30px_rgba(187,61,35,0.12)]" : "border-ink/5"} ${promotion.palette}`}
     >
       {promotion.imageUrl ? (
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-white/50 sm:aspect-[16/10]">

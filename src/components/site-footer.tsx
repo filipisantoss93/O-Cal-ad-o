@@ -27,7 +27,7 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link className="hover:text-ink" href="/#ofertas">
+              <Link className="hover:text-ink" href="/ofertas">
                 Ofertas locais
               </Link>
             </li>
