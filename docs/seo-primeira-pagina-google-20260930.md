@@ -253,3 +253,15 @@ A primeira etapa termina quando:
 - começarmos a receber impressões para consultas locais não relacionadas à marca.
 
 Depois disso, avançar para cidade + categoria.
+
+
+## Execução técnica — 30/09/2026
+
+- links de descoberta de cidades convertidos para links HTML rastreáveis;
+- páginas operacionais de reivindicação e correção marcadas como noindex;
+- breadcrumbs visuais/estruturados adicionados à hierarquia cidade > categoria > vitrine;
+- vitrines conectadas de volta às landings locais;
+- tipos Schema.org locais refinados apenas quando a categoria permite inferência segura;
+- ItemList ajustado para refletir os itens efetivamente presentes em cada página;
+- conteúdo das categorias enriquecido com bairros presentes nos dados reais exibidos;
+- reenvio do sitemap preparado; a submissão pelo GSC Wizard depende de conexão com permissão completa de Search Console.
