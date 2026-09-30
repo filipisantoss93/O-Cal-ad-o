@@ -5,6 +5,8 @@ type HomeSectionSkeletonProps = {
   title: string;
   description?: string;
   tone?: "canvas" | "surface";
+  count?: number;
+  gridClassName?: string;
   variant?: "card" | "compact";
 };
 
@@ -14,8 +16,10 @@ export function HomeSectionSkeleton({
   description,
   tone = "surface",
   variant = "card",
+  count = 4,
+  gridClassName = "grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4",
 }: HomeSectionSkeletonProps) {
-  const height = variant === "compact" ? "h-28" : "h-64";
+  const height = variant === "compact" ? "h-52 sm:h-44" : "h-80";
 
   return (
     <HomeFeedSection
@@ -25,10 +29,10 @@ export function HomeSectionSkeleton({
       tone={tone}
     >
       <div
-        className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4"
+        className={`grid ${gridClassName}`}
         aria-hidden="true"
       >
-        {[0, 1, 2, 3].map((item) => (
+        {Array.from({ length: count }, (_, item) => (
           <div
             key={item}
             className={`${height} min-w-0 animate-pulse rounded-2xl border border-line/70 bg-canvas`}
