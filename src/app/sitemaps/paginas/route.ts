@@ -6,6 +6,11 @@ export function GET() {
     SITE_URL + "/descobrir",
     SITE_URL + "/planos",
     SITE_URL + "/cidade/assis-sp",
+    SITE_URL + "/cidade/assis-sp/alimentacao",
+    SITE_URL + "/cidade/assis-sp/automotivo",
+    SITE_URL + "/cidade/assis-sp/moda-acessorios",
+    SITE_URL + "/cidade/assis-sp/saude-bem-estar",
+    SITE_URL + "/cidade/assis-sp/construcao-reforma",
   ];
   return xmlResponse([
     '<?xml version="1.0" encoding="UTF-8"?>',
