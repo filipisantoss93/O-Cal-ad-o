@@ -164,6 +164,8 @@ export function DiscoveryBusinesses() {
               : "Uma seleção variada de estabelecimentos da cidade para você conhecer."
           }
           tone="surface"
+          count={12}
+          gridClassName="grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6"
         />
       </div>
     );

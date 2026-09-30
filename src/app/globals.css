@@ -229,3 +229,14 @@ button:not(:disabled),
     background-color: #172321;
   }
 }
+
+/* Text needs a lighter accent on dark surfaces; button fills stay unchanged. */
+:root[data-theme="dark"] .text-brand-dark {
+  color: #ff997c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .text-brand-dark {
+    color: #ff997c;
+  }
+}

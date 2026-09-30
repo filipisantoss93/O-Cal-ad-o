@@ -207,6 +207,8 @@ export function NearbyBusinesses() {
           description="Buscando estabelecimentos da cidade selecionada."
           tone="surface"
           variant="compact"
+          count={nearbyListLimit}
+          gridClassName="grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
         />
       </div>
     );
@@ -270,14 +272,14 @@ export function NearbyBusinesses() {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex min-w-0 flex-wrap items-center gap-1">
-                      <span className="min-w-0 truncate text-[13px] font-black text-ink sm:text-sm">{business.name}</span>
+                      <span className="min-w-0 line-clamp-3 break-words text-[13px] font-black text-ink sm:text-sm">{business.name}</span>
                       {business.isFeatured ? (
                         <span className="shrink-0 rounded-full bg-accent/35 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-ink sm:text-xs">
                           Patrocinado
                         </span>
                       ) : null}
                     </span>
-                    <span className="mt-0.5 block truncate text-xs font-semibold text-muted">
+                    <span className="mt-0.5 block line-clamp-2 text-xs font-semibold text-muted">
                       {business.listingType === "public_place" ? "Local público" : business.categoryName}
                     </span>
                     {hasGoogleRating ? (
@@ -293,7 +295,7 @@ export function NearbyBusinesses() {
                 </span>
 
                 <span className="mt-auto flex flex-wrap items-end justify-between gap-x-2 gap-y-1 border-t border-line/70 pt-2.5 sm:mt-3">
-                  <span className="min-w-0 truncate text-xs font-semibold text-muted">
+                  <span className="min-w-0 line-clamp-2 break-words text-xs font-semibold text-muted">
                     {business.neighborhood}
                   </span>
                   <span className="shrink-0 text-xs font-black text-brand-dark">

@@ -36,7 +36,7 @@ export function BusinessCard({
   return (
     <article
       data-highlight-campaign={business.highlightCampaignId ?? undefined}
-      className={`group min-w-0 overflow-hidden bg-surface shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(29,43,40,0.11)] ${compact ? "rounded-2xl sm:rounded-3xl" : "rounded-3xl"} ${
+      className={`group min-w-0 overflow-hidden bg-surface shadow-sm transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(29,43,40,0.11)] ${compact ? "rounded-2xl sm:rounded-3xl" : "rounded-3xl"} ${
         business.isSponsored
           ? "border-2 border-accent-dark/55 ring-2 ring-accent/15 sm:ring-4"
           : "border border-line"
@@ -92,7 +92,7 @@ export function BusinessCard({
             <h3 className={`flex items-center gap-1 font-black tracking-tight text-ink ${compact ? "mt-1 text-sm leading-tight sm:text-base" : "mt-1.5 text-xl"}`}>
               <Link
                 href={`/loja/${business.slug}`}
-                className="line-clamp-2 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                className={`${compact ? "line-clamp-3 sm:line-clamp-2" : "line-clamp-2"} min-w-0 break-words rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-brand`}
               >
                 {business.name}
               </Link>
@@ -132,7 +132,7 @@ export function BusinessCard({
         <div className={`flex flex-wrap font-semibold text-muted ${compact ? "mt-2 gap-1 text-xs sm:mt-3" : "mt-4 gap-x-4 gap-y-2 text-xs"}`}>
           <span className="inline-flex min-w-0 items-center gap-1">
             <MapPinIcon className={`shrink-0 text-brand ${compact ? "size-3.5" : "size-4"}`} />
-            <span className={compact ? "truncate" : ""}>{business.neighborhood} · {business.distance}</span>
+            <span className={compact ? "line-clamp-2 break-words sm:truncate" : ""}>{business.neighborhood} · {business.distance}</span>
           </span>
           <span className={compact ? "hidden items-center gap-1 sm:inline-flex" : "inline-flex items-center gap-1.5"}>
             <ClockIcon className="size-4 text-brand" />
