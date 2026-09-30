@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore, type ChangeEvent } from "react";
+import { useLayoutEffect, useSyncExternalStore, type ChangeEvent } from "react";
 
 type ThemeChoice = "system" | "light" | "dark";
 
@@ -46,6 +46,15 @@ function applyTheme(theme: ThemeChoice) {
 }
 
 export function ThemeSelect() {
+  useLayoutEffect(() => {
+    const savedTheme = readTheme();
+    if (savedTheme === "system") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.dataset.theme = savedTheme;
+    }
+  }, []);
+
   const theme = useSyncExternalStore(
     subscribeToTheme,
     readTheme,
