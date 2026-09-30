@@ -218,3 +218,14 @@ button:not(:disabled),
     background-color: #3b4b5f;
   }
 }
+
+
+:root[data-theme="dark"] [class~="bg-ink/85"] {
+  background-color: #172321;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) [class~="bg-ink/85"] {
+    background-color: #172321;
+  }
+}
