@@ -91,6 +91,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   const citySlug = citySeoSlug(data.city.name, data.city.state_code);
   const canonical = `/cidade/${citySlug}/${data.category.slug}`;
+  if (page > data.totalPages) permanentRedirect(canonical);
+
   const title = `${data.category.name} em ${data.city.name}, ${data.city.state_code}`;
   const description = `Encontre estabelecimentos de ${data.category.name.toLocaleLowerCase("pt-BR")} em ${data.city.name}, ${data.city.state_code}. Consulte vitrines e informações disponíveis no O Calçadão.`;
 
