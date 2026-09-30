@@ -132,3 +132,54 @@ button:not(:disabled),
     animation-iteration-count: 1 !important;
   }
 }
+
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #111827;
+  --surface: #1f2937;
+  --ink: #f3f4f6;
+  --ink-soft: #e5e7eb;
+  --muted: #a1a1aa;
+  --line: #374151;
+  --positive: #4ade80;
+  --positive-soft: #12352b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --canvas: #111827;
+    --surface: #1f2937;
+    --ink: #f3f4f6;
+    --ink-soft: #e5e7eb;
+    --muted: #a1a1aa;
+    --line: #374151;
+    --positive: #4ade80;
+    --positive-soft: #12352b;
+  }
+
+  :root:not([data-theme="light"]) .bg-white {
+    background-color: var(--surface);
+  }
+
+  :root:not([data-theme="light"]) [class~="bg-[#fff2e9]"] {
+    background-color: #33251e;
+  }
+
+  :root:not([data-theme="light"]) [class~="bg-[#ffd766]"] {
+    background-color: #42371f;
+  }
+}
+
+:root[data-theme="dark"] .bg-white {
+  background-color: var(--surface);
+}
+
+:root[data-theme="dark"] [class~="bg-[#fff2e9]"] {
+  background-color: #33251e;
+}
+
+:root[data-theme="dark"] [class~="bg-[#ffd766]"] {
+  background-color: #42371f;
+}
