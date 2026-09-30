@@ -96,12 +96,21 @@ export default async function CityPage({ params }: Props) {
   const canonicalSlug = citySeoSlug(data.city.name, data.city.state_code);
   if (cidadeUf !== canonicalSlug) notFound();
 
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "O Calçadão", item: "https://ocalcadao.com.br/" },
+      { "@type": "ListItem", position: 2, name: `${data.city.name}, ${data.city.state_code}`, item: `https://ocalcadao.com.br/cidade/${canonicalSlug}` },
+    ],
+  };
+
   const itemList = data.businesses.length
     ? {
         "@context": "https://schema.org",
         "@type": "ItemList",
         name: `Estabelecimentos em ${data.city.name}, ${data.city.state_code}`,
-        numberOfItems: data.count,
+        numberOfItems: data.businesses.length,
         itemListElement: data.businesses.map((business, index) => ({
           "@type": "ListItem",
           position: index + 1,
@@ -114,6 +123,10 @@ export default async function CityPage({ params }: Props) {
   return (
     <>
       <SiteHeader />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData).replace(/</g, "\\u003c") }}
+      />
       {itemList && (
         <script
           type="application/ld+json"
