@@ -10,7 +10,7 @@ import { SiteHeader } from "@/components/site-header";
 import { createClient } from "@/lib/supabase/server";
 import type { DatabaseWithBusinessClaims } from "@/types/business-claims";
 
-export const metadata: Metadata = { title: "Reivindicar estabelecimento" };
+export const metadata: Metadata = { title: "Reivindicar estabelecimento", robots: { index: false, follow: true } };
 
 type PageProps = {
   params: Promise<{ slug: string }>;
