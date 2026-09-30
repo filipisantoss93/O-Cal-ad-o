@@ -24,6 +24,7 @@ import {
   catalogWhatsappHref,
 } from "@/lib/catalog-conversion";
 import { catalogPricePresentation } from "@/lib/catalog-pricing";
+import { citySeoSlug } from "@/lib/seo/local-landing";
 import {
   getAdminBusinessPreview,
   getPublicBusiness,
