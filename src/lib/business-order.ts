@@ -64,6 +64,14 @@ export function selectCityFallbackBusinesses<T extends CityFallbackCandidate>(
   const safeLimit = Math.max(0, Math.floor(limit));
   if (safeLimit === 0) return [];
 
+  // A API já entrega os candidatos alternando categorias e considerando a
+  // qualidade do cadastro. Preserve essa relevância como desempate para que
+  // vários estabelecimentos sem avaliações/logotipo não voltem a ser
+  // ordenados globalmente pelo nome no navegador.
+  const sourcePosition = new Map(
+    candidates.map((candidate, index) => [candidate.slug, index]),
+  );
+
   const ranked = [...candidates].sort((first, second) => {
     const featuredDifference = Number(Boolean(second.isFeatured)) - Number(Boolean(first.isFeatured));
     if (featuredDifference !== 0) return featuredDifference;
@@ -76,6 +84,11 @@ export function selectCityFallbackBusinesses<T extends CityFallbackCandidate>(
 
     const reviewDifference = Number(second.reviewCount ?? 0) - Number(first.reviewCount ?? 0);
     if (reviewDifference !== 0) return reviewDifference;
+
+    const sourceDifference =
+      (sourcePosition.get(first.slug) ?? Number.MAX_SAFE_INTEGER) -
+      (sourcePosition.get(second.slug) ?? Number.MAX_SAFE_INTEGER);
+    if (sourceDifference !== 0) return sourceDifference;
 
     return first.name.localeCompare(second.name, "pt-BR", { sensitivity: "base" });
   });
