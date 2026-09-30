@@ -123,11 +123,22 @@ export default async function CityCategoryPage({ params, searchParams }: Props) 
   if (page > data.totalPages) permanentRedirect(basePath);
   const pageHref = (target: number) => target === 1 ? basePath : `${basePath}?pagina=${target}`;
   const firstPosition = (page - 1) * PAGE_SIZE + 1;
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "O Calçadão", item: "https://ocalcadao.com.br/" },
+      { "@type": "ListItem", position: 2, name: `${data.city.name}, ${data.city.state_code}`, item: `https://ocalcadao.com.br/cidade/${citySlug}` },
+      { "@type": "ListItem", position: 3, name: data.category.name, item: `https://ocalcadao.com.br${basePath}` },
+    ],
+  };
+  const neighborhoods = Array.from(new Set(data.businesses.map((business) => business.neighborhood?.trim()).filter((value): value is string => Boolean(value)))).slice(0, 6);
+
   const itemList = {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: `${data.category.name} em ${data.city.name}, ${data.city.state_code}`,
-    numberOfItems: data.total,
+    numberOfItems: data.businesses.length,
     itemListElement: data.businesses.map((business, index) => ({
       "@type": "ListItem", position: firstPosition + index, name: business.name,
       url: `https://ocalcadao.com.br/loja/${encodeURIComponent(business.slug)}`,
@@ -136,15 +147,27 @@ export default async function CityCategoryPage({ params, searchParams }: Props) 
 
   return <>
     <SiteHeader />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData).replace(/</g, "\\u003c") }} />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList).replace(/</g, "\\u003c") }} />
     <main className="min-h-[70vh] bg-canvas">
       <section className="border-b border-line bg-surface px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <Link href={`/cidade/${citySlug}`} className="text-sm font-bold text-brand-dark">← Guia de {data.city.name}</Link>
+          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm font-bold text-muted">
+            <Link href="/" className="hover:text-brand-dark">O Calçadão</Link>
+            <span aria-hidden="true">/</span>
+            <Link href={`/cidade/${citySlug}`} className="hover:text-brand-dark">{data.city.name}</Link>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page" className="text-ink">{data.category.name}</span>
+          </nav>
           <h1 className="mt-3 text-3xl font-black tracking-tight text-ink sm:text-5xl">{data.category.name} em {data.city.name}, {data.city.state_code}</h1>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-muted sm:text-base">
-            Explore {data.total} vitrines publicadas nesta categoria e consulte as informações disponíveis diretamente em cada estabelecimento.
+            Explore {data.total} vitrines publicadas nesta categoria e consulte endereço, bairro e canais de contato disponíveis em cada estabelecimento.
           </p>
+          {neighborhoods.length > 0 && (
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+              Nesta seleção há estabelecimentos em bairros como {neighborhoods.join(", ")}.
+            </p>
+          )}
           {data.totalPages > 1 && <p className="mt-2 text-sm font-bold text-muted">Página {page} de {data.totalPages}</p>}
         </div>
       </section>
