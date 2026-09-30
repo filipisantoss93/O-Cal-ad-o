@@ -150,6 +150,26 @@ export default async function CityPage({ params }: Props) {
           </div>
         </section>
 
+        {data.city.name === "Assis" && data.city.state_code === "SP" && (
+          <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8" aria-labelledby="city-categories-title">
+            <h2 id="city-categories-title" className="text-2xl font-black tracking-tight text-ink">Explore por categoria</h2>
+            <p className="mt-2 text-sm text-muted">Categorias com cobertura suficiente no guia de Assis.</p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              {[
+                ["alimentacao", "Alimentação e Bebidas"],
+                ["automotivo", "Automotivo"],
+                ["moda-acessorios", "Moda e Acessórios"],
+                ["saude-bem-estar", "Saúde e Bem-estar"],
+                ["construcao-reforma", "Construção e Reforma"],
+              ].map(([slug, name]) => (
+                <Link key={slug} href={`/cidade/${canonicalSlug}/${slug}`} className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-black text-ink">
+                  {name}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8" aria-labelledby="city-businesses-title">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
