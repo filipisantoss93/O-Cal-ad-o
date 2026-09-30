@@ -9,7 +9,7 @@ import { SiteHeader } from "@/components/site-header";
 import { createClient } from "@/lib/supabase/server";
 import type { DatabaseWithBusinessClaims } from "@/types/business-claims";
 
-export const metadata: Metadata = { title: "Corrigir ou remover perfil não reivindicado" };
+export const metadata: Metadata = { title: "Corrigir ou remover perfil não reivindicado", robots: { index: false, follow: true } };
 type PageProps = { params: Promise<{ slug: string }>; searchParams: Promise<{ sucesso?: string; erro?: string }> };
 
 export default async function RequestListingChangePage({ params, searchParams }: PageProps) {
