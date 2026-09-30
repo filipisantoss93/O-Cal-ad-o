@@ -1,10 +1,30 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useSyncExternalStore, type ChangeEvent } from "react";
 
 type ThemeChoice = "system" | "light" | "dark";
 
 const storageKey = "ocalcadao-theme";
+const themeChangeEvent = "ocalcadao-theme-change";
+
+function readTheme(): ThemeChoice {
+  try {
+    const saved = window.localStorage.getItem(storageKey);
+    if (saved === "light" || saved === "dark") return saved;
+  } catch {
+    // Automatic system preference remains active when storage is unavailable.
+  }
+  return "system";
+}
+
+function subscribeToTheme(onChange: () => void) {
+  window.addEventListener(themeChangeEvent, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(themeChangeEvent, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
 
 function applyTheme(theme: ThemeChoice) {
   const root = document.documentElement;
@@ -13,36 +33,27 @@ function applyTheme(theme: ThemeChoice) {
     if (theme === "system") {
       root.removeAttribute("data-theme");
       window.localStorage.removeItem(storageKey);
-      return;
+    } else {
+      root.dataset.theme = theme;
+      window.localStorage.setItem(storageKey, theme);
     }
-
-    root.dataset.theme = theme;
-    window.localStorage.setItem(storageKey, theme);
   } catch {
-    // The selected theme still applies if browser storage is unavailable.
     if (theme === "system") root.removeAttribute("data-theme");
     else root.dataset.theme = theme;
   }
+
+  window.dispatchEvent(new Event(themeChangeEvent));
 }
 
 export function ThemeSelect() {
-  const [theme, setTheme] = useState<ThemeChoice>("system");
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(storageKey);
-      if (saved === "light" || saved === "dark") {
-        setTheme(saved);
-      }
-    } catch {
-      // Automatic system preference remains active when storage is unavailable.
-    }
-  }, []);
+  const theme = useSyncExternalStore(
+    subscribeToTheme,
+    readTheme,
+    () => "system" as ThemeChoice,
+  );
 
   function handleChange(event: ChangeEvent<HTMLSelectElement>) {
-    const nextTheme = event.target.value as ThemeChoice;
-    setTheme(nextTheme);
-    applyTheme(nextTheme);
+    applyTheme(event.target.value as ThemeChoice);
   }
 
   return (
