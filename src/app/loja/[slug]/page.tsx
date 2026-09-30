@@ -98,6 +98,17 @@ function websiteButtonLabel(business: Business) {
   return "Acessar site";
 }
 
+function schemaTypeForCategory(categorySlug: string) {
+  const types: Record<string, string> = {
+    alimentacao: "FoodEstablishment",
+    automotivo: "AutomotiveBusiness",
+    "moda-acessorios": "Store",
+    "saude-bem-estar": "HealthAndBeautyBusiness",
+    "construcao-reforma": "HomeAndConstructionBusiness",
+  };
+  return types[categorySlug] ?? "LocalBusiness";
+}
+
 function formatPhone(phone: string) {
   const digits = phone.replace(/\D/g, "");
   if (digits.startsWith("55") && digits.length === 12) {
@@ -182,11 +193,30 @@ export default async function BusinessPage({
   const safeAddress = seoAddressField(business.address);
   const formattedAddress = [safeAddress, neighborhood, business.cityName, business.stateCode].filter(Boolean).join(", ");
   const canonicalUrl = `https://ocalcadao.com.br/loja/${encodeURIComponent(business.slug)}`;
+  const citySlug = business.cityName && business.stateCode
+    ? citySeoSlug(business.cityName, business.stateCode)
+    : null;
+  const cityPath = citySlug ? `/cidade/${citySlug}` : null;
+  const categoryPath = cityPath && business.categorySlug && business.categorySlug !== "outros"
+    ? `${cityPath}/${business.categorySlug}`
+    : null;
+  const breadcrumbData = !isAdminPreview && cityPath
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "O Calçadão", item: "https://ocalcadao.com.br/" },
+          { "@type": "ListItem", position: 2, name: `${business.cityName}, ${business.stateCode}`, item: `https://ocalcadao.com.br${cityPath}` },
+          ...(categoryPath ? [{ "@type": "ListItem", position: 3, name: business.categoryName, item: `https://ocalcadao.com.br${categoryPath}` }] : []),
+          { "@type": "ListItem", position: categoryPath ? 4 : 3, name: business.name, item: canonicalUrl },
+        ],
+      }
+    : null;
   // Usar apenas dados que aparecem publicamente na vitrine; sem geo/avaliações incertos.
   const localBusinessData = !isAdminPreview && !isPublicPlace && safeAddress && business.cityName && business.stateCode
     ? {
         "@context": "https://schema.org",
-        "@type": "LocalBusiness",
+        "@type": schemaTypeForCategory(business.categorySlug),
         "@id": `${canonicalUrl}#business`,
         name: business.name,
         url: canonicalUrl,
@@ -271,6 +301,14 @@ export default async function BusinessPage({
           }}
         />
       )}
+      {breadcrumbData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(breadcrumbData).replace(/</g, "\\u003c"),
+          }}
+        />
+      )}
       {isAdminPreview && (
         <div className="border-b border-accent-dark/20 bg-accent/25 px-4 py-3 text-ink">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
@@ -309,6 +347,21 @@ export default async function BusinessPage({
             {business.coverUrl && <div className="absolute inset-0 bg-ink/55" />}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(255,255,255,0.24),transparent_30%)]" />
             <div className="relative mx-auto max-w-7xl px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-8">
+              {!isAdminPreview && cityPath && (
+                <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-2 text-xs font-bold text-white/80">
+                  <Link href="/" className="hover:text-white">O Calçadão</Link>
+                  <span aria-hidden="true">/</span>
+                  <Link href={cityPath} className="hover:text-white">{business.cityName}</Link>
+                  {categoryPath && (
+                    <>
+                      <span aria-hidden="true">/</span>
+                      <Link href={categoryPath} className="hover:text-white">{business.categoryName}</Link>
+                    </>
+                  )}
+                  <span aria-hidden="true">/</span>
+                  <span aria-current="page" className="text-white">{business.name}</span>
+                </nav>
+              )}
               <div className="flex items-center justify-between gap-3">
                 <Link
                   href={isAdminPreview ? "/admin" : "/buscar"}
