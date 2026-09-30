@@ -184,3 +184,37 @@ button:not(:disabled),
 :root[data-theme="dark"] [class~="bg-[#ffd766]"] {
   background-color: #42371f;
 }
+
+
+/* Dark theme readability and card actions. */
+:root[data-theme="dark"] h1,
+:root[data-theme="dark"] h2,
+:root[data-theme="dark"] h3,
+:root[data-theme="dark"] h4 {
+  font-weight: 700;
+}
+
+:root[data-theme="dark"] .bg-ink {
+  background-color: #293747;
+}
+
+:root[data-theme="dark"] [class~="hover:bg-ink-soft"]:hover {
+  background-color: #3b4b5f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) h1,
+  :root:not([data-theme="light"]) h2,
+  :root:not([data-theme="light"]) h3,
+  :root:not([data-theme="light"]) h4 {
+    font-weight: 700;
+  }
+
+  :root:not([data-theme="light"]) .bg-ink {
+    background-color: #293747;
+  }
+
+  :root:not([data-theme="light"]) [class~="hover:bg-ink-soft"]:hover {
+    background-color: #3b4b5f;
+  }
+}
