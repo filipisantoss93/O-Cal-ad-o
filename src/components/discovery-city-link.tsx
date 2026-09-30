@@ -6,7 +6,8 @@ import type { SelectedCity } from "@/lib/location";
 import { citySeoSlug } from "@/lib/seo/local-landing";
 
 export function DiscoveryCityLink({ city }: { city: SelectedCity }) {
-  const href = "/cidade/" + citySeoSlug(city.name, city.stateCode);\n
+  const href = "/cidade/" + citySeoSlug(city.name, city.stateCode);
+
   return (
     <Link
       href={href}
