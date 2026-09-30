@@ -7,6 +7,7 @@ import {
   HomeIcon,
   LogOutIcon,
   MapPinIcon,
+  PlusIcon,
   ShieldCheckIcon,
   SparklesIcon,
   StarIcon,
@@ -24,7 +25,7 @@ type MerchantMobileNavigationProps = {
 
 const primaryNavigation = [
   { href: "/painel", label: "Início", icon: HomeIcon },
-  { href: "/painel/loja", label: "Lojas", icon: StoreIcon },
+  { href: "/painel/loja?nova=1", label: "Anunciar", icon: PlusIcon },
   { href: "/painel/promocoes", label: "Promoções", icon: TagIcon },
   { href: "/painel/destaques", label: "Publicidade", icon: StarIcon },
 ];
@@ -111,6 +112,14 @@ export function MerchantMobileNavigation({
             </div>
 
             <div className="grid gap-1 p-2">
+              <Link
+                href="/painel/loja"
+                onClick={closeMenu}
+                className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-extrabold text-ink transition hover:bg-canvas"
+              >
+                <StoreIcon className="size-4 text-brand-dark" />
+                Minhas lojas
+              </Link>
               <Link
                 href="/painel/catalogo"
                 onClick={closeMenu}
