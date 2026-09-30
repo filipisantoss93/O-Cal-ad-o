@@ -39,28 +39,41 @@ async function getData(cidadeUf: string, categorySlug: string, page: number) {
   const city = (cities ?? []).find((candidate) => localSeoSlug(candidate.name) === parsed.citySlug);
   if (!city) return null;
 
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
-  const { data: businesses, count, error } = await supabase
+  const { count, error: countError } = await supabase
     .from("businesses")
-    .select("slug,name,neighborhood,updated_at", { count: "exact" })
+    .select("id", { count: "exact", head: true })
     .eq("city_id", city.id)
     .eq("category_id", category.id)
     .eq("publication_status", "published")
     .eq("is_active", true)
-    .eq("billing_suspended", false)
-    .order("updated_at", { ascending: false })
-    .range(from, to);
-  if (error) throw error;
+    .eq("billing_suspended", false);
+  if (countError) throw countError;
 
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  if (page > totalPages && total > 0) return null;
+  let businesses: Array<{ slug: string; name: string; neighborhood: string | null; updated_at: string | null }> = [];
+
+  if (page <= totalPages) {
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from("businesses")
+      .select("slug,name,neighborhood,updated_at")
+      .eq("city_id", city.id)
+      .eq("category_id", category.id)
+      .eq("publication_status", "published")
+      .eq("is_active", true)
+      .eq("billing_suspended", false)
+      .order("updated_at", { ascending: false })
+      .range(from, to);
+    if (error) throw error;
+    businesses = data ?? [];
+  }
 
   return {
     city,
     category,
-    businesses: businesses ?? [],
+    businesses,
     total,
     totalPages,
     page,
@@ -105,6 +118,7 @@ export default async function CityCategoryPage({ params, searchParams }: Props) 
   if (cidadeUf !== citySlug || categoria !== data.category.slug) notFound();
 
   const basePath = `/cidade/${citySlug}/${data.category.slug}`;
+  if (page > data.totalPages) permanentRedirect(basePath);
   const pageHref = (target: number) => target === 1 ? basePath : `${basePath}?pagina=${target}`;
   const firstPosition = (page - 1) * PAGE_SIZE + 1;
   const itemList = {
