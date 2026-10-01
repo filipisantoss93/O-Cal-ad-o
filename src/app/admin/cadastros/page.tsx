@@ -8,12 +8,12 @@ import {
   saveAdminBusinessAction,
   saveAdminUserAction,
   setAdminUserAccessAction,
-  transferAdminBusinessOwnerAction,
   updateAdminUserEmailAction,
 } from "./actions";
 import type { DatabaseWithAdminOwnerLink } from "@/types/admin-owner-link";
 import type { DatabaseWithAdminUserManagement } from "@/types/admin-user-management";
 import type { DatabaseWithBusinessClaims } from "@/types/business-claims";
+import { BusinessOwnerTransferForm } from "@/components/admin/business-owner-transfer-form";
 import { PreRegistrationLocationFields } from "@/components/admin/pre-registration-location-fields";
 import { FloatingNotice } from "@/components/floating-notice";
 
@@ -111,6 +111,12 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
     : { data: [], error: null };
   if (transferHistoryResult.error) throw new Error("Não foi possível carregar o histórico de transferências.");
   const transferHistory = transferHistoryResult.data ?? [];
+
+  const currentOwnerResult = business?.owner_id
+    ? await adminUserClient.rpc("admin_search_users", { p_query: business.owner_id, p_limit: 1 })
+    : { data: [], error: null };
+  if (currentOwnerResult.error) throw new Error("Não foi possível carregar o responsável atual.");
+  const currentOwner = (currentOwnerResult.data ?? [])[0] ?? null;
 
   const currentCity = business && (Array.isArray(business.cities) ? business.cities[0] : business.cities);
 
@@ -370,23 +376,28 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
                                 <p className="mt-3 text-sm font-bold text-muted">Este é o responsável atual.</p>
                               ) : full ? (
                                 <p className="mt-3 text-sm font-bold text-brand-dark">A conta de destino atingiu o limite de lojas.</p>
+                              ) : currentOwner ? (
+                                <BusinessOwnerTransferForm
+                                  business={{ id: business.id, name: business.name }}
+                                  currentOwner={{
+                                    id: currentOwner.user_id,
+                                    name: currentOwner.full_name,
+                                    email: currentOwner.email,
+                                    usedBusinesses: currentOwner.used_businesses,
+                                    allowedBusinesses: currentOwner.allowed_businesses,
+                                  }}
+                                  newOwner={{
+                                    id: candidate.user_id,
+                                    name: candidate.full_name,
+                                    email: candidate.email,
+                                    usedBusinesses: candidate.used_businesses,
+                                    allowedBusinesses: candidate.allowed_businesses,
+                                  }}
+                                />
                               ) : (
-                                <form action={transferAdminBusinessOwnerAction} className="mt-3 space-y-3">
-                                  <input type="hidden" name="business_id" value={business.id} />
-                                  <input type="hidden" name="new_owner_id" value={candidate.user_id} />
-                                  <label className={label}>Motivo obrigatório
-                                    <textarea name="reason" minLength={5} maxLength={1000} required
-                                      className={field + " min-h-24"}
-                                      placeholder="Ex.: venda da empresa, troca de responsável ou correção de vínculo." />
-                                  </label>
-                                  <label className="flex items-start gap-3 rounded-xl border border-line bg-surface p-3 text-sm font-semibold text-ink">
-                                    <input type="checkbox" name="confirm_transfer" value="1" required className="mt-1 size-4 shrink-0" />
-                                    <span>Confirmo a transferência desta empresa para <strong>{candidate.full_name || candidate.email || "o usuário selecionado"}</strong>.</span>
-                                  </label>
-                                  <button type="submit" className="min-h-11 rounded-xl bg-brand px-4 text-sm font-black text-white">
-                                    Confirmar transferência
-                                  </button>
-                                </form>
+                                <p className="mt-3 text-sm font-bold text-brand-dark">
+                                  Não foi possível carregar o responsável atual. Atualize a página antes de transferir.
+                                </p>
                               )}
                             </div>
                           );
