@@ -301,3 +301,64 @@ export async function revokeAdminBusinessOwnerAction(formData: FormData) {
   if (slug) revalidatePath("/loja/" + slug);
   redirect(basePath + "?tipo=empresa&id=" + businessId + "&desvinculado=1");
 }
+
+
+export async function transferAdminBusinessOwnerAction(formData: FormData) {
+  const { supabase } = await requireAdmin(basePath);
+  const rawBusinessId = formString(formData, "business_id");
+  const businessId = Number(rawBusinessId);
+  const newOwnerId = formString(formData, "new_owner_id");
+  const confirmed = formString(formData, "confirm_transfer");
+
+  if (!Number.isSafeInteger(businessId) || businessId <= 0 || !uuidPattern.test(newOwnerId)) {
+    redirect(basePath + "?erro=" + encodeURIComponent("Selecione uma empresa e um usuário válidos."));
+  }
+
+  if (confirmed !== "1") {
+    redirect(
+      basePath + "?tipo=empresa&id=" + businessId +
+      "&erro=" + encodeURIComponent("Confirme explicitamente a transferência antes de continuar."),
+    );
+  }
+
+  try {
+    const reason = requiredText(formData, "reason", "Motivo da transferência", 5, 1000);
+    const client = supabase as unknown as SupabaseClient<DatabaseWithAdminOwnerLink>;
+    const { error } = await client.rpc("admin_transfer_business_owner", {
+      p_business_id: businessId,
+      p_new_owner_id: newOwnerId,
+      p_reason: reason,
+      p_confirmation: "TRANSFERIR",
+    });
+
+    if (error) {
+      if (error.message.includes("Limite de lojas atingido")) {
+        throw new ValidationError("new_owner_id", "A conta de destino atingiu o limite de lojas do plano.");
+      }
+      if (error.message.includes("já é o responsável")) {
+        throw new ValidationError("new_owner_id", "O usuário selecionado já é o responsável pela empresa.");
+      }
+      if (error.message.includes("não possui responsável atual")) {
+        throw new ValidationError("business_id", "A empresa ficou sem responsável. Use o vínculo de perfil não reivindicado.");
+      }
+      if (error.message.includes("Novo responsável não encontrado")) {
+        throw new ValidationError("new_owner_id", "Novo responsável não encontrado ou não autorizado.");
+      }
+      if (error.message.includes("alterado por outra operação")) {
+        throw new ValidationError("business_id", "O responsável mudou durante a operação. Atualize a página e tente novamente.");
+      }
+      throw new Error("Não foi possível transferir a empresa.");
+    }
+  } catch (error) {
+    redirect(failurePath("empresa", rawBusinessId, error));
+  }
+
+  revalidatePath(basePath);
+  revalidatePath("/admin/reivindicacoes");
+  revalidatePath("/admin/perfis-nao-reivindicados");
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/painel");
+  revalidatePath("/painel/loja");
+  revalidatePath("/buscar");
+  redirect(basePath + "?tipo=empresa&id=" + businessId + "&transferido=1");
+}
