@@ -2,15 +2,33 @@ import type { Metadata } from "next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/dal";
-import { linkAdminUnclaimedBusinessAction, saveAdminBusinessAction, saveAdminUserAction } from "./actions";
+import {
+  linkAdminUnclaimedBusinessAction,
+  revokeAdminBusinessOwnerAction,
+  saveAdminBusinessAction,
+  saveAdminUserAction,
+  setAdminUserAccessAction,
+  updateAdminUserEmailAction,
+} from "./actions";
 import type { DatabaseWithAdminOwnerLink } from "@/types/admin-owner-link";
+import type { DatabaseWithAdminUserManagement } from "@/types/admin-user-management";
 import type { DatabaseWithBusinessClaims } from "@/types/business-claims";
 import { PreRegistrationLocationFields } from "@/components/admin/pre-registration-location-fields";
 import { FloatingNotice } from "@/components/floating-notice";
 
 export const metadata: Metadata = { title: "Cadastros | Administração", robots: { index: false, follow: false } };
 
-type Search = { q?: string; tipo?: string; id?: string; salvo?: string; vinculado?: string; owner_q?: string; erro?: string };
+type Search = {
+  q?: string;
+  tipo?: string;
+  id?: string;
+  salvo?: string;
+  vinculado?: string;
+  desvinculado?: string;
+  conta?: string;
+  owner_q?: string;
+  erro?: string;
+};
 type Props = { searchParams: Promise<Search> };
 
 const field = "mt-1.5 min-h-11 w-full rounded-xl border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand focus:ring-4 focus:ring-brand/10";
@@ -20,6 +38,11 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 
 function editUrl(type: "usuario" | "empresa", id: string | number) {
   return "/admin/cadastros?tipo=" + type + "&id=" + encodeURIComponent(String(id));
+}
+
+const dateFormatter = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+function dateTime(value: string | null | undefined) {
+  return value ? dateFormatter.format(new Date(value)) : "Nunca";
 }
 
 export default async function AdminRegistrationsPage({ searchParams }: Props) {
@@ -32,29 +55,23 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
   const editUserId = type === "usuario" && uuid.test(id) ? id : null;
   const editBusinessId = type === "empresa" && /^[1-9][0-9]*$/.test(id) && Number.isSafeInteger(Number(id)) ? Number(id) : null;
 
-  // Não se consulta auth.users pelo navegador, nem se envia uma chave privilegiada ao cliente.
-  const profileQuery = supabase.from("profiles")
-    .select("id, full_name, phone_e164, role, created_at")
-    .order("created_at", { ascending: false }).limit(q ? 25 : 10);
+  // auth.users é consultado apenas por RPC administrativa protegida; nenhuma chave privilegiada vai ao navegador.
+  const adminUserClient = supabase as unknown as SupabaseClient<DatabaseWithAdminUserManagement>;
   const businessQuery = supabase.from("businesses")
     .select("id, name, owner_id, slug, cities(name, state_code)")
     .eq("listing_type", "business").order("created_at", { ascending: false }).limit(q ? 25 : 12);
 
   if (q) {
-    if (uuid.test(q)) profileQuery.eq("id", q);
-    else if (/^[+0-9() -]{8,22}$/.test(q)) {
-      const digits = q.replace(/\D/g, "");
-      profileQuery.eq("phone_e164", "+" + (digits.length <= 11 ? "55" + digits : digits));
-    } else profileQuery.ilike("full_name", "%" + q.replace(/[%_]/g, "") + "%");
-
     if (/^[1-9][0-9]*$/.test(q) && Number.isSafeInteger(Number(q))) businessQuery.eq("id", Number(q));
     else businessQuery.ilike("name", "%" + q.replace(/[%_]/g, "") + "%");
   }
 
   const [usersResult, businessesResult, selectedUserResult, selectedBusinessResult, categoriesResult, statesResult] = await Promise.all([
-    profileQuery,
+    adminUserClient.rpc("admin_search_users", { p_query: q, p_limit: q ? 25 : 10 }),
     businessQuery,
-    editUserId ? supabase.from("profiles").select("id, full_name, phone_e164, role").eq("id", editUserId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    editUserId
+      ? adminUserClient.rpc("admin_search_users", { p_query: editUserId, p_limit: 1 })
+      : Promise.resolve({ data: [], error: null }),
     editBusinessId ? supabase.from("businesses")
       .select("id, owner_id, slug, name, description, city_id, category_id, street, address_number, complement, neighborhood, postal_code, whatsapp_e164, phone_e164, public_email, website_url, instagram_url, facebook_url, latitude, longitude, status, publication_status, plan, pre_registered, cities(name, state_code)")
       .eq("id", editBusinessId).eq("listing_type", "business").maybeSingle() : Promise.resolve({ data: null, error: null }),
@@ -67,7 +84,7 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
   }
   const users = usersResult.data ?? [];
   const businesses = businessesResult.data ?? [];
-  const selectedUser = selectedUserResult.data;
+  const selectedUser = (selectedUserResult.data ?? [])[0] ?? null;
   const business = selectedBusinessResult.data;
   const canLinkBusiness = Boolean(business && business.pre_registered && !business.owner_id);
   // Pesquisa de usuários somente quando uma empresa não reivindicada está aberta.
@@ -89,7 +106,7 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
   const currentCity = business && (Array.isArray(business.cities) ? business.cities[0] : business.cities);
 
   const relatedBusinessesResult = selectedUser
-    ? await supabase.from("businesses").select("id, name, slug").eq("owner_id", selectedUser.id)
+    ? await supabase.from("businesses").select("id, name, slug").eq("owner_id", selectedUser.user_id)
       .eq("listing_type", "business").order("name").limit(30)
     : { data: [], error: null };
   if (relatedBusinessesResult.error) throw new Error("Não foi possível consultar as empresas vinculadas.");
@@ -100,24 +117,28 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
         <p className="text-xs font-black uppercase tracking-widest text-brand-dark">Administração</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-ink sm:text-4xl">Usuários e empresas</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-          Encontre um cadastro, corrija seus dados ou vincule uma empresa ainda não reivindicada a um usuário.
-          As permissões, a senha, os pagamentos e o endereço público da vitrine não são alterados nesta página.
+          Encontre contas e empresas, edite dados cadastrais, gerencie acesso e vínculo de propriedade.
+          Senhas nunca são exibidas; ações críticas ficam protegidas e exigem acesso administrativo.
         </p>
       </header>
 
       {params.salvo === "1" && <FloatingNotice tone="success">Alterações salvas com sucesso.</FloatingNotice>}
       {params.vinculado === "1" && <FloatingNotice tone="success">Empresa vinculada ao usuário. O limite de lojas da conta foi respeitado.</FloatingNotice>}
+      {params.desvinculado === "1" && <FloatingNotice tone="success">Responsável removido. A empresa voltou a ficar disponível para reivindicação.</FloatingNotice>}
+      {params.conta === "email" && <FloatingNotice tone="success">E-mail de acesso atualizado.</FloatingNotice>}
+      {params.conta === "suspensa" && <FloatingNotice tone="success">Conta suspensa. Novos acessos foram bloqueados.</FloatingNotice>}
+      {params.conta === "reativada" && <FloatingNotice tone="success">Conta reativada.</FloatingNotice>}
       {params.erro && <FloatingNotice tone="error">{params.erro}</FloatingNotice>}
 
       <form method="get" action="/admin/cadastros" className={box}>
         <label className={label} htmlFor="cadastros-q">Pesquisar usuários ou empresas</label>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <input className={field + " mt-0 flex-1"} id="cadastros-q" name="q" type="search"
-            defaultValue={q} maxLength={80} placeholder="Nome, ID ou telefone do usuário" />
+            defaultValue={q} maxLength={80} placeholder="Nome, e-mail, telefone ou ID" />
           <button className="min-h-11 rounded-xl bg-brand px-6 text-sm font-black text-white" type="submit">Pesquisar</button>
           {q && <Link href="/admin/cadastros" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-line px-4 text-sm font-bold text-ink">Limpar</Link>}
         </div>
-        <p className="mt-2 text-xs text-muted">Empresas: pesquise pelo nome ou ID numérico. Usuários: nome, UUID ou telefone cadastrado.</p>
+        <p className="mt-2 text-xs text-muted">Empresas: nome ou ID numérico. Usuários: nome, e-mail, UUID ou telefone.</p>
       </form>
 
       {(type && id) && (
@@ -134,9 +155,8 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
           ) : (
             <div className="space-y-5">
               <form action={saveAdminUserAction} className="space-y-4">
-                <input type="hidden" name="user_id" value={selectedUser.id} />
-                <p className="break-all text-xs text-muted">Identificador: {selectedUser.id} · Perfil: {selectedUser.role}</p>
-                <p className="text-xs text-muted">O e-mail de acesso e a senha pertencem ao Supabase Auth e não são modificados por este formulário.</p>
+                <input type="hidden" name="user_id" value={selectedUser.user_id} />
+                <p className="break-all text-xs text-muted">Identificador: {selectedUser.user_id} · Perfil: {selectedUser.role}</p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className={label}>Nome completo
                     <input className={field} name="full_name" defaultValue={selectedUser.full_name ?? ""} minLength={2} maxLength={120} required />
@@ -147,6 +167,69 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
                 </div>
                 <button type="submit" className="min-h-11 rounded-xl bg-brand px-5 text-sm font-black text-white">Salvar dados do usuário</button>
               </form>
+
+              <section className="rounded-2xl border border-line bg-canvas p-4 sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-black text-ink">Conta de acesso</h3>
+                    <p className="mt-1 text-xs leading-5 text-muted">E-mail, situação da conta, assinatura e atividade recente.</p>
+                  </div>
+                  <span className={"rounded-full px-3 py-1 text-xs font-black " +
+                    (selectedUser.banned_until && new Date(selectedUser.banned_until) > new Date()
+                      ? "bg-brand/10 text-brand-dark"
+                      : "bg-positive-soft text-positive")}>
+                    {selectedUser.banned_until && new Date(selectedUser.banned_until) > new Date() ? "Suspensa" : "Ativa"}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                  <div><p className="text-xs font-bold text-muted">Último acesso</p><p className="mt-1 font-bold text-ink">{dateTime(selectedUser.last_sign_in_at)}</p></div>
+                  <div><p className="text-xs font-bold text-muted">E-mail confirmado</p><p className="mt-1 font-bold text-ink">{selectedUser.email_confirmed_at ? "Sim" : "Não"}</p></div>
+                  <div><p className="text-xs font-bold text-muted">Plano</p><p className="mt-1 font-bold text-ink">{selectedUser.subscription_plan === "pro" ? "Pro" : "Free"} · {selectedUser.subscription_status}</p></div>
+                  <div><p className="text-xs font-bold text-muted">Lojas</p><p className="mt-1 font-bold text-ink">{selectedUser.used_businesses} de {selectedUser.allowed_businesses}</p></div>
+                </div>
+
+                {selectedUser.subscription_period_end && (
+                  <p className="mt-3 text-xs text-muted">Período atual da assinatura até {dateTime(selectedUser.subscription_period_end)}.</p>
+                )}
+
+                {selectedUser.role === "admin" ? (
+                  <p className="mt-4 rounded-xl border border-line bg-surface p-3 text-sm font-semibold text-muted">
+                    Conta administrativa protegida. E-mail e acesso não podem ser alterados por este controle.
+                  </p>
+                ) : (
+                  <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                    <form action={updateAdminUserEmailAction} className="rounded-xl border border-line bg-surface p-4">
+                      <input type="hidden" name="user_id" value={selectedUser.user_id} />
+                      <label className={label}>E-mail de acesso
+                        <input className={field} name="email" type="email" required maxLength={254} defaultValue={selectedUser.email ?? ""} />
+                      </label>
+                      <p className="mt-2 text-xs leading-5 text-muted">A alteração é aplicada diretamente à conta de login.</p>
+                      <button type="submit" className="mt-3 min-h-11 rounded-xl bg-ink px-4 text-sm font-black text-white">Atualizar e-mail</button>
+                    </form>
+
+                    <form action={setAdminUserAccessAction} className="rounded-xl border border-line bg-surface p-4">
+                      <input type="hidden" name="user_id" value={selectedUser.user_id} />
+                      <input type="hidden" name="account_action"
+                        value={selectedUser.banned_until && new Date(selectedUser.banned_until) > new Date() ? "reactivate" : "suspend"} />
+                      <h4 className="text-sm font-black text-ink">Acesso à plataforma</h4>
+                      <p className="mt-2 text-xs leading-5 text-muted">
+                        {selectedUser.banned_until && new Date(selectedUser.banned_until) > new Date()
+                          ? "Reativar permite que o usuário volte a autenticar normalmente."
+                          : "Suspender bloqueia novas autenticações sem apagar a conta, lojas ou histórico."}
+                      </p>
+                      <button type="submit"
+                        className={"mt-3 min-h-11 rounded-xl px-4 text-sm font-black " +
+                          (selectedUser.banned_until && new Date(selectedUser.banned_until) > new Date()
+                            ? "bg-positive text-white"
+                            : "border border-brand/30 bg-brand/10 text-brand-dark")}>
+                        {selectedUser.banned_until && new Date(selectedUser.banned_until) > new Date() ? "Reativar conta" : "Suspender conta"}
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </section>
+
               <div className="border-t border-line pt-4">
                 <h3 className="text-sm font-black text-ink">Empresas vinculadas</h3>
                 {(relatedBusinessesResult.data ?? []).length === 0 ? (
@@ -224,9 +307,32 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
                 </section>
               )}
               {business.owner_id && (
-                <p className="rounded-xl border border-line bg-canvas p-4 text-sm text-muted">
-                  Esta empresa já possui responsável. A transferência entre usuários não é permitida nesta função.
-                </p>
+                <section className="rounded-2xl border border-brand/25 bg-canvas p-4 sm:p-5">
+                  <h3 className="text-lg font-black text-ink">Responsável atual</h3>
+                  <p className="mt-1 text-sm leading-6 text-muted">
+                    Se a reivindicação foi aprovada para a pessoa errada, remova o vínculo. O perfil volta a ser não reivindicado
+                    e poderá ser atribuído ao responsável correto.
+                  </p>
+                  <div className="mt-3">
+                    <Link href={editUrl("usuario", business.owner_id)} className="text-sm font-black text-brand-dark underline">
+                      Abrir cadastro do responsável
+                    </Link>
+                  </div>
+                  <form action={revokeAdminBusinessOwnerAction} className="mt-4 rounded-xl border border-line bg-surface p-4">
+                    <input type="hidden" name="business_id" value={business.id} />
+                    <label className={label}>Motivo da revogação
+                      <textarea name="admin_note" minLength={5} maxLength={1000} required
+                        className={field + " min-h-24"}
+                        placeholder="Ex.: solicitante não comprovou ser responsável pelo estabelecimento." />
+                    </label>
+                    <p className="mt-2 text-xs leading-5 text-muted">
+                      A ação remove o acesso à empresa, preserva o histórico e suspende promoções vinculadas até um novo responsável ser definido.
+                    </p>
+                    <button type="submit" className="mt-3 min-h-11 rounded-xl border border-brand/30 bg-brand/10 px-4 text-sm font-black text-brand-dark">
+                      Remover responsável e cancelar reivindicação
+                    </button>
+                  </form>
+                </section>
               )}
               <form action={saveAdminBusinessAction} className="space-y-6">
               <input type="hidden" name="business_id" value={business.id} />
@@ -319,13 +425,23 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
           <h2 className="text-lg font-black text-ink">Usuários</h2>
           <p className="mt-1 text-xs text-muted">{q ? "Resultados da pesquisa (até 25)" : "Cadastros recentes (até 10)"}</p>
           <div className="mt-4 space-y-2">
-            {users.length === 0 ? <p className="text-sm text-muted">Nenhum usuário encontrado.</p> : users.map((user) => (
-              <Link key={user.id} href={editUrl("usuario", user.id)}
-                className="block rounded-xl border border-line bg-canvas p-3 transition hover:border-brand/50">
-                <p className="text-sm font-black text-ink">{user.full_name || "Sem nome informado"}</p>
-                <p className="mt-1 break-all text-xs text-muted">{user.phone_e164 || "Sem telefone"} · {user.role} · {user.id}</p>
-              </Link>
-            ))}
+            {users.length === 0 ? <p className="text-sm text-muted">Nenhum usuário encontrado.</p> : users.map((user) => {
+              const suspended = Boolean(user.banned_until && new Date(user.banned_until) > new Date());
+              return (
+                <Link key={user.user_id} href={editUrl("usuario", user.user_id)}
+                  className="block rounded-xl border border-line bg-canvas p-3 transition hover:border-brand/50">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-black text-ink">{user.full_name || "Sem nome informado"}</p>
+                    <span className={"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black " +
+                      (suspended ? "bg-brand/10 text-brand-dark" : "bg-positive-soft text-positive")}>
+                      {suspended ? "Suspensa" : "Ativa"}
+                    </span>
+                  </div>
+                  <p className="mt-1 break-all text-xs text-muted">{user.email || "Sem e-mail"} · {user.phone_e164 || "Sem telefone"}</p>
+                  <p className="mt-1 break-all text-xs text-muted">{user.subscription_plan === "pro" ? "Pro" : "Free"} · {user.used_businesses}/{user.allowed_businesses} lojas · {user.user_id}</p>
+                </Link>
+              );
+            })}
           </div>
         </section>
         <section className={box}>
