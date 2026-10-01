@@ -8,6 +8,7 @@ import {
   saveAdminBusinessAction,
   saveAdminUserAction,
   setAdminUserAccessAction,
+  transferAdminBusinessOwnerAction,
   updateAdminUserEmailAction,
 } from "./actions";
 import type { DatabaseWithAdminOwnerLink } from "@/types/admin-owner-link";
@@ -25,6 +26,7 @@ type Search = {
   salvo?: string;
   vinculado?: string;
   desvinculado?: string;
+  transferido?: string;
   conta?: string;
   owner_q?: string;
   erro?: string;
@@ -87,9 +89,9 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
   const selectedUser = (selectedUserResult.data ?? [])[0] ?? null;
   const business = selectedBusinessResult.data;
   const canLinkBusiness = Boolean(business && business.pre_registered && !business.owner_id);
-  // Pesquisa de usuários somente quando uma empresa não reivindicada está aberta.
-  // A RPC protegida também encontra pelo e-mail de login, sem expor auth.users no cliente.
-  const { data: ownerCandidates, error: ownerSearchError } = canLinkBusiness && ownerQ.length >= 2
+  // A mesma busca protegida atende vínculo inicial e transferência direta.
+  // Ela também encontra pelo e-mail de login sem expor auth.users no cliente.
+  const { data: ownerCandidates, error: ownerSearchError } = business && ownerQ.length >= 2
     ? await (supabase as unknown as SupabaseClient<DatabaseWithAdminOwnerLink>)
         .rpc("admin_search_business_owner_candidates", { p_query: ownerQ, p_limit: 10 })
     : { data: [], error: null };
@@ -102,6 +104,13 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
         .eq("business_id", business!.id).eq("status", "pending")
     : { count: 0, error: null };
   if (pendingClaimsResult.error) throw new Error("Não foi possível consultar as reivindicações pendentes.");
+
+  const transferHistoryResult = business
+    ? await (supabase as unknown as SupabaseClient<DatabaseWithAdminOwnerLink>)
+        .rpc("admin_business_owner_transfer_history", { p_business_id: business.id, p_limit: 20 })
+    : { data: [], error: null };
+  if (transferHistoryResult.error) throw new Error("Não foi possível carregar o histórico de transferências.");
+  const transferHistory = transferHistoryResult.data ?? [];
 
   const currentCity = business && (Array.isArray(business.cities) ? business.cities[0] : business.cities);
 
@@ -125,6 +134,7 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
       {params.salvo === "1" && <FloatingNotice tone="success">Alterações salvas com sucesso.</FloatingNotice>}
       {params.vinculado === "1" && <FloatingNotice tone="success">Empresa vinculada ao usuário. O limite de lojas da conta foi respeitado.</FloatingNotice>}
       {params.desvinculado === "1" && <FloatingNotice tone="success">Responsável removido. A empresa voltou a ficar disponível para reivindicação.</FloatingNotice>}
+      {params.transferido === "1" && <FloatingNotice tone="success">Empresa transferida para o novo responsável e registrada no histórico de auditoria.</FloatingNotice>}
       {params.conta === "email" && <FloatingNotice tone="success">E-mail de acesso atualizado.</FloatingNotice>}
       {params.conta === "suspensa" && <FloatingNotice tone="success">Conta suspensa. Novos acessos foram bloqueados.</FloatingNotice>}
       {params.conta === "reativada" && <FloatingNotice tone="success">Conta reativada.</FloatingNotice>}
@@ -310,17 +320,85 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
                 <section className="rounded-2xl border border-brand/25 bg-canvas p-4 sm:p-5">
                   <h3 className="text-lg font-black text-ink">Responsável atual</h3>
                   <p className="mt-1 text-sm leading-6 text-muted">
-                    Se a reivindicação foi aprovada para a pessoa errada, remova o vínculo. O perfil volta a ser não reivindicado
-                    e poderá ser atribuído ao responsável correto.
+                    Você pode transferir a empresa diretamente para outra conta ou remover o responsável e devolver o perfil para a fila de não reivindicados.
                   </p>
                   <div className="mt-3">
                     <Link href={editUrl("usuario", business.owner_id)} className="text-sm font-black text-brand-dark underline">
-                      Abrir cadastro do responsável
+                      Abrir cadastro do responsável atual
                     </Link>
                   </div>
+
+                  <div className="mt-5 rounded-xl border border-line bg-surface p-4">
+                    <h4 className="text-base font-black text-ink">Transferir empresa para outro usuário</h4>
+                    <p className="mt-1 text-xs leading-5 text-muted">
+                      A transferência é imediata. O destino precisa ter vaga no plano e o motivo ficará gravado na auditoria.
+                    </p>
+                    <form action="/admin/cadastros" method="get" className="mt-4 flex flex-col gap-2 sm:flex-row">
+                      <input type="hidden" name="tipo" value="empresa" />
+                      <input type="hidden" name="id" value={business.id} />
+                      <label className="min-w-0 flex-1 text-sm font-bold text-ink">
+                        Pesquisar novo responsável
+                        <input className={field} name="owner_q" type="search" defaultValue={ownerQ}
+                          minLength={2} maxLength={80} required placeholder="Nome, e-mail, telefone ou UUID" />
+                      </label>
+                      <button className="min-h-11 self-end rounded-xl bg-ink px-5 text-sm font-black text-white" type="submit">
+                        Buscar usuário
+                      </button>
+                    </form>
+
+                    {ownerQ.length >= 2 && (
+                      <div className="mt-4 space-y-3">
+                        {(ownerCandidates ?? []).length === 0 ? (
+                          <p className="text-sm text-muted">Nenhum usuário encontrado. Refine a pesquisa.</p>
+                        ) : (ownerCandidates ?? []).map((candidate) => {
+                          const isCurrentOwner = candidate.user_id === business.owner_id;
+                          const full = candidate.used_businesses >= candidate.allowed_businesses;
+                          return (
+                            <div key={candidate.user_id} className="rounded-xl border border-line bg-canvas p-3">
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                  <p className="text-sm font-black text-ink">{candidate.full_name || "Sem nome informado"}</p>
+                                  <p className="mt-1 break-all text-xs text-muted">{candidate.email || "Sem e-mail"} · {candidate.phone_e164 || "Sem telefone"}</p>
+                                  <p className="mt-1 break-all text-xs text-muted">ID: {candidate.user_id}</p>
+                                </div>
+                                <span className="rounded-full bg-surface px-2 py-1 text-xs font-bold text-muted">
+                                  {candidate.used_businesses}/{candidate.allowed_businesses} lojas
+                                </span>
+                              </div>
+
+                              {isCurrentOwner ? (
+                                <p className="mt-3 text-sm font-bold text-muted">Este é o responsável atual.</p>
+                              ) : full ? (
+                                <p className="mt-3 text-sm font-bold text-brand-dark">A conta de destino atingiu o limite de lojas.</p>
+                              ) : (
+                                <form action={transferAdminBusinessOwnerAction} className="mt-3 space-y-3">
+                                  <input type="hidden" name="business_id" value={business.id} />
+                                  <input type="hidden" name="new_owner_id" value={candidate.user_id} />
+                                  <label className={label}>Motivo obrigatório
+                                    <textarea name="reason" minLength={5} maxLength={1000} required
+                                      className={field + " min-h-24"}
+                                      placeholder="Ex.: venda da empresa, troca de responsável ou correção de vínculo." />
+                                  </label>
+                                  <label className="flex items-start gap-3 rounded-xl border border-line bg-surface p-3 text-sm font-semibold text-ink">
+                                    <input type="checkbox" name="confirm_transfer" value="1" required className="mt-1 size-4 shrink-0" />
+                                    <span>Confirmo a transferência desta empresa para <strong>{candidate.full_name || candidate.email || "o usuário selecionado"}</strong>.</span>
+                                  </label>
+                                  <button type="submit" className="min-h-11 rounded-xl bg-brand px-4 text-sm font-black text-white">
+                                    Confirmar transferência
+                                  </button>
+                                </form>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
                   <form action={revokeAdminBusinessOwnerAction} className="mt-4 rounded-xl border border-line bg-surface p-4">
+                    <h4 className="text-sm font-black text-ink">Remover responsável sem transferir</h4>
                     <input type="hidden" name="business_id" value={business.id} />
-                    <label className={label}>Motivo da revogação
+                    <label className={label + " mt-3"}>Motivo da revogação
                       <textarea name="admin_note" minLength={5} maxLength={1000} required
                         className={field + " min-h-24"}
                         placeholder="Ex.: solicitante não comprovou ser responsável pelo estabelecimento." />
@@ -332,6 +410,34 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
                       Remover responsável e cancelar reivindicação
                     </button>
                   </form>
+                </section>
+              )}
+
+              {transferHistory.length > 0 && (
+                <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-black text-ink">Histórico de transferências</h3>
+                      <p className="mt-1 text-xs text-muted">Registro de auditoria das trocas de responsável feitas pelo admin.</p>
+                    </div>
+                    <span className="rounded-full bg-canvas px-3 py-1 text-xs font-black text-muted">{transferHistory.length}</span>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {transferHistory.map((item) => (
+                      <div key={item.transfer_id} className="rounded-xl border border-line bg-canvas p-3">
+                        <p className="text-sm font-black text-ink">
+                          {item.previous_owner_name || item.previous_owner_email || item.previous_owner_id}
+                          <span className="mx-2 text-muted">→</span>
+                          {item.new_owner_name || item.new_owner_email || item.new_owner_id}
+                        </p>
+                        <p className="mt-1 text-xs text-muted">
+                          {item.previous_owner_email || item.previous_owner_id} → {item.new_owner_email || item.new_owner_id}
+                        </p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink">{item.reason}</p>
+                        <p className="mt-2 text-xs font-semibold text-muted">{dateTime(item.created_at)}</p>
+                      </div>
+                    ))}
+                  </div>
                 </section>
               )}
               <form action={saveAdminBusinessAction} className="space-y-6">
