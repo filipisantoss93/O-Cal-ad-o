@@ -114,6 +114,14 @@ type ReviewBusinessListingRequestFunction = {
   Returns: undefined;
 };
 
+type AdminRevokeBusinessOwnershipFunction = {
+  Args: {
+    p_business_id: number;
+    p_admin_note: string;
+  };
+  Returns: undefined;
+};
+
 export type DatabaseWithBusinessClaims = Omit<Database, "public"> & {
   public: Omit<Database["public"], "Tables" | "Functions"> & {
     Tables: Omit<Database["public"]["Tables"], "businesses"> & {
@@ -124,6 +132,7 @@ export type DatabaseWithBusinessClaims = Omit<Database, "public"> & {
     Functions: Database["public"]["Functions"] & {
       review_business_claim_request: ReviewBusinessClaimRequestFunction;
       review_business_listing_request: ReviewBusinessListingRequestFunction;
+      admin_revoke_business_ownership: AdminRevokeBusinessOwnershipFunction;
     };
   };
 };
