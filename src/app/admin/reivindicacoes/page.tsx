@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { reviewBusinessClaimAction, reviewBusinessListingRequestAction } from "@/app/admin/reivindicacoes/actions";
+import {
+  reviewBusinessClaimAction,
+  reviewBusinessListingRequestAction,
+  revokeBusinessOwnershipAction,
+} from "@/app/admin/reivindicacoes/actions";
 import { FloatingNotice } from "@/components/floating-notice";
 import { ShieldCheckIcon } from "@/components/icons";
 import { requireAdmin } from "@/lib/admin/dal";
@@ -16,14 +20,22 @@ export default async function AdminClaimsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { supabase } = await requireAdmin("/admin/reivindicacoes");
   const client = supabase as unknown as SupabaseClient<DatabaseWithBusinessClaims>;
-  const [claimsResult, listingResult] = await Promise.all([
+  const [claimsResult, listingResult, approvedClaimsResult] = await Promise.all([
     client.from("business_claim_requests").select("id, business_id, requester_name, requester_email, relationship, evidence, created_at").eq("status", "pending").order("created_at").limit(100),
     client.from("business_listing_requests").select("id, business_id, requester_name, requester_email, request_type, details, created_at").eq("status", "pending").order("created_at").limit(100),
+    client.from("business_claim_requests")
+      .select("id, business_id, requester_id, requester_name, requester_email, relationship, evidence, admin_note, reviewed_at")
+      .eq("status", "approved").order("reviewed_at", { ascending: false }).limit(100),
   ]);
-  if (claimsResult.error || listingResult.error) throw new Error("Não foi possível carregar as solicitações pendentes.");
+  if (claimsResult.error || listingResult.error || approvedClaimsResult.error) throw new Error("Não foi possível carregar as solicitações.");
   const claims = claimsResult.data ?? [];
   const listingRequests = listingResult.data ?? [];
-  const ids = Array.from(new Set([...claims.map((item) => item.business_id), ...listingRequests.map((item) => item.business_id)]));
+  const approvedClaims = approvedClaimsResult.data ?? [];
+  const ids = Array.from(new Set([
+    ...claims.map((item) => item.business_id),
+    ...listingRequests.map((item) => item.business_id),
+    ...approvedClaims.map((item) => item.business_id),
+  ]));
   const businessResult = ids.length ? await client.from("businesses").select("id, name, slug, pre_registered, owner_id, publication_status, cities(name, state_code)").in("id", ids) : { data: [], error: null };
   if (businessResult.error) throw new Error("Não foi possível carregar os estabelecimentos relacionados.");
   const businesses = new Map((businessResult.data ?? []).map((business) => [business.id, business]));
@@ -35,6 +47,64 @@ export default async function AdminClaimsPage({ searchParams }: PageProps) {
 
     <section className="mt-8"><div className="flex items-center justify-between"><h2 className="text-2xl font-black text-ink">Reivindicações pendentes</h2><span className="rounded-full bg-canvas px-3 py-1.5 text-sm font-black text-muted">{claims.length}</span></div>
       {claims.length === 0 ? <p className="mt-4 rounded-3xl border border-dashed border-line bg-surface p-6 text-sm font-semibold text-muted">Nenhuma reivindicação pendente.</p> : <div className="mt-4 space-y-4">{claims.map((claim) => { const business = businesses.get(claim.business_id); const canEdit = Boolean(business?.pre_registered && !business.owner_id); return <article key={claim.id} className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7"><div className="grid gap-5 lg:grid-cols-[1fr_22rem]"><div><p className="text-xs font-black uppercase tracking-wider text-brand-dark">{relationshipLabels[claim.relationship] ?? claim.relationship}</p><h3 className="mt-2 text-xl font-black text-ink">{business?.name ?? `Estabelecimento #${claim.business_id}`}</h3><p className="mt-2 text-sm font-bold text-ink">{claim.requester_name} · {claim.requester_email}</p><div className="mt-4 rounded-2xl bg-canvas p-4"><p className="text-xs font-black uppercase tracking-wider text-muted">Comprovação informada</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink">{claim.evidence}</p></div><div className="mt-4 flex flex-wrap gap-3">{business?.slug && <Link href={`/loja/${business.slug}`} target="_blank" className="inline-flex text-sm font-black text-brand-dark hover:underline">Abrir perfil público</Link>}{canEdit && <Link href={`/admin/perfis-nao-reivindicados/${business!.id}/editar?return_to=${encodeURIComponent("/admin/reivindicacoes")}`} className="inline-flex text-sm font-black text-brand-dark hover:underline">Editar informações</Link>}</div></div><form action={reviewBusinessClaimAction} className="rounded-2xl bg-canvas p-4"><input type="hidden" name="request_id" value={claim.id} /><input type="hidden" name="slug" value={business?.slug ?? ""} /><label className="text-sm font-extrabold text-ink">Observação administrativa<textarea name="admin_note" maxLength={1000} className="mt-2 min-h-24 w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" /></label><div className="mt-3 grid grid-cols-2 gap-2"><button name="decision" value="approve" className="min-h-11 rounded-xl bg-positive px-3 text-sm font-black text-white">Aprovar</button><button name="decision" value="reject" className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-black text-ink">Rejeitar</button></div><p className="mt-3 text-xs font-semibold leading-5 text-muted">A aprovação transfere a vitrine para a conta do solicitante.</p></form></div></article>; })}</div>}
+    </section>
+
+    <section className="mt-10">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-black text-ink">Reivindicações aprovadas</h2>
+          <p className="mt-1 text-sm text-muted">Revogue a propriedade quando a identidade ou o vínculo informado não forem legítimos.</p>
+        </div>
+        <span className="rounded-full bg-canvas px-3 py-1.5 text-sm font-black text-muted">{approvedClaims.length}</span>
+      </div>
+      {approvedClaims.length === 0 ? (
+        <p className="mt-4 rounded-3xl border border-dashed border-line bg-surface p-6 text-sm font-semibold text-muted">Nenhuma reivindicação aprovada no histórico recente.</p>
+      ) : (
+        <div className="mt-4 space-y-4">
+          {approvedClaims.map((claim) => {
+            const business = businesses.get(claim.business_id);
+            const isCurrentOwner = Boolean(business?.owner_id === claim.requester_id);
+            return (
+              <article key={claim.id} className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7">
+                <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-positive">Aprovada</p>
+                    <h3 className="mt-2 text-xl font-black text-ink">{business?.name ?? `Estabelecimento #${claim.business_id}`}</h3>
+                    <p className="mt-2 text-sm font-bold text-ink">{claim.requester_name} · {claim.requester_email}</p>
+                    <p className="mt-1 text-xs text-muted">
+                      {relationshipLabels[claim.relationship] ?? claim.relationship}
+                      {claim.reviewed_at ? ` · aprovada em ${new Date(claim.reviewed_at).toLocaleString("pt-BR")}` : ""}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      {business?.slug && <Link href={`/loja/${business.slug}`} target="_blank" className="inline-flex text-sm font-black text-brand-dark hover:underline">Abrir perfil público</Link>}
+                      {business?.owner_id && <Link href={`/admin/cadastros?tipo=usuario&id=${encodeURIComponent(business.owner_id)}`} className="inline-flex text-sm font-black text-brand-dark hover:underline">Abrir responsável</Link>}
+                    </div>
+                  </div>
+                  {isCurrentOwner ? (
+                    <form action={revokeBusinessOwnershipAction} className="rounded-2xl border border-brand/20 bg-canvas p-4">
+                      <input type="hidden" name="business_id" value={claim.business_id} />
+                      <input type="hidden" name="slug" value={business?.slug ?? ""} />
+                      <label className="text-sm font-extrabold text-ink">Motivo para cancelar
+                        <textarea name="admin_note" minLength={5} maxLength={1000} required
+                          className="mt-2 min-h-24 w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+                          placeholder="Ex.: solicitante não comprovou ser responsável pelo estabelecimento." />
+                      </label>
+                      <button type="submit" className="mt-3 min-h-11 w-full rounded-xl border border-brand/30 bg-brand/10 px-3 text-sm font-black text-brand-dark">
+                        Cancelar reivindicação
+                      </button>
+                      <p className="mt-3 text-xs font-semibold leading-5 text-muted">Remove o acesso à empresa e devolve o perfil para a fila de não reivindicados, mantendo o histórico.</p>
+                    </form>
+                  ) : (
+                    <div className="rounded-2xl bg-canvas p-4 text-sm font-semibold text-muted">
+                      O responsável atual já é diferente deste pedido. Nenhuma ação automática será executada.
+                    </div>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </section>
 
     <section className="mt-10"><div className="flex items-center justify-between"><h2 className="text-2xl font-black text-ink">Correções, atualizações e remoções</h2><span className="rounded-full bg-canvas px-3 py-1.5 text-sm font-black text-muted">{listingRequests.length}</span></div>
