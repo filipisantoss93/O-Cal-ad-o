@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/dal";
 import type { DatabaseWithAdminOwnerLink } from "@/types/admin-owner-link";
+import type { DatabaseWithBusinessClaims } from "@/types/business-claims";
 import {
   formString,
   normalizePhone,
@@ -199,4 +200,104 @@ export async function linkAdminUnclaimedBusinessAction(formData: FormData) {
   revalidatePath("/painel/loja");
   revalidatePath("/buscar");
   redirect(basePath + "?tipo=empresa&id=" + businessId + "&vinculado=1");
+}
+
+
+async function invokeAdminUserAccountAction(
+  supabase: Awaited<ReturnType<typeof requireAdmin>>["supabase"],
+  body: { action: "update_email" | "suspend" | "reactivate"; target_user_id: string; email?: string },
+) {
+  const { data, error } = await supabase.functions.invoke("admin-manage-user", { body });
+  const response = data as { success?: boolean; error?: string } | null;
+  if (error || !response?.success) {
+    throw new Error(response?.error || "Não foi possível alterar a conta de acesso.");
+  }
+}
+
+export async function updateAdminUserEmailAction(formData: FormData) {
+  const { supabase } = await requireAdmin(basePath);
+  const id = formString(formData, "user_id");
+  if (!uuidPattern.test(id)) redirect(basePath + "?erro=identificador-invalido");
+
+  try {
+    const email = validateEmail(formString(formData, "email"), "email");
+    await invokeAdminUserAccountAction(supabase, {
+      action: "update_email",
+      target_user_id: id,
+      email,
+    });
+  } catch (error) {
+    redirect(failurePath("usuario", id, error));
+  }
+
+  revalidatePath(basePath);
+  redirect(basePath + "?tipo=usuario&id=" + encodeURIComponent(id) + "&conta=email");
+}
+
+export async function setAdminUserAccessAction(formData: FormData) {
+  const { supabase } = await requireAdmin(basePath);
+  const id = formString(formData, "user_id");
+  const requestedAction = formString(formData, "account_action");
+  if (!uuidPattern.test(id)) redirect(basePath + "?erro=identificador-invalido");
+  if (requestedAction !== "suspend" && requestedAction !== "reactivate") {
+    redirect(basePath + "?tipo=usuario&id=" + encodeURIComponent(id) + "&erro=" + encodeURIComponent("Ação de acesso inválida."));
+  }
+
+  try {
+    await invokeAdminUserAccountAction(supabase, {
+      action: requestedAction,
+      target_user_id: id,
+    });
+  } catch (error) {
+    redirect(failurePath("usuario", id, error));
+  }
+
+  revalidatePath(basePath);
+  revalidatePath("/painel");
+  redirect(
+    basePath + "?tipo=usuario&id=" + encodeURIComponent(id) +
+    "&conta=" + (requestedAction === "suspend" ? "suspensa" : "reativada"),
+  );
+}
+
+export async function revokeAdminBusinessOwnerAction(formData: FormData) {
+  const { supabase } = await requireAdmin(basePath);
+  const rawId = formString(formData, "business_id");
+  const businessId = Number(rawId);
+  if (!Number.isSafeInteger(businessId) || businessId <= 0) {
+    redirect(basePath + "?erro=identificador-invalido");
+  }
+
+  let slug = "";
+  try {
+    const reason = requiredText(formData, "admin_note", "Motivo da revogação", 5, 1000);
+    const { data: current, error: lookupError } = await supabase
+      .from("businesses")
+      .select("id, slug, owner_id")
+      .eq("id", businessId)
+      .eq("listing_type", "business")
+      .maybeSingle();
+    if (lookupError || !current) throw new Error("Empresa não encontrada.");
+    if (!current.owner_id) throw new ValidationError("business_id", "Esta empresa já está sem responsável.");
+    slug = current.slug;
+
+    const client = supabase as unknown as SupabaseClient<DatabaseWithBusinessClaims>;
+    const { error } = await client.rpc("admin_revoke_business_ownership", {
+      p_business_id: businessId,
+      p_admin_note: reason,
+    });
+    if (error) throw new Error(error.message);
+  } catch (error) {
+    redirect(failurePath("empresa", rawId, error));
+  }
+
+  revalidatePath(basePath);
+  revalidatePath("/admin/reivindicacoes");
+  revalidatePath("/admin/perfis-nao-reivindicados");
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/painel");
+  revalidatePath("/painel/loja");
+  revalidatePath("/buscar");
+  if (slug) revalidatePath("/loja/" + slug);
+  redirect(basePath + "?tipo=empresa&id=" + businessId + "&desvinculado=1");
 }
