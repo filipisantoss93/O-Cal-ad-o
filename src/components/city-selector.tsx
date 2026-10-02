@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { LocateIcon, MapPinIcon, XIcon } from "@/components/icons";
 import {
@@ -84,11 +85,16 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
 
   useEffect(() => {
     if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open]);
 
   function openCitySelector(initialError = "") {
@@ -173,7 +179,7 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
         </span>
       </button>
 
-      {open && (
+      {open && createPortal(
         <div className="fixed inset-0 z-[100] grid max-w-full place-items-end overflow-x-hidden bg-ink/45 p-0 sm:place-items-center sm:p-4">
           <button
             type="button"
@@ -185,7 +191,7 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
             role="dialog"
             aria-modal="true"
             aria-labelledby="city-selector-title"
-            className="relative z-10 w-full min-w-0 max-w-full overflow-x-hidden rounded-t-[2rem] border border-line bg-surface p-5 shadow-2xl sm:max-w-lg sm:rounded-[2rem] sm:p-7"
+            className="relative z-10 max-h-[100dvh] w-full min-w-0 max-w-full overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-[2rem] border border-line bg-surface p-5 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-[2rem] sm:p-7"
           >
             <div className="flex min-w-0 items-start justify-between gap-4">
               <div className="min-w-0">
@@ -271,7 +277,8 @@ export function CitySelector({ variant = "compact" }: { variant?: "compact" | "h
               A localização exata é usada para calcular distâncias e permanece somente nesta sessão.
             </p>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

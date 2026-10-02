@@ -92,9 +92,11 @@ export function BusinessCard({
             <h3 className={`flex items-center gap-1 font-black tracking-tight text-ink ${compact ? "mt-1 text-sm leading-tight sm:text-base" : "mt-1.5 text-xl"}`}>
               <Link
                 href={`/loja/${business.slug}`}
-                className={`${compact ? "line-clamp-3 sm:line-clamp-2" : "line-clamp-2"} min-w-0 break-words rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-brand`}
+                className="flex min-h-11 min-w-0 flex-1 items-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
-                {business.name}
+                <span className={`${compact ? "line-clamp-3 sm:line-clamp-2" : "line-clamp-2"} min-w-0 break-words`}>
+                  {business.name}
+                </span>
               </Link>
               {business.verified && (
                 <>
